@@ -1,0 +1,261 @@
+﻿CONVERSATIONAL DOCUMENT IDE - USER JOURNEY MATRIX,,,,,,,,,,,,
+User Type,"Phase 1:
+Discovery & Setup","Phase 2:
+Document Upload","Phase 3:
+AI Analysis","Phase 4:
+Agent Configuration","Phase 5:
+Agent Preview","Phase 6:
+Sharing Setup","Phase 7:
+Access & View","Phase 8:
+Conversation","Phase 9:
+Conversion","Phase 10:
+Analytics Review","Phase 11:
+Iteration","Phase 12:
+Retention"
+"Document Creator
+(Consultant)","Searches for 'document sharing with AI'
+
+Finds product via SEO, referral, or direct
+
+Reads landing page value prop","Creates account (email/OAuth)
+
+Creates new project
+
+Uploads 3-5 documents (PDF, DOCX, XLSX)","Reviews AI-generated document summary
+
+Confirms understanding of content
+
+Verifies key sections identified","Answers 5 essential questions in chat:
+• Audience
+• Communication style
+• Key emphasis areas
+• Speculation allowed?
+• Main purpose
+
+Optionally answers 6 deeper questions","Reviews AI agent preview
+
+Tests sample interactions
+
+Edits configuration if needed
+
+Approves agent persona","Configures share settings:
+• Access level (public/email/whitelist)
+• Optional password
+• Expiration date
+• View limits
+
+Generates share link","N/A
+(Creator doesn't view, they share)","N/A
+(No conversation needed)","N/A
+(No conversion needed)","Views analytics dashboard
+
+Sees who accessed documents
+
+Reviews conversation summaries
+
+Reads AI insights on viewer concerns","Updates agent configuration based on feedback
+
+Adds/removes documents
+
+Refines emphasis areas
+
+Creates new share links for different audiences","Monitors engagement over time
+
+Upgrades to Pro for more projects
+
+Refers other consultants
+
+Provides product feedback"
+"Board Member
+(First-time Viewer)","Receives email with share link
+
+Clicks link out of curiosity
+
+No prior context about platform","N/A
+(Not uploading)","N/A
+(Not their docs)","N/A
+(Not configuring)","N/A
+(Not configuring)","N/A
+(Not sharing)","Lands on access gate
+
+Provides email (if required)
+
+Enters password (if required)
+
+Grants access","Reads AI welcome message
+
+Asks: 'What's the ROI?'
+
+AI opens Financial doc to Section 3.2
+
+Reviews highlighted content
+
+Asks 3-5 follow-up questions
+
+Spends 15-20 minutes total","Sees 'Save Conversation' modal
+
+Reads benefits of account
+
+Considers creating account
+
+40% skip, 60% consider","Views conversation summary
+
+Reads analytics on creator dashboard
+
+No further action (non-converted)","Returns via email notification
+
+Asks new questions
+
+Views updated documents
+
+Engages 2-3 more times","Becomes familiar with platform
+
+May ask consultant about tool
+
+Potential future creator"
+"Investor
+(Return Visitor)","Already familiar from previous use
+
+Receives new share link
+
+Expects conversational experience","N/A
+(Not uploading)","N/A
+(Not their docs)","N/A
+(Not configuring)","N/A
+(Not configuring)","N/A
+(Not sharing)","Clicks link
+
+Provides credentials quickly
+
+Immediate access","Jumps straight to specific questions
+
+'Show me competitive analysis'
+
+'Compare to previous quarter'
+
+More efficient, asks 7-10 questions
+
+Spends 25-30 minutes","Sees 'Save Conversation' modal
+
+Already has account
+
+Logs in to save
+
+Conversion success: 90%","Reviews saved conversations
+
+Compares across multiple projects
+
+Downloads summary PDFs
+
+Shares insights with team","Bookmarks platform
+
+Checks for updates regularly
+
+Engages 5-10 times per project","High engagement user
+
+Provides valuable feedback
+
+Potential advocate/referral source"
+"Platform Admin
+(System)","System monitors sign-ups
+
+Tracks activation funnel
+
+Identifies drop-off points","Logs upload events
+
+Monitors file types/sizes
+
+Tracks upload success rate
+
+Flags errors","Tracks analysis completion time
+
+Monitors LLM API usage
+
+Logs analysis quality metrics","Records interview completion rate
+
+Tracks questions answered
+
+Measures time to configuration","Logs preview interactions
+
+Tracks edit frequency
+
+Measures satisfaction indicators","Records share link generation
+
+Tracks access settings chosen
+
+Monitors share link clicks","Logs access attempts
+
+Tracks authentication failures
+
+Monitors geographic distribution
+
+Records access timing","Tracks message count
+
+Monitors conversation duration
+
+Logs document opens
+
+Measures engagement depth","Records conversion modal shows
+
+Tracks conversion rate
+
+Logs conversion method (email/OAuth)
+
+Measures time to conversion","Generates automated summaries
+
+Sends email notifications
+
+Compiles engagement metrics
+
+Provides actionable insights","Tracks iteration frequency
+
+Monitors configuration changes
+
+Measures improvement impact","Calculates retention metrics
+
+Identifies churn risk
+
+Triggers re-engagement campaigns
+
+Measures LTV"
+"Converted User
+(Creator)","Converted from viewer
+
+Has account now
+
+Explores creator features","First project setup
+
+Uploads own documents
+
+Excited to try as creator","Compares to experience as viewer
+
+Appreciates analysis quality","Answers questions thoughtfully
+
+Draws from own viewer experience
+
+Configures based on what worked","Tests thoroughly
+
+Compares to agents they've interacted with
+
+Refined expectations","Shares with small test group first
+
+Monitors carefully
+
+Iterates based on feedback","N/A initially
+(May become viewer of others' docs)","N/A for own projects
+(May view others' shared docs)","Already converted
+(May refer others)","Deeply engaged with analytics
+
+Compares to own viewer experience
+
+Understands value viscerally","Rapid iteration based on analytics
+
+Expands use cases
+
+Creates multiple projects","High retention
+
+Strong product advocate
+
+Provides detailed feedback
+
+Refers actively"

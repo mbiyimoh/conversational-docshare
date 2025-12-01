@@ -1,0 +1,209 @@
+import { useState, useEffect, useRef } from 'react'
+import { ChatMessage } from './ChatMessage'
+import { ChatInput } from './ChatInput'
+
+interface Message {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: Date
+}
+
+interface ChatInterfaceProps {
+  conversationId: string
+  onCitationClick?: (documentId: string, sectionId: string) => void
+}
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+
+export function ChatInterface({ conversationId, onCitationClick }: ChatInterfaceProps) {
+  const [messages, setMessages] = useState<Message[]>([])
+  const [isStreaming, setIsStreaming] = useState(false)
+  const [streamingContent, setStreamingContent] = useState('')
+  const [loadError, setLoadError] = useState('')
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, streamingContent])
+
+  // Load conversation history on mount
+  useEffect(() => {
+    loadConversationHistory()
+  }, [conversationId])
+
+  const loadConversationHistory = async () => {
+    try {
+      setLoadError('')
+      const response = await fetch(`${API_URL}/api/conversations/${conversationId}`)
+      const data = await response.json()
+
+      if (data.conversation?.messages) {
+        setMessages(
+          data.conversation.messages.map((msg: { id: string; role: string; content: string; createdAt: string }) => ({
+            id: msg.id,
+            role: msg.role as 'user' | 'assistant',
+            content: msg.content,
+            timestamp: new Date(msg.createdAt),
+          }))
+        )
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load conversation'
+      setLoadError(message)
+      console.error('Failed to load conversation history:', error)
+    }
+  }
+
+  const handleSendMessage = async (content: string) => {
+    // Add user message immediately
+    const userMessage: Message = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content,
+      timestamp: new Date(),
+    }
+    setMessages((prev) => [...prev, userMessage])
+
+    // Start streaming
+    setIsStreaming(true)
+    setStreamingContent('')
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/conversations/${conversationId}/messages/stream`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message: content }),
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('Failed to send message')
+      }
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        throw new Error('No response stream')
+      }
+
+      let fullContent = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+
+        if (done) break
+
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.substring(6).trim()
+
+            if (data === '[DONE]') {
+              // Stream complete - add assistant message
+              const assistantMessage: Message = {
+                id: `assistant-${Date.now()}`,
+                role: 'assistant',
+                content: fullContent,
+                timestamp: new Date(),
+              }
+              setMessages((prev) => [...prev, assistantMessage])
+              setStreamingContent('')
+              break
+            }
+
+            try {
+              const parsed = JSON.parse(data)
+              if (parsed.chunk) {
+                fullContent += parsed.chunk
+                setStreamingContent(fullContent)
+              }
+            } catch {
+              // Ignore parse errors
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to send message:', error)
+      // Add error message
+      const errorMessage: Message = {
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        content: 'Sorry, I encountered an error processing your message. Please try again.',
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, errorMessage])
+    } finally {
+      setIsStreaming(false)
+      setStreamingContent('')
+    }
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* Error banner */}
+      {loadError && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4">
+          <div className="flex items-center">
+            <span className="text-red-700">{loadError}</span>
+            <button
+              onClick={() => setLoadError('')}
+              className="ml-auto text-red-700 hover:text-red-900"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Messages container */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((message) => (
+          <ChatMessage
+            key={message.id}
+            role={message.role}
+            content={message.content}
+            timestamp={message.timestamp}
+            onCitationClick={onCitationClick}
+          />
+        ))}
+
+        {/* Streaming message */}
+        {isStreaming && streamingContent && (
+          <ChatMessage
+            role="assistant"
+            content={streamingContent}
+            onCitationClick={onCitationClick}
+          />
+        )}
+
+        {/* Loading indicator */}
+        {isStreaming && !streamingContent && (
+          <div className="flex justify-start">
+            <div className="rounded-lg bg-gray-100 px-4 py-2">
+              <div className="flex space-x-2">
+                <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400" style={{ animationDelay: '0ms' }} />
+                <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400" style={{ animationDelay: '150ms' }} />
+                <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400" style={{ animationDelay: '300ms' }} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <ChatInput onSend={handleSendMessage} disabled={isStreaming} />
+    </div>
+  )
+}

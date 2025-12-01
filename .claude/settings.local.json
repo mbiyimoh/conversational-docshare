@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claudekit:*)",
+      "Bash(stm:*)",
+      "Bash(export:*)",
+      "Bash(python3:*)",
+      "SlashCommand(/dev:cleanup)",
+      "SlashCommand(/spec:create Automated weekly scheduling (cron job) to run the eBay Playwright scraper and ETL pipeline, ensuring each weekly run stores results in the PostgreSQL database with proper execution date tracking to enable longitudinal trend analysis over time)",
+      "SlashCommand(/spec:validate:*)",
+      "SlashCommand(/spec:execute:*)",
+      "SlashCommand(/spec:create:*)",
+      "Read(//Users/AstroLab/Desktop/code-projects/tradeblock-cursor/**)",
+      "WebSearch",
+      "SlashCommand(/task-context:*)",
+      "SlashCommand(/research-building-blocks:*)",
+      "WebFetch(domain:github.com)",
+      "SlashCommand(/preflight-discovery:*)",
+      "SlashCommand(/spec:decompose:*)",
+      "WebFetch(domain:pudding.cool)",
+      "WebFetch(domain:vallandingham.me)",
+      "WebFetch(domain:jaehyeon.me)",
+      "WebFetch(domain:slamgoods.com)",
+      "WebFetch(domain:supabase.com)",
+      "SlashCommand(/create-dev-guide:*)",
+      "SlashCommand(/spec:ideate:*)",
+      "WebFetch(domain:docs.voiceflow.com)",
+      "WebFetch(domain:www.chatbase.co)",
+      "WebFetch(domain:docs.langwatch.ai)",
+      "WebFetch(domain:www.glassix.com)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

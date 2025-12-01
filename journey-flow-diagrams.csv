@@ -1,0 +1,345 @@
+﻿"CONVERSATIONAL DOCUMENT IDE - DETAILED JOURNEY FLOWS
+
+═══════════════════════════════════════════════════════════════════════════
+
+FLOW 1: DOCUMENT CREATOR - FIRST PROJECT
+End-to-End Experience (30-45 minutes)
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 1. DISCOVERY & SIGN UP (2-3 min)                                │
+│                                                                  │
+│ Landing Page → Value Prop → Sign Up CTA                        │
+│ ↓                                                               │
+│ • Reads: ""Turn documents into conversations""                    │
+│ • Sees: Demo video or sample conversation                       │
+│ • Clicks: [Start Free] button                                   │
+│ • Fills: Email + password OR OAuth                             │
+│ ↓                                                               │
+│ DECISION POINT: Trust sufficient to create account?             │
+│ • YES (80%): Proceeds to dashboard                             │
+│ • NO (20%): Bounces                                            │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ 2. FIRST PROJECT SETUP (3-5 min)                                │
+│                                                                  │
+│ Dashboard → [+ New Project] → Upload Interface                  │
+│ ↓                                                               │
+│ • Names project: ""IP Framework for Board""                       │
+│ • Drags 3 files: IP.pdf, Financial.xlsx, Market.docx          │
+│ • Sees: Upload progress bars                                    │
+│ • Waits: Processing indicator                                   │
+│ ↓                                                               │
+│ ANXIETY POINT: ""Will it understand my docs?""                    │
+│ • System provides: Real-time upload feedback                    │
+│ • System shows: ""Processing... 2 of 3 complete""                │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ 3. AI ANALYSIS & VALIDATION (1-2 min)                          │
+│                                                                  │
+│ Analysis Screen → Review Summary → Confirm                      │
+│ ↓                                                               │
+│ AI presents:                                                    │
+│ ""I've analyzed your 3 documents. They appear to cover:          │
+│  • IP strategy and market positioning (25 pages)                │
+│  • Financial projections with 35% ROI over 18 months           │
+│  • Competitive landscape analysis                               │
+│                                                                  │
+│ Key sections I identified:                                      │
+│  - Section 3.2: ROI Analysis                                    │
+│  - Section 4: Risk Mitigation                                   │
+│  - Appendix: Competitive Matrix""                                │
+│ ↓                                                               │
+│ Creator reactions:                                              │
+│ • ""Wow, it actually understood!"" (70% impressed)               │
+│ • ""Close, but not quite right"" (25% need refinement)           │
+│ • ""This is garbage"" (5% drop off)                              │
+│ ↓                                                               │
+│ DECISION POINT: Continue or abandon?                            │
+│ • Continues (90%): Impressed by analysis                        │
+│ • Drops off (10%): Quality concerns                            │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ 4. AGENT CONFIGURATION INTERVIEW (10-15 min)                   │
+│                                                                  │
+│ Chat Interface → Progressive Q&A → Build Context               │
+│ ↓                                                               │
+│ ESSENTIAL QUESTIONS (5 min - 80% completion):                   │
+│ AI: ""Who will you be sharing these with?""                       │
+│ Creator: ""My board members and key investors""                   │
+│                                                                  │
+│ AI: ""What communication style works best?""                      │
+│ Creator: ""Professional but approachable""                        │
+│                                                                  │
+│ AI: ""What should I emphasize?""                                  │
+│ Creator: ""ROI projections, risk mitigation, timeline""          │
+│                                                                  │
+│ AI: ""Can I make reasonable inferences?""                         │
+│ Creator: ""No - stick to what's explicitly stated""              │
+│ ↓                                                               │
+│ OPTIONAL DEEP DIVE (5-10 min - 40% complete):                  │
+│ AI: ""What questions do you anticipate?""                         │
+│ Creator: ""Timeline concerns, competitive positioning""           │
+│                                                                  │
+│ AI: ""Any sensitive topics?""                                     │
+│ Creator: ""Legal risks - handle carefully""                       │
+│ ↓                                                               │
+│ SATISFACTION POINT: ""It's learning my needs""                    │
+│ • Progress bar shows 80% essential complete                     │
+│ • Can skip remaining or continue                                │
+│ • Most (60%) skip after essentials                             │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ 5. AGENT PREVIEW & APPROVAL (3-5 min)                          │
+│                                                                  │
+│ Preview Interface → Test Interactions → Refine or Approve       │
+│ ↓                                                               │
+│ Creator sees configured agent in action:                        │
+│ AI: ""Hi! I'm here to help you understand the IP framework      │
+│      documentation. I've been configured to focus on ROI        │
+│      projections and risk mitigation strategies...""            │
+│ ↓                                                               │
+│ Creator can:                                                    │
+│ • Ask test questions                                            │
+│ • Review configuration summary                                  │
+│ • Edit settings                                                 │
+│ • Approve and continue                                          │
+│ ↓                                                               │
+│ CONFIDENCE POINT: ""This will represent me well""                 │
+│ • 80% approve immediately                                       │
+│ • 15% make minor edits                                          │
+│ • 5% start over                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ 6. SHARING CONFIGURATION (5-7 min)                             │
+│                                                                  │
+│ Share Modal → Access Settings → Generate Link                   │
+│ ↓                                                               │
+│ Configures:                                                     │
+│ • Access level: ☑ Email Required                               │
+│ • Expiration: 30 days                                           │
+│ • Password: Optional                                            │
+│ • Whitelist: john@investor.com, sarah@fund.com                 │
+│ ↓                                                               │
+│ Receives:                                                       │
+│ • Unique share link: app.com/s/xyz123                          │
+│ • QR code for mobile                                            │
+│ • Pre-written email template                                    │
+│ ↓                                                               │
+│ ANXIETY POINT: ""Will they actually engage?""                     │
+│ • Sends link via email                                          │
+│ • Waits for access notifications                                │
+│ • Hopes for good impression                                     │
+└─────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════
+
+FLOW 2: BOARD MEMBER - FIRST VIEW
+End-to-End Experience (15-25 minutes)
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 7. ACCESS & FIRST IMPRESSION (1-2 min)                         │
+│                                                                  │
+│ Email → Click Link → Access Gate → Entry                        │
+│ ↓                                                               │
+│ Receives email:                                                 │
+│ ""John shared IP Framework docs with you. View with AI chat.""    │
+│ ↓                                                               │
+│ Clicks link → Lands on access gate:                            │
+│ ""Please provide your email to access""                           │
+│ ↓                                                               │
+│ Mental state:                                                   │
+│ • Curious: ""What is this?""                                      │
+│ • Cautious: ""Is this secure?""                                   │
+│ • Busy: ""This better be worth it""                               │
+│ ↓                                                               │
+│ DECISION POINT: Provide email or bounce?                        │
+│ • Provides email (70%): Curious enough                          │
+│ • Bounces (30%): Friction too high                             │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ 8. INITIAL CONVERSATION (15-20 min)                            │
+│                                                                  │
+│ Chat Welcome → Ask Questions → Review Docs → Deeper Dive        │
+│ ↓                                                               │
+│ AI greets:                                                      │
+│ ""Hi! I'm here to help you understand John's IP framework        │
+│  documentation. I've been configured to focus on ROI            │
+│  projections and risk mitigation. What interests you most?""     │
+│ ↓                                                               │
+│ MOMENT OF TRUTH: First question                                 │
+│ Board Member: ""What's the projected ROI?""                       │
+│ ↓                                                               │
+│ AI responds + auto-opens doc:                                   │
+│ ""According to the Financial Projections (Section 3.2),         │
+│  the projected ROI is 35% over 18 months...""                    │
+│ [Document panel opens, scrolls to Section 3.2, highlights]     │
+│ ↓                                                               │
+│ Board Member reaction:                                          │
+│ • ""Wow, this is actually helpful!"" (60% engaged)               │
+│ • ""Interesting, let me explore"" (30% cautious)                 │
+│ • ""Not impressed"" (10% bounce)                                 │
+│ ↓                                                               │
+│ Conversation continues:                                         │
+│ Q: ""What are the main risks?""                                   │
+│ Q: ""Show me competitive analysis""                               │
+│ Q: ""What if regulatory approval delays?""                        │
+│ Q: ""How does timeline compare to industry?""                     │
+│ ↓                                                               │
+│ Documents open automatically:                                   │
+│ • Risk section highlighted                                      │
+│ • Market analysis displayed                                     │
+│ • Timeline charts visible                                       │
+│ ↓                                                               │
+│ ENGAGEMENT CRESCENDO: Getting value                             │
+│ • Asks 5-8 questions total                                      │
+│ • Spends 15-20 minutes                                          │
+│ • Reviews 2-3 documents                                         │
+│ • Gains clear understanding                                     │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ 9. CONVERSION OPPORTUNITY (1-2 min)                            │
+│                                                                  │
+│ Modal Appears → Value Prop → Decision                           │
+│ ↓                                                               │
+│ Modal shows:                                                    │
+│ ""Save this conversation?                                        │
+│  • Save conversation and AI summary                             │
+│  • Return anytime for follow-ups                                │
+│  • Get notified of updates                                      │
+│  • Create your own doc experiences""                             │
+│ ↓                                                               │
+│ Board Member considers:                                         │
+│ • Just had valuable experience                                  │
+│ • Might want to reference later                                 │
+│ • Minimal friction to sign up                                   │
+│ • Sees potential for own use                                    │
+│ ↓                                                               │
+│ DECISION POINT: Create account?                                 │
+│ • Creates account (40%): Sees value                            │
+│ • No thanks (60%): One-time use sufficient                     │
+│ ↓                                                               │
+│ IF NO ACCOUNT:                                                  │
+│ • Conversation data logged for creator                          │
+│ • Can't save or return                                          │
+│ • Lost follow-up opportunity                                    │
+│ ↓                                                               │
+│ IF ACCOUNT:                                                     │
+│ • Conversation saved                                            │
+│ • Summary PDF generated                                         │
+│ • Email confirmation sent                                       │
+│ • Potential future creator                                      │
+└─────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════
+
+FLOW 3: CREATOR - ANALYTICS & ITERATION
+Post-Share Experience (Ongoing)
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 10. ANALYTICS REVIEW (Daily check-ins, 5-10 min each)          │
+│                                                                  │
+│ Email Notification → Dashboard → Review Insights                │
+│ ↓                                                               │
+│ Receives email:                                                 │
+│ ""john@investor.com viewed your IP Framework docs""               │
+│ ↓                                                               │
+│ Logs into dashboard:                                            │
+│ • Overview: 12 views, 8 conversations, 156 avg seconds         │
+│ • Recent: John's conversation 23 min ago                        │
+│ ↓                                                               │
+│ Reviews AI-generated summary:                                   │
+│ ""Key Topics:                                                    │
+│  • Financial projections (8 min) - deep interest               │
+│  • Risk mitigation (7 min) - concerned about delays            │
+│  • Timeline (5 min) - questioned 18-month projection           │
+│                                                                  │
+│ Questions Raised:                                               │
+│  1. 'What if regulatory approval delays 6 months?'             │
+│     → Concern about contingency planning                        │
+│  2. 'How does this compare to competitor X?'                   │
+│     → Interested in competitive positioning                     │
+│                                                                  │
+│ Action Items:                                                   │
+│  • Prepare contingency timeline document                        │
+│  • Schedule follow-up on competitive analysis""                  │
+│ ↓                                                               │
+│ INSIGHT MOMENT: ""I know exactly what they care about""           │
+│ • Sees patterns across conversations                            │
+│ • Identifies common concerns                                    │
+│ • Understands what resonates                                    │
+│ • Can prepare better for meetings                               │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ 11. ITERATION & IMPROVEMENT (Weekly, 10-20 min)                │
+│                                                                  │
+│ Analytics → Identify Gaps → Update Agent → Refine Docs          │
+│ ↓                                                               │
+│ Notices patterns:                                               │
+│ • 3 people asked about regulatory timeline                      │
+│ • 2 people wanted competitor comparison                         │
+│ • Everyone spent time on risk section                           │
+│ ↓                                                               │
+│ Takes action:                                                   │
+│ 1. Updates agent configuration:                                 │
+│    • Adds: ""Proactively address timeline concerns""             │
+│    • Emphasizes: ""Regulatory contingency planning""             │
+│                                                                  │
+│ 2. Adds supplementary document:                                 │
+│    • ""Regulatory_Timeline_FAQ.pdf""                              │
+│    • ""Competitive_Positioning.docx""                             │
+│                                                                  │
+│ 3. Refines existing content:                                    │
+│    • Expands risk mitigation section                            │
+│    • Adds timeline buffer explanation                           │
+│ ↓                                                               │
+│ Generates new share link:                                       │
+│ • For next round of stakeholders                                │
+│ • With improved agent                                           │
+│ • With better documentation                                     │
+│ ↓                                                               │
+│ OPTIMIZATION LOOP: Continuous improvement                       │
+│ • Each conversation provides insights                           │
+│ • Each iteration improves experience                            │
+│ • Stakeholder satisfaction increases                            │
+│ • Meeting prep becomes more efficient                           │
+└─────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════
+
+KEY DECISION POINTS & CONVERSION FUNNELS
+
+CREATOR ACTIVATION FUNNEL:
+Landing → Sign Up → Upload → Configure → Share → Monitor
+  100%      80%      95%      90%        95%      85%
+  
+DROP-OFF POINTS:
+• Sign up: 20% (trust/value unclear)
+• Upload: 5% (technical issues)
+• Configure: 10% (complexity/time)
+• Share: 5% (hesitation)
+• Monitor: 15% (passive users)
+
+VIEWER CONVERSION FUNNEL:
+Access → Engage → Complete → Convert
+  100%     70%      90%       40%
+
+DROP-OFF POINTS:
+• Access: 30% (friction at gate)
+• Engage: 10% (poor first impression)
+• Convert: 60% (no immediate need)
+
+RETENTION DRIVERS:
+• Analytics insights (85% return rate)
+• Positive viewer feedback (90% continue)
+• Time saved vs traditional sharing (75% report >2 hours saved)
+• Meeting quality improvement (80% report better prepared meetings)
+
+"

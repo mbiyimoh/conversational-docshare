@@ -1,0 +1,415 @@
+// Prisma Schema for Conversational Document Sharing Platform
+// PostgreSQL with pgvector extension for vector embeddings
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+// ============================================================================
+// USER & AUTHENTICATION
+// ============================================================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String? // Null for OAuth users
+  name          String?
+  emailVerified DateTime?
+  image         String?
+
+  // Relationships
+  projects           Project[]
+  savedConversations Conversation[] @relation("SavedConversations")
+  accounts           Account[] // OAuth accounts
+  sessions           Session[] // Active sessions
+
+  // Subscription (Phase 3)
+  subscriptionTier String  @default("free") // free, pro
+  stripeCustomerId String? @unique
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([subscriptionTier])
+  @@map("users")
+}
+
+// NextAuth.js Account model (OAuth providers)
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+// NextAuth.js Session model
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+// NextAuth.js Verification Token model
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================================================
+// PROJECTS & DOCUMENTS
+// ============================================================================
+
+model Project {
+  id      String @id @default(cuid())
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String? @db.Text
+
+  // Relationships
+  documents       Document[]
+  agentConfig     AgentConfig?
+  contextLayers   ContextLayer[]
+  shareLinks      ShareLink[]
+  conversations   Conversation[]
+  analyticsEvents AnalyticsEvent[]
+
+  // Settings
+  isActive Boolean @default(true)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([createdAt])
+  @@map("projects")
+}
+
+model Document {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // File metadata
+  filename     String
+  originalName String
+  mimeType     String
+  fileSize     Int // bytes
+  filePath     String // Storage path
+
+  // Processing
+  status          String  @default("pending") // pending, processing, completed, failed
+  processingError String? @db.Text
+
+  // Extracted content
+  title     String?
+  outline   Json? // Structured outline with section IDs
+  pageCount Int?
+  wordCount Int?
+
+  // Relationships
+  chunks    DocumentChunk[]
+  citations Citation[]
+
+  // Timestamps
+  uploadedAt  DateTime  @default(now())
+  processedAt DateTime?
+
+  @@index([projectId])
+  @@index([status])
+  @@map("documents")
+}
+
+// Document chunks for RAG with vector embeddings
+model DocumentChunk {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  // Chunk content
+  content      String  @db.Text
+  sectionId    String? // Links to outline section
+  sectionTitle String?
+
+  // Position in document
+  chunkIndex Int
+  startChar  Int
+  endChar    Int
+  pageNumber Int?
+
+  // Vector embedding (1536 dimensions for OpenAI text-embedding-3-small)
+  embedding Unsupported("vector(1536)")?
+
+  // Metadata
+  metadata Json? // Additional context
+
+  @@index([documentId])
+  @@index([sectionId])
+  @@map("document_chunks")
+}
+
+// ============================================================================
+// AGENT CONFIGURATION & CONTEXT LAYERS
+// ============================================================================
+
+model AgentConfig {
+  id        String  @id @default(cuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Interview responses
+  interviewData Json // Stores all interview Q&A
+
+  // Configuration status
+  status          String @default("incomplete") // incomplete, essential, complete
+  completionLevel Float  @default(0) // 0-100%
+
+  // AI model preferences
+  preferredModel String @default("gpt-4-turbo") // gpt-4-turbo, claude-3-opus, etc.
+  temperature    Float  @default(0.7)
+
+  // Synthesized profile
+  profile            Json?      // Structured profile sections
+  profileGeneratedAt DateTime?  // When profile was last synthesized
+  profileSource      String?    // "interview" | "manual" | "feedback" - tracks origin
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("agent_configs")
+}
+
+model ContextLayer {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Layer identification
+  category String // audience, communication, content, engagement
+  priority Int    @default(5) // 1-10, higher = more important
+
+  // Layer content
+  content  String @db.Text // Plain text prompt content
+  metadata Json? // Structured data for UI display/editing
+
+  // Status
+  isActive Boolean @default(true)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, category])
+  @@index([projectId, priority])
+  @@map("context_layers")
+}
+
+// ============================================================================
+// SHARING & ACCESS
+// ============================================================================
+
+model ShareLink {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Link details
+  slug       String @unique // Short, shareable identifier
+  accessType String // open, email, password, domain
+
+  // Access controls
+  passwordHash   String? // For password-protected links
+  allowedEmails  String[] // For email-restricted links
+  allowedDomains String[] // For domain-restricted links (Phase 3)
+  maxViews       Int? // Optional view limit
+  currentViews   Int      @default(0)
+
+  // Expiration
+  expiresAt DateTime?
+
+  // Relationships
+  accessLogs    AccessLog[]
+  conversations Conversation[]
+
+  // Status
+  isActive Boolean @default(true)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  @@index([slug])
+  @@index([projectId])
+  @@map("share_links")
+}
+
+model AccessLog {
+  id          String    @id @default(cuid())
+  shareLinkId String
+  shareLink   ShareLink @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+
+  // Viewer information
+  viewerEmail String?
+  viewerIp    String?
+  userAgent   String?
+
+  // Access details
+  accessGranted Boolean @default(true)
+  denialReason  String?
+
+  // Timestamp
+  accessedAt DateTime @default(now())
+
+  @@index([shareLinkId])
+  @@index([viewerEmail])
+  @@index([accessedAt])
+  @@map("access_logs")
+}
+
+// ============================================================================
+// CONVERSATIONS & MESSAGES
+// ============================================================================
+
+model Conversation {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  shareLinkId String?
+  shareLink   ShareLink? @relation(fields: [shareLinkId], references: [id], onDelete: SetNull)
+
+  // Viewer information
+  viewerEmail String?
+  viewerName  String?
+  viewerIp    String?
+
+  // Conversation metadata
+  messageCount    Int  @default(0)
+  durationSeconds Int? // Total conversation duration
+
+  // AI-generated insights (Phase 2)
+  summary   String?  @db.Text
+  sentiment String? // positive, neutral, negative
+  topics    String[] // Extracted topics
+
+  // Relationships
+  messages      Message[]
+  savedBy       User?     @relation("SavedConversations", fields: [savedByUserId], references: [id], onDelete: SetNull)
+  savedByUserId String?
+
+  // Timestamps
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  @@index([projectId])
+  @@index([shareLinkId])
+  @@index([viewerEmail])
+  @@index([startedAt])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  // Message content
+  role    String // user, assistant, system
+  content String @db.Text
+
+  // Citations & references
+  citations Citation[]
+
+  // Metadata
+  metadata Json? // Model info, token counts, etc.
+
+  // Timestamp
+  createdAt DateTime @default(now())
+
+  @@index([conversationId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+model Citation {
+  id        String  @id @default(cuid())
+  messageId String
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  // Citation location
+  sectionId    String? // Reference to outline section
+  sectionTitle String?
+  chunkId      String? // Reference to specific chunk
+  pageNumber   Int?
+
+  // Citation text
+  citedText String? @db.Text
+
+  @@index([messageId])
+  @@index([documentId])
+  @@map("citations")
+}
+
+// ============================================================================
+// ANALYTICS
+// ============================================================================
+
+model AnalyticsEvent {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Event details
+  eventType String // view, question, citation, conversion, etc.
+  eventData Json? // Additional event-specific data
+
+  // User/Session context
+  sessionId   String?
+  viewerEmail String?
+
+  // Timestamp
+  createdAt DateTime @default(now())
+
+  @@index([projectId, eventType])
+  @@index([sessionId])
+  @@index([createdAt])
+  @@map("analytics_events")
+}
