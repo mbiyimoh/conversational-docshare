@@ -70,6 +70,7 @@ A dedicated Testing Dojo tab that provides a complete sandbox environment with s
 | ChatInterface | `frontend/src/components/ChatInterface.tsx` | Base chat component to extend |
 | ChatMessage | `frontend/src/components/ChatMessage.tsx` | Message rendering |
 | ChatInput | `frontend/src/components/ChatInput.tsx` | Input component |
+| ProfileSectionContent | `frontend/src/components/ProfileSectionContent.tsx` | AI response formatting (handles mixed JSON/markdown) |
 | Chat Controller | `backend/src/controllers/chat.controller.ts` | Streaming chat logic |
 | Context Service | `backend/src/services/contextService.ts` | System prompt composition |
 
@@ -1072,9 +1073,12 @@ export function TestingDojo({ projectId, onNavigateAway }: TestingDojoProps) {
 
 #### New File: `frontend/src/components/TestingDojo/DojoChat.tsx`
 
+> **Note:** AI responses may contain mixed JSON/markdown formatting from OpenAI. We reuse the `ProfileSectionContent` component to ensure consistent rendering across the application.
+
 ```typescript
 import { useState, useRef, useEffect } from 'react'
 import { ChatInput } from '../ChatInput'
+import { ProfileSectionContent } from '../ProfileSectionContent'
 import { CommentOverlay } from './CommentOverlay'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
@@ -1202,7 +1206,12 @@ export function DojoChat({
                   : 'bg-gray-100 text-gray-900'
               }`}
             >
-              <div className="whitespace-pre-wrap">{message.content}</div>
+              {/* Use ProfileSectionContent for assistant messages to handle mixed JSON/markdown */}
+              {message.role === 'assistant' ? (
+                <ProfileSectionContent content={message.content} />
+              ) : (
+                <div className="whitespace-pre-wrap">{message.content}</div>
+              )}
 
               {/* Comment indicator */}
               {message.comments.length > 0 && (
@@ -1244,7 +1253,8 @@ export function DojoChat({
         {isStreaming && streamingContent && (
           <div className="flex justify-start">
             <div className="max-w-[80%] rounded-lg bg-gray-100 px-4 py-3">
-              <div className="whitespace-pre-wrap">{streamingContent}</div>
+              {/* Use ProfileSectionContent for streaming content too */}
+              <ProfileSectionContent content={streamingContent} />
             </div>
           </div>
         )}
@@ -1600,8 +1610,28 @@ export function SessionManager({
 
 #### New File: `frontend/src/components/TestingDojo/CommentSidebar.tsx`
 
+> **Note:** Message previews strip markdown/JSON formatting for cleaner display in the sidebar.
+
 ```typescript
 import type { TestMessage, TestComment } from '../../types/testing'
+
+/**
+ * Strip markdown and JSON formatting for clean preview text
+ */
+function getPreviewText(content: string, maxLength = 100): string {
+  return content
+    // Remove markdown bold/italic
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    // Remove markdown headers
+    .replace(/^#{1,6}\s+/gm, '')
+    // Remove JSON-like patterns
+    .replace(/[{}\[\]"]/g, '')
+    // Collapse whitespace
+    .replace(/\s+/g, ' ')
+    .trim()
+    .substring(0, maxLength)
+}
 
 const TEMPLATE_LABELS: Record<string, { icon: string; label: string }> = {
   identity: { icon: '👤', label: 'Identity/Role' },
@@ -1667,7 +1697,7 @@ export function CommentSidebar({
                 >
                   <div className="text-xs text-gray-500 mb-1">AI Response</div>
                   <div className="text-sm text-gray-700 line-clamp-2">
-                    {message.content.substring(0, 100)}...
+                    {getPreviewText(message.content)}...
                   </div>
                 </button>
 

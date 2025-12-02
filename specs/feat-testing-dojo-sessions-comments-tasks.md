@@ -426,8 +426,11 @@ Create the chat interface with SSE streaming support.
 **Files to create**:
 - `frontend/src/components/TestingDojo/DojoChat.tsx`
 
+**IMPORTANT**: AI responses may contain mixed JSON/markdown formatting from OpenAI. Use `ProfileSectionContent` component for rendering assistant messages to ensure proper formatting.
+
 **Implementation**: ~150 lines including:
 - Message list with user/assistant styling
+- **Use ProfileSectionContent for assistant messages** (handles markdown/JSON)
 - SSE streaming handling
 - Comment indicators on messages
 - Add comment button (hover)
@@ -438,9 +441,16 @@ Create the chat interface with SSE streaming support.
 - Parses streaming data format
 - Shows typing indicator during streaming
 - Uses `group` class for hover effects
+- **Uses ProfileSectionContent for AI response rendering**
+
+**Required import**:
+```typescript
+import { ProfileSectionContent } from '../ProfileSectionContent'
+```
 
 **Validation**:
 - [ ] Messages display correctly
+- [ ] **Assistant messages use ProfileSectionContent** (no raw markdown/JSON visible)
 - [ ] Streaming works end-to-end
 - [ ] Auto-scroll functions
 - [ ] Comment button appears on hover
@@ -519,16 +529,33 @@ Create the right sidebar showing all comments grouped by message.
 **Files to create**:
 - `frontend/src/components/TestingDojo/CommentSidebar.tsx`
 
+**IMPORTANT**: Message previews should strip markdown/JSON formatting for clean display. Use the `getPreviewText` utility function.
+
 **Implementation**: ~120 lines including:
 - Header with total comment count
 - Comments grouped by message
-- Message preview (clickable to scroll)
+- Message preview (clickable to scroll) - **uses getPreviewText for clean text**
 - Template badges on comments
 - Delete button per comment
 - Empty state
 
+**Preview text utility**:
+```typescript
+function getPreviewText(content: string, maxLength = 100): string {
+  return content
+    .replace(/\*\*([^*]+)\*\*/g, '$1')  // Remove bold
+    .replace(/\*([^*]+)\*/g, '$1')       // Remove italic
+    .replace(/^#{1,6}\s+/gm, '')         // Remove headers
+    .replace(/[{}\[\]"]/g, '')           // Remove JSON chars
+    .replace(/\s+/g, ' ')                // Collapse whitespace
+    .trim()
+    .substring(0, maxLength)
+}
+```
+
 **Validation**:
 - [ ] Comments display grouped by message
+- [ ] **Message previews use getPreviewText** (no raw markdown/JSON in previews)
 - [ ] Click scrolls to message
 - [ ] Delete removes comment
 - [ ] Empty state shows instructions
