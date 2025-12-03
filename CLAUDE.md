@@ -31,6 +31,36 @@ When technical blockers arise, Claude should propose solutions and implement the
 
 ---
 
+## Database Schema Changes (CRITICAL)
+
+**Database:** Supabase PostgreSQL (cloud-hosted)
+**Schema Management:** `prisma db push` (NOT migrations)
+
+**MANDATORY: After ANY Prisma schema changes:**
+```bash
+# From backend/ directory:
+npm run db:push
+```
+
+**Why This Matters:**
+- Schema changes in `prisma/schema.prisma` are NOT automatically applied
+- The app will fail silently or return "failed to fetch" if tables don't exist
+- Always push schema changes immediately after modifying schema.prisma
+
+**Safe Schema Change Workflow:**
+1. Edit `prisma/schema.prisma`
+2. Run `prisma db push` using the command above (loads env vars properly)
+3. Restart the backend server to pick up regenerated Prisma client
+4. Verify with health check: `curl http://localhost:4000/health`
+
+**NEVER use destructive operations without explicit user approval:**
+- `npm run db:cleanup` - Deletes ALL projects, documents, conversations, etc.
+- `prisma migrate reset` - Deletes ALL data
+- `prisma db push --force-reset` - Deletes ALL data
+- Direct DROP TABLE SQL commands
+
+---
+
 ## Test Credentials
 
 **User Email:** mbiyimoh@gmail.com
@@ -402,6 +432,129 @@ The backend generates content in mixed formats:
 - Add new content patterns to `preprocessContent()` function
 - Add special JSON patterns to `convertJsonToMarkdown()` function
 - Use `camelToTitle()` utility for any camelCase → Title Case conversion
+
+---
+
+## Testing Dojo (Creator Testing Environment)
+
+**What it does:** Sandbox environment where creators test their AI agent by simulating the recipient experience. Includes sessions, comments, and feedback workflow.
+
+**Key files:**
+- `frontend/src/components/TestingDojo/TestingDojo.tsx` - Main container
+- `frontend/src/components/TestingDojo/DojoChat.tsx` - Chat with SSE streaming
+- `frontend/src/components/TestingDojo/SessionManager.tsx` - Session list/switching
+- `frontend/src/components/TestingDojo/CommentSidebar.tsx` - Feedback display
+- `backend/src/controllers/testSession.controller.ts` - Test session CRUD + SSE chat
+- `backend/prisma/schema.prisma` - TestSession, TestMessage, TestComment models
+
+**Architecture:**
+```
+TestingDojo (container)
+├── SessionManager (top-right dropdown)
+├── DojoChat (left panel - mirrors recipient chat exactly)
+│   └── Uses ProfileSectionContent for AI responses
+├── CommentSidebar (right panel - shows all comments)
+└── NavigationModal (end session flow)
+```
+
+**Integration points:**
+- **Uses production context**: `buildSystemPrompt(projectId)` - Testing mirrors real behavior
+- **RAG-enabled**: `buildDocumentContext()` included - full document access
+- **SSE streaming**: Same streaming pattern as production chat
+- **Auth**: Requires creator ownership via `req.user.userId`
+
+**Critical Gotcha - React Stale Closure with Rapid State Updates:**
+
+When user sends a message and AI responds quickly via SSE, both events try to update `activeSession` state. Using object spread captures stale state:
+
+```typescript
+// ❌ BAD - Stale closure bug
+const handleNewMessage = (message: TestMessage) => {
+  setActiveSession({
+    ...activeSession,  // Captured stale value!
+    messages: [...activeSession.messages, message],
+  })
+}
+```
+
+**Why this breaks:** When user message and assistant message both call this function within milliseconds, both capture the same `activeSession` value from the closure. The second call overwrites the first.
+
+**Solution - Functional setState Pattern:**
+
+```typescript
+// ✅ GOOD - Always uses latest state
+const handleNewMessage = (message: TestMessage) => {
+  setActiveSession((prev) => {
+    if (!prev) return prev
+    return {
+      ...prev,
+      messages: [...prev.messages, message],
+    }
+  })
+}
+```
+
+**When to use this pattern:**
+- Any state updated by SSE streaming events
+- Any state updated by multiple rapid async events
+- Any state that depends on previous state value
+
+**Session Lifecycle:**
+1. **Creation**: Auto-named "Session #N" or custom name
+2. **Active**: Can chat, add comments, remains active indefinitely
+3. **Ended**: Marked via NavigationModal, becomes read-only
+4. **Deletion**: Cascades to messages and comments
+
+**Comment System:**
+- Comments attach to specific AI messages (`messageId`)
+- Support optional `templateId` for categorization (identity, communication, content, engagement, framing)
+- Displayed in sidebar grouped by message
+- Future: Recommendation engine analyzes comments → suggests interview updates
+
+**Database Models:**
+
+```prisma
+// Session groups conversation + comments
+model TestSession {
+  id        String  @id @default(cuid())
+  projectId String
+  name      String?
+  status    String  @default("active")  // active | ended
+  messages  TestMessage[]
+  createdAt DateTime @default(now())
+  endedAt   DateTime?
+}
+
+// Each chat message in the session
+model TestMessage {
+  id        String        @id @default(cuid())
+  sessionId String
+  role      String        // user | assistant
+  content   String        @db.Text
+  comments  TestComment[]
+  createdAt DateTime      @default(now())
+}
+
+// Feedback comments on AI responses
+model TestComment {
+  id         String  @id @default(cuid())
+  messageId  String
+  content    String  @db.Text
+  templateId String?  // Optional: identity|communication|content|engagement|framing
+  createdAt  DateTime @default(now())
+}
+```
+
+**Extending this:**
+- To add new comment templates: Update COMMENT_TEMPLATES in CommentOverlay.tsx
+- To modify session behavior: Update TestingDojo.tsx `handleEndSession()`
+- To change SSE format: Modify testSession.controller.ts `sendTestMessage()`
+- **Next Phase**: Recommendation engine (Phase 4) - analyzes comments → suggests interview updates
+
+**Performance notes:**
+- Sessions persist indefinitely - consider archival for old projects
+- Comment counts use N+1 query pattern - optimize if sessions > 100
+- SSE streaming uses same OpenAI call limits as production
 
 ---
 
