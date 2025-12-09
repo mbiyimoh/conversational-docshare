@@ -57,3 +57,35 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Citation Highlight Animation */
+@keyframes citation-glow {
+  0% {
+    background-color: rgb(254 249 195); /* yellow-100 */
+    box-shadow: 0 0 0 4px rgb(254 240 138); /* yellow-200 */
+  }
+  70% {
+    background-color: rgb(254 249 195);
+    box-shadow: 0 0 0 4px rgb(254 240 138);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+.citation-highlight {
+  animation: citation-glow 2.5s ease-out forwards;
+  border-radius: 0.25rem;
+  transition: background-color 0.3s ease-out, box-shadow 0.3s ease-out;
+}
+
+/* Accessibility: Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .citation-highlight {
+    animation: none;
+    background-color: rgb(254 249 195); /* yellow-100 - static highlight */
+    border-left: 4px solid rgb(234 179 8); /* yellow-500 */
+    box-shadow: none;
+  }
+}

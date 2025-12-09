@@ -12,6 +12,57 @@ function generateSlug(): string {
 }
 
 /**
+ * Validation result for share link status checks
+ */
+interface ShareLinkValidationResult {
+  isValid: boolean
+  errorCode?: 'LINK_INACTIVE' | 'LINK_EXPIRED' | 'MAX_VIEWS_EXCEEDED'
+  errorMessage?: string
+  httpStatus?: number
+}
+
+/**
+ * Validate share link is active and not expired
+ * Extracted to avoid duplication across endpoints
+ */
+function validateShareLinkStatus(shareLink: {
+  isActive: boolean
+  expiresAt: Date | null
+  maxViews?: number | null
+  currentViews?: number
+}): ShareLinkValidationResult {
+  if (!shareLink.isActive) {
+    return {
+      isValid: false,
+      errorCode: 'LINK_INACTIVE',
+      errorMessage: 'This link has been deactivated',
+      httpStatus: 403,
+    }
+  }
+
+  if (shareLink.expiresAt && shareLink.expiresAt < new Date()) {
+    return {
+      isValid: false,
+      errorCode: 'LINK_EXPIRED',
+      errorMessage: 'This link has expired',
+      httpStatus: 410,
+    }
+  }
+
+  if (shareLink.maxViews && shareLink.currentViews !== undefined &&
+      shareLink.currentViews >= shareLink.maxViews) {
+    return {
+      isValid: false,
+      errorCode: 'MAX_VIEWS_EXCEEDED',
+      errorMessage: 'This link has reached its maximum number of views',
+      httpStatus: 403,
+    }
+  }
+
+  return { isValid: true }
+}
+
+/**
  * Create a share link
  */
 export async function createShareLink(req: Request, res: Response) {
@@ -21,6 +72,7 @@ export async function createShareLink(req: Request, res: Response) {
 
   const { projectId } = req.params
   const { accessType, password, allowedEmails, allowedDomains, maxViews, expiresAt } = req.body
+  const recipientRole = req.body.recipientRole || 'viewer'
 
   // Verify project ownership
   const project = await prisma.project.findUnique({
@@ -38,6 +90,11 @@ export async function createShareLink(req: Request, res: Response) {
   // Validate access type
   if (!['open', 'email', 'password', 'domain'].includes(accessType)) {
     throw new ValidationError('Invalid access type')
+  }
+
+  // Validate recipientRole
+  if (!['viewer', 'collaborator'].includes(recipientRole)) {
+    throw new ValidationError('recipientRole must be viewer or collaborator')
   }
 
   // Hash password if provided
@@ -72,6 +129,7 @@ export async function createShareLink(req: Request, res: Response) {
       maxViews,
       expiresAt: expiresAt ? new Date(expiresAt) : null,
       isActive: true,
+      recipientRole,
     },
   })
 
@@ -80,6 +138,7 @@ export async function createShareLink(req: Request, res: Response) {
       id: shareLink.id,
       slug: shareLink.slug,
       accessType: shareLink.accessType,
+      recipientRole: shareLink.recipientRole,
       maxViews: shareLink.maxViews,
       currentViews: shareLink.currentViews,
       expiresAt: shareLink.expiresAt,
@@ -142,6 +201,60 @@ export async function getProjectShareLinks(req: Request, res: Response) {
 }
 
 /**
+ * Get share link and project info by slug (public endpoint)
+ * Used by SharePage to fetch basic info before access verification
+ */
+export async function getShareLinkBySlug(req: Request, res: Response) {
+  const { slug } = req.params
+
+  const shareLink = await prisma.shareLink.findUnique({
+    where: { slug },
+    include: {
+      project: {
+        select: {
+          id: true,
+          name: true,
+          description: true,
+        },
+      },
+    },
+  })
+
+  if (!shareLink) {
+    throw new NotFoundError('Share link')
+  }
+
+  // Validate share link status (active, not expired, within view limits)
+  const validation = validateShareLinkStatus(shareLink)
+  if (!validation.isValid) {
+    res.status(validation.httpStatus || 403).json({
+      error: {
+        code: validation.errorCode,
+        message: validation.errorMessage,
+        retryable: false,
+      },
+    })
+    return
+  }
+
+  // Return share link and project info (don't expose password hash)
+  res.json({
+    shareLink: {
+      id: shareLink.id,
+      slug: shareLink.slug,
+      accessType: shareLink.accessType,
+      projectId: shareLink.projectId,
+      recipientRole: shareLink.recipientRole,
+    },
+    project: {
+      id: shareLink.project.id,
+      name: shareLink.project.name,
+      description: shareLink.project.description,
+    },
+  })
+}
+
+/**
  * Verify access to a share link (public endpoint)
  */
 export async function verifyShareLinkAccess(req: Request, res: Response) {
@@ -164,36 +277,13 @@ export async function verifyShareLinkAccess(req: Request, res: Response) {
     throw new NotFoundError('Share link')
   }
 
-  // Check if link is active
-  if (!shareLink.isActive) {
-    res.status(403).json({
+  // Validate share link status (active, not expired, within view limits)
+  const validation = validateShareLinkStatus(shareLink)
+  if (!validation.isValid) {
+    res.status(validation.httpStatus || 403).json({
       error: {
-        code: 'LINK_INACTIVE',
-        message: 'This link has been deactivated',
-        retryable: false,
-      },
-    })
-    return
-  }
-
-  // Check expiration
-  if (shareLink.expiresAt && shareLink.expiresAt < new Date()) {
-    res.status(403).json({
-      error: {
-        code: 'LINK_EXPIRED',
-        message: 'This link has expired',
-        retryable: false,
-      },
-    })
-    return
-  }
-
-  // Check max views
-  if (shareLink.maxViews && shareLink.currentViews >= shareLink.maxViews) {
-    res.status(403).json({
-      error: {
-        code: 'MAX_VIEWS_EXCEEDED',
-        message: 'This link has reached its maximum number of views',
+        code: validation.errorCode,
+        message: validation.errorMessage,
         retryable: false,
       },
     })
@@ -283,12 +373,11 @@ export async function verifyShareLinkAccess(req: Request, res: Response) {
   })
 
   res.json({
-    access: {
-      granted: true,
-      projectId: shareLink.project.id,
-      projectName: shareLink.project.name,
-      shareLinkId: shareLink.id,
-    },
+    accessGranted: true,
+    projectId: shareLink.project.id,
+    projectName: shareLink.project.name,
+    shareLinkId: shareLink.id,
+    recipientRole: shareLink.recipientRole,
   })
 }
 
@@ -343,6 +432,205 @@ export async function updateShareLink(req: Request, res: Response) {
       currentViews: updated.currentViews,
     },
   })
+}
+
+/**
+ * Get a document via share link (public endpoint for viewers)
+ * This allows viewers who have verified access to fetch documents
+ * without requiring user authentication
+ */
+export async function getShareLinkDocument(req: Request, res: Response) {
+  const { slug, documentId } = req.params
+
+  // Find share link and verify it's valid
+  const shareLink = await prisma.shareLink.findUnique({
+    where: { slug },
+    include: {
+      project: {
+        select: {
+          id: true,
+        },
+      },
+    },
+  })
+
+  if (!shareLink) {
+    throw new NotFoundError('Share link')
+  }
+
+  // Validate share link status
+  const validation = validateShareLinkStatus(shareLink)
+  if (!validation.isValid) {
+    res.status(validation.httpStatus || 403).json({
+      error: {
+        code: validation.errorCode,
+        message: validation.errorMessage,
+        retryable: false,
+      },
+    })
+    return
+  }
+
+  // Verify document belongs to the project
+  const document = await prisma.document.findFirst({
+    where: {
+      id: documentId,
+      projectId: shareLink.project.id,
+    },
+    select: {
+      id: true,
+      filename: true,
+      title: true,
+      mimeType: true,
+      outline: true,
+      status: true,
+    },
+  })
+
+  if (!document) {
+    throw new NotFoundError('Document')
+  }
+
+  res.json({
+    document: {
+      id: document.id,
+      filename: document.filename,
+      title: document.title,
+      mimeType: document.mimeType,
+      outline: document.outline,
+      status: document.status,
+    },
+  })
+}
+
+/**
+ * Get all documents for a project via share link (public endpoint)
+ * Returns document list for the document lookup cache
+ */
+export async function getShareLinkDocuments(req: Request, res: Response) {
+  const { slug } = req.params
+
+  // Find share link and verify it's valid
+  const shareLink = await prisma.shareLink.findUnique({
+    where: { slug },
+    include: {
+      project: {
+        select: {
+          id: true,
+        },
+      },
+    },
+  })
+
+  if (!shareLink) {
+    throw new NotFoundError('Share link')
+  }
+
+  // Validate share link status
+  const validation = validateShareLinkStatus(shareLink)
+  if (!validation.isValid) {
+    res.status(validation.httpStatus || 403).json({
+      error: {
+        code: validation.errorCode,
+        message: validation.errorMessage,
+        retryable: false,
+      },
+    })
+    return
+  }
+
+  // Get all documents for the project
+  const documents = await prisma.document.findMany({
+    where: {
+      projectId: shareLink.project.id,
+    },
+    select: {
+      id: true,
+      filename: true,
+      title: true,
+      mimeType: true,
+      outline: true,
+      status: true,
+    },
+    orderBy: {
+      uploadedAt: 'asc',
+    },
+  })
+
+  res.json({
+    documents: documents.map((doc) => ({
+      id: doc.id,
+      filename: doc.filename,
+      title: doc.title,
+      mimeType: doc.mimeType,
+      outline: doc.outline,
+      status: doc.status,
+    })),
+  })
+}
+
+/**
+ * Get document chunks via share link (public endpoint for content rendering)
+ * Returns the actual text content of a document for the viewer
+ */
+export async function getShareLinkDocumentChunks(req: Request, res: Response) {
+  const { slug, documentId } = req.params
+
+  // Find share link and verify it's valid
+  const shareLink = await prisma.shareLink.findUnique({
+    where: { slug },
+    include: {
+      project: {
+        select: {
+          id: true,
+        },
+      },
+    },
+  })
+
+  if (!shareLink) {
+    throw new NotFoundError('Share link')
+  }
+
+  // Validate share link status
+  const validation = validateShareLinkStatus(shareLink)
+  if (!validation.isValid) {
+    res.status(validation.httpStatus || 403).json({
+      error: {
+        code: validation.errorCode,
+        message: validation.errorMessage,
+        retryable: false,
+      },
+    })
+    return
+  }
+
+  // Verify document belongs to the project
+  const document = await prisma.document.findFirst({
+    where: {
+      id: documentId,
+      projectId: shareLink.project.id,
+    },
+  })
+
+  if (!document) {
+    throw new NotFoundError('Document')
+  }
+
+  // Fetch chunks ordered by index
+  const chunks = await prisma.documentChunk.findMany({
+    where: { documentId },
+    orderBy: { chunkIndex: 'asc' },
+    select: {
+      id: true,
+      content: true,
+      sectionId: true,
+      sectionTitle: true,
+      chunkIndex: true,
+    },
+  })
+
+  res.json({ chunks })
 }
 
 /**

@@ -12,11 +12,12 @@ interface Message {
 interface ChatInterfaceProps {
   conversationId: string
   onCitationClick?: (documentId: string, sectionId: string) => void
+  onMessagesChange?: (messages: Array<{ role: string; content: string }>) => void
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API_URL = import.meta.env.VITE_API_URL || ''
 
-export function ChatInterface({ conversationId, onCitationClick }: ChatInterfaceProps) {
+export function ChatInterface({ conversationId, onCitationClick, onMessagesChange }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingContent, setStreamingContent] = useState('')
@@ -32,6 +33,13 @@ export function ChatInterface({ conversationId, onCitationClick }: ChatInterface
   useEffect(() => {
     loadConversationHistory()
   }, [conversationId])
+
+  // Notify parent when messages change
+  useEffect(() => {
+    if (onMessagesChange) {
+      onMessagesChange(messages.map(m => ({ role: m.role, content: m.content })))
+    }
+  }, [messages, onMessagesChange])
 
   const loadConversationHistory = async () => {
     try {
@@ -166,7 +174,7 @@ export function ChatInterface({ conversationId, onCitationClick }: ChatInterface
       )}
 
       {/* Messages container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
         {messages.map((message) => (
           <ChatMessage
             key={message.id}

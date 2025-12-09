@@ -9,7 +9,7 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  directUrl  = env("DIRECT_URL")
+  directUrl  = env("DIRECT_URL") // Direct connection for schema migrations (bypasses pooler)
   extensions = [pgvector(map: "vector")]
 }
 
@@ -30,6 +30,9 @@ model User {
   savedConversations Conversation[] @relation("SavedConversations")
   accounts           Account[] // OAuth accounts
   sessions           Session[] // Active sessions
+  documentVersions   DocumentVersion[]
+  audienceProfiles     AudienceProfile[]     @relation("UserAudienceProfiles")
+  collaboratorProfiles CollaboratorProfile[] @relation("UserCollaboratorProfiles")
 
   // Subscription (Phase 3)
   subscriptionTier String  @default("free") // free, pro
@@ -107,6 +110,10 @@ model Project {
   shareLinks      ShareLink[]
   conversations   Conversation[]
   analyticsEvents AnalyticsEvent[]
+  testSessions    TestSession[]
+  profileRecommendations ProfileRecommendation[]
+  profileVersions        ProfileVersion[]
+  audienceSyntheses      AudienceSynthesis[]
 
   // Settings
   isActive Boolean @default(true)
@@ -142,9 +149,16 @@ model Document {
   pageCount Int?
   wordCount Int?
 
+  // Versioning
+  currentVersion Int     @default(1)
+  isEditable     Boolean @default(false)
+
   // Relationships
-  chunks    DocumentChunk[]
-  citations Citation[]
+  chunks                   DocumentChunk[]
+  citations                Citation[]
+  versions                 DocumentVersion[]
+  conversationRecommendations ConversationRecommendation[]
+  comments                 DocumentComment[]
 
   // Timestamps
   uploadedAt  DateTime  @default(now())
@@ -153,6 +167,31 @@ model Document {
   @@index([projectId])
   @@index([status])
   @@map("documents")
+}
+
+// Document version history for edit tracking
+model DocumentVersion {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  version    Int      // Sequential version number (1, 2, 3...)
+  content    Json     // Full document content snapshot as structured JSON
+
+  // Edit metadata
+  editedById String?  // User ID who made the edit (null for v1 original)
+  editedBy   User?    @relation(fields: [editedById], references: [id])
+  changeNote String?  @db.Text // Optional description of changes
+
+  // Source tracking
+  source   String?  // "manual" | "recommendation" | "import"
+  sourceId String?  // Reference to recommendation ID if applicable
+
+  createdAt DateTime @default(now())
+
+  @@unique([documentId, version])
+  @@index([documentId])
+  @@map("document_versions")
 }
 
 // Document chunks for RAG with vector embeddings
@@ -207,6 +246,7 @@ model AgentConfig {
   profile            Json?      // Structured profile sections
   profileGeneratedAt DateTime?  // When profile was last synthesized
   profileSource      String?    // "interview" | "manual" | "feedback" - tracks origin
+  profileVersion     Int        @default(1)
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -244,6 +284,11 @@ model ContextLayer {
 // SHARING & ACCESS
 // ============================================================================
 
+enum RecipientRole {
+  viewer
+  collaborator
+}
+
 model ShareLink {
   id        String  @id @default(cuid())
   projectId String
@@ -252,6 +297,9 @@ model ShareLink {
   // Link details
   slug       String @unique // Short, shareable identifier
   accessType String // open, email, password, domain
+
+  // Recipient role (viewer can chat, collaborator can also comment)
+  recipientRole RecipientRole @default(viewer)
 
   // Access controls
   passwordHash   String? // For password-protected links
@@ -328,9 +376,12 @@ model Conversation {
   topics    String[] // Extracted topics
 
   // Relationships
-  messages      Message[]
-  savedBy       User?     @relation("SavedConversations", fields: [savedByUserId], references: [id], onDelete: SetNull)
-  savedByUserId String?
+  messages         Message[]
+  savedBy          User?     @relation("SavedConversations", fields: [savedByUserId], references: [id], onDelete: SetNull)
+  savedByUserId    String?
+  recipientMessage RecipientMessage?
+  recommendations  ConversationRecommendation[]
+  documentComments DocumentComment[]
 
   // Timestamps
   startedAt DateTime  @default(now())
@@ -340,6 +391,7 @@ model Conversation {
   @@index([shareLinkId])
   @@index([viewerEmail])
   @@index([startedAt])
+  @@index([savedByUserId])
   @@map("conversations")
 }
 
@@ -412,4 +464,295 @@ model AnalyticsEvent {
   @@index([sessionId])
   @@index([createdAt])
   @@map("analytics_events")
+}
+
+// ============================================================================
+// TESTING DOJO
+// ============================================================================
+
+model TestSession {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name   String? // User-editable name, defaults to "Session #N"
+  status String  @default("active") // active, ended
+
+  messages TestMessage[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  endedAt   DateTime?
+
+  @@index([projectId])
+  @@index([status])
+  @@map("test_sessions")
+}
+
+model TestMessage {
+  id        String      @id @default(cuid())
+  sessionId String
+  session   TestSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  role    String // user, assistant
+  content String @db.Text
+
+  comments TestComment[]
+
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+  @@map("test_messages")
+}
+
+model TestComment {
+  id        String      @id @default(cuid())
+  messageId String
+  message   TestMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  content    String  @db.Text
+  templateId String? // identity|communication|content|engagement|framing
+
+  createdAt DateTime @default(now())
+
+  @@index([messageId])
+  @@map("test_comments")
+}
+
+// ============================================================================
+// PROFILE RECOMMENDATIONS & VERSIONING
+// ============================================================================
+
+model ProfileRecommendation {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  setId           String
+  generatedAt     DateTime @default(now())
+  type            String // "add" | "remove" | "modify"
+  targetSection   String // identityRole | communicationStyle | contentPriorities | engagementApproach | keyFramings
+
+  addedContent   String? @db.Text
+  removedContent String? @db.Text
+  modifiedFrom   String? @db.Text
+  modifiedTo     String? @db.Text
+
+  summaryBullets    Json
+  previewBefore     String @db.Text
+  previewAfter      String @db.Text
+  rationale         String @db.Text
+  relatedCommentIds Json
+
+  status    String    @default("pending")
+  appliedAt DateTime?
+
+  @@index([projectId])
+  @@index([setId])
+  @@index([status])
+  @@map("profile_recommendations")
+}
+
+model ProfileVersion {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  version                Int
+  profile                Json
+  source                 String
+  recommendationSetId    String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, version])
+  @@index([projectId])
+  @@index([createdAt])
+  @@map("profile_versions")
+}
+
+// ============================================================================
+// CONVERSATION FEEDBACK & RECOMMENDATIONS
+// ============================================================================
+
+// Recipient's direct message to sender at end of session
+model RecipientMessage {
+  id             String       @id @default(cuid())
+  conversationId String       @unique
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  content String @db.Text
+
+  // Metadata
+  viewerEmail String?
+  viewerName  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId])
+  @@map("recipient_messages")
+}
+
+// AI-generated recommendations from conversation analysis
+model ConversationRecommendation {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  // Recommendation type
+  type String // "document_update" | "consideration" | "follow_up"
+
+  // Target (for document_update type)
+  targetDocumentId String?
+  targetDocument   Document? @relation(fields: [targetDocumentId], references: [id])
+  targetSectionId  String?   // Section within document
+  targetChunkId    String?   // Specific chunk
+
+  // Content
+  title           String            // "Clarify revenue assumptions"
+  description     String   @db.Text // 1-2 sentence summary
+  proposedContent String?  @db.Text // Production-ready content (for document_update)
+  changeHighlight String?  @db.Text // Just the delta for preview
+
+  // Evidence from conversation
+  evidenceQuotes Json            // Array of exact conversation excerpts
+  reasoning      String @db.Text // Why this change is warranted
+
+  // Scoring
+  confidence  Float           // 0.0 to 1.0
+  impactLevel String          // "low" | "medium" | "high"
+  priority    Int    @default(0)
+
+  // Workflow
+  status           String    @default("pending") // pending | approved | rejected | applied
+  reviewedAt       DateTime?
+  appliedAt        DateTime?
+  appliedToVersion Int? // Link to DocumentVersion if applied
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId])
+  @@index([targetDocumentId])
+  @@index([status])
+  @@map("conversation_recommendations")
+}
+
+// ============================================================================
+// DOCUMENT COMMENTS (Collaborator Feature)
+// ============================================================================
+
+model DocumentComment {
+  id             String        @id @default(cuid())
+  documentId     String
+  document       Document      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  // Anchor (supports highlight-to-comment)
+  chunkId         String // Which chunk contains the highlight
+  startOffset     Int    // Character offset within chunk
+  endOffset       Int    // Character offset within chunk
+  highlightedText String // Exact text that was highlighted (for fuzzy re-anchor)
+
+  // Comment content
+  content     String  @db.Text
+  viewerEmail String?
+  viewerName  String?
+
+  // Status
+  status String @default("pending") // pending, addressed, dismissed
+
+  createdAt DateTime @default(now())
+
+  @@index([documentId])
+  @@index([conversationId])
+  @@index([chunkId])
+  @@map("document_comments")
+}
+
+// ============================================================================
+// AUDIENCE SYNTHESIS (Aggregate Insights)
+// ============================================================================
+
+model AudienceSynthesis {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  version Int
+
+  // Aggregate insights (JSON fields)
+  overview            String @db.Text // Overall pattern description
+  commonQuestions     Json // Array of { pattern, frequency, documents[] }
+  knowledgeGaps       Json // Array of { topic, severity, suggestion }
+  documentSuggestions Json // Array of { document, section, suggestion }
+  sentimentTrend      String // improving, stable, declining
+  insights            Json // Array of string insights
+
+  // Metadata
+  conversationCount Int
+  totalMessages     Int
+  dateRangeFrom     DateTime
+  dateRangeTo       DateTime
+
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, version])
+  @@index([projectId])
+  @@map("audience_syntheses")
+}
+
+// ============================================================================
+// SAVED PROFILES (Reusable Templates)
+// ============================================================================
+
+// Saved audience profiles (templates for audience types like "Board Members", "Investors")
+model AudienceProfile {
+  id      String @id @default(cuid())
+  ownerId String
+  owner   User   @relation("UserAudienceProfiles", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  name        String            // "Board Members", "Series A Investors"
+  description String? @db.Text  // Optional notes about this audience
+
+  // Configuration fields (match interview/context layer data)
+  audienceDescription String? @db.Text // Who they are, background
+  communicationStyle  String? @db.Text // Formal, casual, technical level
+  topicsEmphasis      String? @db.Text // What to focus on
+  accessType          String  @default("password") // Default access type for share links
+
+  // Usage tracking
+  timesUsed Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+  @@map("audience_profiles")
+}
+
+// Saved individual collaborator profiles (contacts like "John Smith", "Sarah Jones")
+model CollaboratorProfile {
+  id      String @id @default(cuid())
+  ownerId String
+  owner   User   @relation("UserCollaboratorProfiles", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  name        String           // "John Smith"
+  email       String?          // Contact email
+  description String? @db.Text // Role, relationship notes
+
+  // Collaborator-specific preferences
+  communicationNotes String?  @db.Text // How to communicate with this person
+  expertiseAreas     String[]          // What they're experts in
+  feedbackStyle      String?           // "direct", "gentle", "detailed", "high-level"
+
+  // Usage tracking
+  timesUsed Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([email])
+  @@map("collaborator_profiles")
 }

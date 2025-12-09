@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { api } from '../lib/api'
 import { formatFileSize } from '../lib/utils'
+import { DocumentEditor } from './DocumentEditor'
+import { DocumentVersionHistory } from './DocumentVersionHistory'
 
 interface Document {
   id: string
@@ -13,6 +15,8 @@ interface Document {
   processingError?: string
   uploadedAt: string
   processedAt?: string
+  isEditable?: boolean
+  currentVersion?: number
 }
 
 interface DocumentUploadProps {
@@ -25,6 +29,14 @@ export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadPr
   const [error, setError] = useState('')
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
+  const [editingDocument, setEditingDocument] = useState<{
+    id: string
+    content: Record<string, unknown> | null
+  } | null>(null)
+  const [viewingHistory, setViewingHistory] = useState<{
+    id: string
+    currentVersion: number
+  } | null>(null)
 
   // Load documents from API
   const loadDocuments = useCallback(async () => {
@@ -81,6 +93,30 @@ export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadPr
       setDocuments(prev => prev.filter(d => d.id !== documentId))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Delete failed')
+    }
+  }
+
+  const handleEditDocument = async (documentId: string) => {
+    try {
+      const response = await api.getDocumentForEdit(documentId)
+      setEditingDocument({ id: documentId, content: response.content })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load document for editing')
+    }
+  }
+
+  const handleViewHistory = (documentId: string, currentVersion: number) => {
+    setViewingHistory({ id: documentId, currentVersion })
+  }
+
+  const handleRollback = async (version: number) => {
+    if (!viewingHistory) return
+    try {
+      await api.rollbackDocumentVersion(viewingHistory.id, version)
+      setViewingHistory(null)
+      loadDocuments() // Refresh document list
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to rollback')
     }
   }
 
@@ -244,6 +280,24 @@ export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadPr
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
                   {getStatusBadge(doc.status)}
+                  {doc.isEditable && doc.status === 'completed' && (
+                    <>
+                      <button
+                        onClick={() => handleEditDocument(doc.id)}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        title="Edit document"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleViewHistory(doc.id, doc.currentVersion || 1)}
+                        className="text-gray-600 hover:text-gray-800 text-sm"
+                        title="View version history"
+                      >
+                        History
+                      </button>
+                    </>
+                  )}
                   <button
                     onClick={() => handleDelete(doc.id)}
                     className="text-gray-400 hover:text-red-600 transition-colors p-1"
@@ -275,6 +329,29 @@ export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadPr
             <li>Send the link to your audience to start conversations!</li>
           </ol>
         </div>
+      )}
+
+      {/* Document Editor Modal */}
+      {editingDocument && (
+        <DocumentEditor
+          documentId={editingDocument.id}
+          initialContent={editingDocument.content}
+          onSave={() => {
+            setEditingDocument(null)
+            loadDocuments()
+          }}
+          onClose={() => setEditingDocument(null)}
+        />
+      )}
+
+      {/* Version History Modal */}
+      {viewingHistory && (
+        <DocumentVersionHistory
+          documentId={viewingHistory.id}
+          currentVersion={viewingHistory.currentVersion}
+          onRollback={handleRollback}
+          onClose={() => setViewingHistory(null)}
+        />
       )}
     </div>
   )

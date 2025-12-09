@@ -1,5 +1,9 @@
 import { Router } from 'express'
-import { getProjectAnalytics, getConversationAnalytics } from '../controllers/analytics.controller'
+import {
+  getProjectAnalytics,
+  getConversationAnalytics,
+  exportConversationsCSV,
+} from '../controllers/analytics.controller'
 import { authenticate } from '../middleware/auth'
 import { asyncHandler } from '../middleware/errorHandler'
 
@@ -11,6 +15,17 @@ const router = Router()
  * @access Private (project owner only)
  */
 router.get('/projects/:projectId/analytics', authenticate, asyncHandler(getProjectAnalytics))
+
+/**
+ * @route GET /api/projects/:projectId/analytics/export
+ * @desc Export project conversations as CSV
+ * @access Private (project owner only)
+ */
+router.get(
+  '/projects/:projectId/analytics/export',
+  authenticate,
+  asyncHandler(exportConversationsCSV)
+)
 
 /**
  * @route GET /api/conversations/:conversationId/analytics

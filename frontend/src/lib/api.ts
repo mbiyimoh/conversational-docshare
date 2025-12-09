@@ -1,4 +1,13 @@
 import { fetchEventSource } from '@microsoft/fetch-event-source'
+import type {
+  RecommendationResponse,
+  ApplyAllResponse,
+  RollbackResponse,
+  VersionHistoryResponse,
+} from '../types/recommendation'
+
+// Re-export types for external use
+export type { VersionHistoryResponse } from '../types/recommendation'
 
 // Use empty string to leverage Vite's proxy in development, or VITE_API_URL for production
 const API_URL = import.meta.env.VITE_API_URL || ''
@@ -273,7 +282,13 @@ class ApiClient {
   }
 
   // Share link endpoints
-  async createShareLink(projectId: string, data: { accessType: string; password?: string; allowedEmails?: string[]; expiresAt?: string }) {
+  async createShareLink(projectId: string, data: {
+    accessType: string
+    password?: string
+    allowedEmails?: string[]
+    expiresAt?: string
+    recipientRole?: 'viewer' | 'collaborator'
+  }) {
     return this.request<{ shareLink: unknown }>(`/api/projects/${projectId}/share-links`, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -289,7 +304,10 @@ class ApiClient {
   }
 
   async verifyShareLinkAccess(slug: string, credentials: { password?: string; email?: string }) {
-    return this.request<{ accessGranted: boolean }>(`/api/share/${slug}/verify`, {
+    return this.request<{
+      accessGranted: boolean
+      recipientRole?: 'viewer' | 'collaborator'
+    }>(`/api/share/${slug}/verify`, {
       method: 'POST',
       body: JSON.stringify(credentials),
     })
@@ -298,6 +316,837 @@ class ApiClient {
   async deleteShareLink(shareLinkId: string) {
     return this.request<void>(`/api/share-links/${shareLinkId}`, {
       method: 'DELETE',
+    })
+  }
+
+  // Share link document endpoints (public, for viewers)
+  async getShareLinkDocuments(slug: string) {
+    return this.request<{
+      documents: Array<{
+        id: string
+        filename: string
+        title: string
+        mimeType: string
+        outline: Array<{ id: string; title: string; level: number; position: number }>
+        status: string
+      }>
+    }>(`/api/share/${slug}/documents`)
+  }
+
+  async getShareLinkDocument(slug: string, documentId: string) {
+    return this.request<{
+      document: {
+        id: string
+        filename: string
+        title: string
+        mimeType: string
+        outline: Array<{ id: string; title: string; level: number; position: number }>
+        status: string
+      }
+    }>(`/api/share/${slug}/documents/${documentId}`)
+  }
+
+  async getShareLinkDocumentChunks(slug: string, documentId: string) {
+    return this.request<{
+      chunks: Array<{
+        id: string
+        content: string
+        sectionId: string | null
+        sectionTitle: string | null
+        chunkIndex: number
+      }>
+    }>(`/api/share/${slug}/documents/${documentId}/chunks`)
+  }
+
+  // ============================================================================
+  // Test Session endpoints (Testing Dojo)
+  // ============================================================================
+
+  async getTestSessions(projectId: string) {
+    return this.request<{
+      sessions: Array<{
+        id: string
+        name: string | null
+        status: 'active' | 'ended'
+        messageCount: number
+        commentCount: number
+        createdAt: string
+        endedAt: string | null
+      }>
+    }>(`/api/projects/${projectId}/test-sessions`)
+  }
+
+  async createTestSession(projectId: string, name?: string) {
+    return this.request<{
+      session: {
+        id: string
+        projectId: string
+        name: string | null
+        status: 'active' | 'ended'
+        createdAt: string
+        updatedAt: string
+        endedAt: string | null
+      }
+    }>(`/api/projects/${projectId}/test-sessions`, {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    })
+  }
+
+  async getTestSession(sessionId: string) {
+    return this.request<{
+      session: {
+        id: string
+        projectId: string
+        name: string | null
+        status: 'active' | 'ended'
+        createdAt: string
+        updatedAt: string
+        endedAt: string | null
+        messages: Array<{
+          id: string
+          sessionId: string
+          role: 'user' | 'assistant'
+          content: string
+          createdAt: string
+          comments: Array<{
+            id: string
+            messageId: string
+            content: string
+            templateId: string | null
+            createdAt: string
+          }>
+        }>
+      }
+    }>(`/api/test-sessions/${sessionId}`)
+  }
+
+  async updateTestSession(sessionId: string, data: { name?: string; status?: 'active' | 'ended' }) {
+    return this.request<{
+      session: {
+        id: string
+        name: string | null
+        status: string
+        endedAt: string | null
+      }
+    }>(`/api/test-sessions/${sessionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteTestSession(sessionId: string) {
+    return this.request<{ success: boolean }>(`/api/test-sessions/${sessionId}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async addTestComment(messageId: string, content: string, templateId?: string) {
+    return this.request<{
+      comment: {
+        id: string
+        messageId: string
+        content: string
+        templateId: string | null
+        createdAt: string
+      }
+    }>(`/api/test-messages/${messageId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ content, templateId }),
+    })
+  }
+
+  async deleteTestComment(commentId: string) {
+    return this.request<{ success: boolean }>(`/api/test-comments/${commentId}`, {
+      method: 'DELETE',
+    })
+  }
+
+  // Recommendation endpoints
+  async getRecommendations(projectId: string) {
+    return this.request<RecommendationResponse>(
+      `/api/projects/${projectId}/recommendations`,
+      { method: 'POST' }
+    )
+  }
+
+  async applyAllRecommendations(projectId: string, setId: string) {
+    return this.request<ApplyAllResponse>(
+      `/api/projects/${projectId}/recommendations/apply-all`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ setId }),
+      }
+    )
+  }
+
+  async dismissRecommendation(projectId: string, recommendationId: string) {
+    return this.request<{ success: boolean }>(
+      `/api/projects/${projectId}/recommendations/${recommendationId}/dismiss`,
+      { method: 'POST' }
+    )
+  }
+
+  async rollbackProfile(projectId: string, toVersion: number) {
+    return this.request<RollbackResponse>(
+      `/api/projects/${projectId}/profile/rollback`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ toVersion }),
+      }
+    )
+  }
+
+  async getVersionHistory(projectId: string) {
+    return this.request<VersionHistoryResponse>(
+      `/api/projects/${projectId}/profile/versions`,
+      { method: 'GET' }
+    )
+  }
+
+  // ============================================================================
+  // User endpoints (Conversation saving & Dashboard)
+  // ============================================================================
+
+  async saveConversation(conversationId: string) {
+    return this.request<{ savedConversation: unknown }>(
+      `/api/conversations/${conversationId}/save`,
+      { method: 'POST' }
+    )
+  }
+
+  async getSavedConversations() {
+    return this.request<{
+      conversations: Array<{
+        id: string
+        projectId: string
+        messageCount: number
+        startedAt: string
+        endedAt: string | null
+        project: {
+          id: string
+          name: string
+        }
+      }>
+      total: number
+    }>('/api/users/me/saved-conversations')
+  }
+
+  async getDashboardData() {
+    return this.request<{
+      projects: unknown[]
+      savedConversations: Array<{
+        id: string
+        projectId: string
+        messageCount: number
+        startedAt: string
+        endedAt: string | null
+        project: {
+          id: string
+          name: string
+        }
+      }>
+      stats: {
+        projectCount: number
+        savedConversationCount: number
+      }
+    }>('/api/users/me/dashboard')
+  }
+
+  // ============================================================================
+  // Conversation Detail & Management (Analytics)
+  // ============================================================================
+
+  async getConversationDetail(conversationId: string) {
+    return this.request<{
+      conversation: {
+        id: string
+        projectId: string
+        shareLinkSlug: string | null
+        viewerEmail: string | null
+        viewerName: string | null
+        messageCount: number
+        durationSeconds: number | null
+        summary: string | null
+        sentiment: string | null
+        topics: string[]
+        startedAt: string
+        endedAt: string | null
+        messages: Array<{
+          id: string
+          role: string
+          content: string
+          createdAt: string
+        }>
+        project: {
+          id: string
+          name: string
+        }
+      }
+    }>(`/api/conversations/${conversationId}`)
+  }
+
+  async endConversation(conversationId: string) {
+    return this.request<{
+      conversation: unknown
+      summary: string | null
+    }>(`/api/conversations/${conversationId}/end`, {
+      method: 'POST',
+    })
+  }
+
+  async exportConversationsCSV(projectId: string): Promise<Blob> {
+    const headers: Record<string, string> = {}
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`
+    }
+
+    const response = await fetch(
+      `${this.baseUrl}/api/projects/${projectId}/analytics/export`,
+      {
+        method: 'GET',
+        headers,
+      }
+    )
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error?.message || 'Export failed')
+    }
+
+    return response.blob()
+  }
+
+  /**
+   * Get documents for a project (used by SavedThreadPage for document panel)
+   */
+  async getProjectDocuments(projectId: string) {
+    return this.request<{
+      documents: Array<{
+        id: string
+        filename: string
+        title: string
+        mimeType: string
+        outline: Array<{ id: string; title: string; level: number; position: number }>
+        status: string
+      }>
+    }>(`/api/projects/${projectId}/documents`)
+  }
+
+  // ============================================================================
+  // Conversation Recommendations (Post-conversation document improvements)
+  // ============================================================================
+
+  async getConversationRecommendations(conversationId: string) {
+    return this.request<{
+      recommendations: Array<{
+        id: string
+        type: 'document_update' | 'consideration' | 'follow_up'
+        title: string
+        description: string
+        proposedContent: string | null
+        changeHighlight: string | null
+        evidenceQuotes: string[]
+        reasoning: string
+        confidence: number
+        impactLevel: 'low' | 'medium' | 'high'
+        status: 'pending' | 'approved' | 'rejected' | 'applied'
+        targetDocument?: { id: string; filename: string }
+        targetSectionId: string | null
+        reviewedAt: string | null
+        appliedAt: string | null
+        appliedToVersion: number | null
+        createdAt: string
+      }>
+    }>(`/api/conversations/${conversationId}/recommendations`)
+  }
+
+  async applyRecommendation(recommendationId: string) {
+    return this.request<{
+      success: boolean
+      recommendation: {
+        id: string
+        status: string
+        appliedAt: string | null
+        appliedToVersion: number | null
+      }
+      documentVersion?: {
+        version: number
+      }
+    }>(`/api/recommendations/${recommendationId}/apply`, {
+      method: 'POST',
+    })
+  }
+
+  async dismissConversationRecommendation(recommendationId: string) {
+    return this.request<{
+      success: boolean
+      recommendation: {
+        id: string
+        status: string
+        reviewedAt: string | null
+      }
+    }>(`/api/recommendations/${recommendationId}/dismiss`, {
+      method: 'POST',
+    })
+  }
+
+  async endConversationWithMessage(conversationId: string, recipientMessage?: string) {
+    return this.request<{
+      conversation: unknown
+      summary: string | null
+      recommendationCount: number
+    }>(`/api/conversations/${conversationId}/end`, {
+      method: 'POST',
+      body: JSON.stringify({ recipientMessage }),
+    })
+  }
+
+  // ============================================================================
+  // Document Comment endpoints (Collaborator feature)
+  // ============================================================================
+
+  async createDocumentComment(
+    documentId: string,
+    data: {
+      conversationId?: string
+      chunkId: string
+      startOffset: number
+      endOffset: number
+      highlightedText: string
+      content: string
+      viewerEmail?: string
+      viewerName?: string
+    }
+  ) {
+    return this.request<{
+      comment: {
+        id: string
+        documentId: string
+        highlightedText: string
+        content: string
+        status: string
+        createdAt: string
+      }
+    }>(`/api/documents/${documentId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async getDocumentComments(
+    documentId: string,
+    params?: { conversationId?: string; status?: string }
+  ) {
+    const query = params
+      ? new URLSearchParams(
+          Object.entries(params).filter(([_, v]) => v !== undefined) as Array<[string, string]>
+        ).toString()
+      : ''
+    return this.request<{
+      comments: Array<{
+        id: string
+        chunkId: string
+        startOffset: number
+        endOffset: number
+        highlightedText: string
+        content: string
+        viewerEmail: string | null
+        viewerName: string | null
+        status: string
+        createdAt: string
+      }>
+    }>(`/api/documents/${documentId}/comments${query ? `?${query}` : ''}`)
+  }
+
+  async updateCommentStatus(
+    commentId: string,
+    status: 'pending' | 'addressed' | 'dismissed'
+  ) {
+    return this.request<{
+      comment: {
+        id: string
+        status: string
+      }
+    }>(`/api/comments/${commentId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    })
+  }
+
+  // ============================================================================
+  // Audience Synthesis endpoints
+  // ============================================================================
+
+  async getAudienceSynthesis(projectId: string) {
+    return this.request<{
+      synthesis: {
+        id: string
+        version: number
+        overview: string
+        commonQuestions: Array<{ pattern: string; frequency: number; documents: string[] }>
+        knowledgeGaps: Array<{ topic: string; severity: string; suggestion: string }>
+        documentSuggestions: Array<{ documentId: string; section: string; suggestion: string }>
+        sentimentTrend: string
+        insights: string[]
+        conversationCount: number
+        totalMessages: number
+        dateRangeFrom: string
+        dateRangeTo: string
+        createdAt: string
+      } | null
+    }>(`/api/projects/${projectId}/audience-synthesis`)
+  }
+
+  async getAudienceSynthesisVersions(projectId: string) {
+    return this.request<{
+      versions: Array<{
+        id: string
+        version: number
+        conversationCount: number
+        createdAt: string
+      }>
+    }>(`/api/projects/${projectId}/audience-synthesis/versions`)
+  }
+
+  async getAudienceSynthesisVersion(projectId: string, version: number) {
+    return this.request<{
+      synthesis: {
+        id: string
+        version: number
+        overview: string
+        commonQuestions: Array<{ pattern: string; frequency: number; documents: string[] }>
+        knowledgeGaps: Array<{ topic: string; severity: string; suggestion: string }>
+        documentSuggestions: Array<{ documentId: string; section: string; suggestion: string }>
+        sentimentTrend: string
+        insights: string[]
+        conversationCount: number
+        totalMessages: number
+        dateRangeFrom: string
+        dateRangeTo: string
+        createdAt: string
+      }
+    }>(`/api/projects/${projectId}/audience-synthesis/versions/${version}`)
+  }
+
+  async regenerateAudienceSynthesis(projectId: string) {
+    return this.request<{
+      synthesis: {
+        id: string
+        version: number
+        overview: string
+        commonQuestions: Array<{ pattern: string; frequency: number; documents: string[] }>
+        knowledgeGaps: Array<{ topic: string; severity: string; suggestion: string }>
+        documentSuggestions: Array<{ documentId: string; section: string; suggestion: string }>
+        sentimentTrend: string
+        insights: string[]
+        conversationCount: number
+        totalMessages: number
+        dateRangeFrom: string
+        dateRangeTo: string
+        createdAt: string
+      } | null
+      regenerated: boolean
+    }>(`/api/projects/${projectId}/audience-synthesis/regenerate`, {
+      method: 'POST',
+    })
+  }
+
+  // ============================================================================
+  // Saved Audience Profile endpoints
+  // ============================================================================
+
+  async getAudienceProfiles() {
+    return this.request<{
+      profiles: Array<{
+        id: string
+        name: string
+        description: string | null
+        audienceDescription: string | null
+        communicationStyle: string | null
+        topicsEmphasis: string | null
+        accessType: string
+        timesUsed: number
+        createdAt: string
+        updatedAt: string
+      }>
+    }>('/api/audience-profiles')
+  }
+
+  async createAudienceProfile(data: {
+    name: string
+    description?: string
+    audienceDescription?: string
+    communicationStyle?: string
+    topicsEmphasis?: string
+    accessType?: string
+  }) {
+    return this.request<{
+      profile: {
+        id: string
+        name: string
+        description: string | null
+        audienceDescription: string | null
+        communicationStyle: string | null
+        topicsEmphasis: string | null
+        accessType: string
+        timesUsed: number
+        createdAt: string
+        updatedAt: string
+      }
+    }>('/api/audience-profiles', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateAudienceProfile(
+    profileId: string,
+    data: {
+      name?: string
+      description?: string
+      audienceDescription?: string
+      communicationStyle?: string
+      topicsEmphasis?: string
+      accessType?: string
+    }
+  ) {
+    return this.request<{
+      profile: {
+        id: string
+        name: string
+        description: string | null
+        audienceDescription: string | null
+        communicationStyle: string | null
+        topicsEmphasis: string | null
+        accessType: string
+        timesUsed: number
+        createdAt: string
+        updatedAt: string
+      }
+    }>(`/api/audience-profiles/${profileId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteAudienceProfile(profileId: string) {
+    return this.request<void>(`/api/audience-profiles/${profileId}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async incrementAudienceProfileUsage(profileId: string) {
+    return this.request<{
+      profile: {
+        id: string
+        timesUsed: number
+      }
+    }>(`/api/audience-profiles/${profileId}/use`, {
+      method: 'POST',
+    })
+  }
+
+  // ============================================================================
+  // Saved Collaborator Profile endpoints
+  // ============================================================================
+
+  async getCollaboratorProfiles() {
+    return this.request<{
+      profiles: Array<{
+        id: string
+        name: string
+        email: string | null
+        description: string | null
+        communicationNotes: string | null
+        expertiseAreas: string[]
+        feedbackStyle: string | null
+        timesUsed: number
+        createdAt: string
+        updatedAt: string
+      }>
+    }>('/api/collaborator-profiles')
+  }
+
+  async createCollaboratorProfile(data: {
+    name: string
+    email?: string
+    description?: string
+    communicationNotes?: string
+    expertiseAreas?: string[]
+    feedbackStyle?: string
+  }) {
+    return this.request<{
+      profile: {
+        id: string
+        name: string
+        email: string | null
+        description: string | null
+        communicationNotes: string | null
+        expertiseAreas: string[]
+        feedbackStyle: string | null
+        timesUsed: number
+        createdAt: string
+        updatedAt: string
+      }
+    }>('/api/collaborator-profiles', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateCollaboratorProfile(
+    profileId: string,
+    data: {
+      name?: string
+      email?: string
+      description?: string
+      communicationNotes?: string
+      expertiseAreas?: string[]
+      feedbackStyle?: string
+    }
+  ) {
+    return this.request<{
+      profile: {
+        id: string
+        name: string
+        email: string | null
+        description: string | null
+        communicationNotes: string | null
+        expertiseAreas: string[]
+        feedbackStyle: string | null
+        timesUsed: number
+        createdAt: string
+        updatedAt: string
+      }
+    }>(`/api/collaborator-profiles/${profileId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteCollaboratorProfile(profileId: string) {
+    return this.request<void>(`/api/collaborator-profiles/${profileId}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async incrementCollaboratorProfileUsage(profileId: string) {
+    return this.request<{
+      profile: {
+        id: string
+        timesUsed: number
+      }
+    }>(`/api/collaborator-profiles/${profileId}/use`, {
+      method: 'POST',
+    })
+  }
+
+  // ============================================================================
+  // Document Versioning & Editing
+  // ============================================================================
+
+  async getDocumentForEdit(documentId: string) {
+    return this.request<{
+      document: {
+        id: string
+        filename: string
+        isEditable: boolean
+        currentVersion: number
+      }
+      content: Record<string, unknown> | null
+    }>(`/api/documents/${documentId}/edit`)
+  }
+
+  async saveDocumentVersion(
+    documentId: string,
+    content: Record<string, unknown>,
+    changeNote?: string
+  ) {
+    return this.request<{
+      version: {
+        id: string
+        version: number
+        createdAt: string
+      }
+    }>(`/api/documents/${documentId}/versions`, {
+      method: 'POST',
+      body: JSON.stringify({ content, changeNote }),
+    })
+  }
+
+  async getDocumentVersions(documentId: string) {
+    return this.request<{
+      versions: Array<{
+        id: string
+        version: number
+        editedByName: string | null
+        changeNote: string | null
+        source: string | null
+        createdAt: string
+      }>
+      currentVersion: number
+    }>(`/api/documents/${documentId}/versions`)
+  }
+
+  async getDocumentVersion(documentId: string, versionNum: number) {
+    return this.request<{
+      version: {
+        id: string
+        version: number
+        content: Record<string, unknown>
+        editedByName: string | null
+        changeNote: string | null
+        source: string | null
+        createdAt: string
+      }
+    }>(`/api/documents/${documentId}/versions/${versionNum}`)
+  }
+
+  async rollbackDocumentVersion(documentId: string, versionNum: number) {
+    return this.request<{
+      newVersion: number
+      content: Record<string, unknown>
+    }>(`/api/documents/${documentId}/rollback/${versionNum}`, {
+      method: 'POST',
+    })
+  }
+
+  // ============================================================================
+  // AI Recommendation Application
+  // ============================================================================
+
+  async generateRecommendationDraft(recommendationId: string) {
+    return this.request<{
+      draft: {
+        originalText: string
+        proposedText: string
+        changeNote: string
+        targetChunkId: string
+      }
+    }>(`/api/recommendations/${recommendationId}/draft`, {
+      method: 'POST',
+    })
+  }
+
+  async applyRecommendationDraft(
+    recommendationId: string,
+    proposedText: string,
+    changeNote: string
+  ) {
+    return this.request<{
+      version: {
+        id: string
+        version: number
+        createdAt: string
+      }
+      recommendation: {
+        id: string
+        status: string
+      }
+    }>(`/api/recommendations/${recommendationId}/apply`, {
+      method: 'POST',
+      body: JSON.stringify({ proposedText, changeNote }),
     })
   }
 }

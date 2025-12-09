@@ -4,6 +4,7 @@ import { DocumentUpload } from '../components/DocumentUpload'
 import { AgentInterview } from '../components/AgentInterview'
 import { AnalyticsDashboard } from '../components/AnalyticsDashboard'
 import { ShareLinkManager } from '../components/ShareLinkManager'
+import { TestingDojo } from '../components/TestingDojo'
 import { api } from '../lib/api'
 
 interface Project {
@@ -117,6 +118,18 @@ export function ProjectPage() {
               AI Agent
             </button>
             <button
+              onClick={() => setActiveTab('test')}
+              role="tab"
+              aria-selected={activeTab === 'test'}
+              className={`px-3 py-4 border-b-2 font-medium transition-colors ${
+                activeTab === 'test'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Test
+            </button>
+            <button
               onClick={() => setActiveTab('share')}
               role="tab"
               aria-selected={activeTab === 'share'}
@@ -157,6 +170,20 @@ export function ProjectPage() {
               onComplete={(action) => {
                 if (action === 'navigate-to-share') {
                   setActiveTab('share')
+                }
+              }}
+            />
+          )}
+        </div>
+
+        <div role="tabpanel" hidden={activeTab !== 'test'}>
+          {activeTab === 'test' && (
+            <TestingDojo
+              projectId={projectId!}
+              onNavigateAway={(dest) => {
+                if (dest === 'recommendations' || dest === 'interview' || dest === 'profile') {
+                  // Navigate to agent/interview tab (profile view is also on agent tab)
+                  setActiveTab('agent')
                 }
               }}
             />

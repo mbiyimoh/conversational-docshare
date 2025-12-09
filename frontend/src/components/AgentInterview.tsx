@@ -60,6 +60,7 @@ export function AgentInterview({ projectId, onComplete }: AgentInterviewProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [expandedAnswers, setExpandedAnswers] = useState<Set<string>>(new Set())
+  const [notification, setNotification] = useState<string | null>(null)
 
   // Load existing agent config on mount
   useEffect(() => {
@@ -103,6 +104,35 @@ export function AgentInterview({ projectId, onComplete }: AgentInterviewProps) {
 
     loadExistingConfig()
   }, [projectId])
+
+  // Check for pre-filled recommendation on mount
+  useEffect(() => {
+    const prefilled = sessionStorage.getItem('prefilled_interview')
+    if (prefilled) {
+      try {
+        const { questionId, value } = JSON.parse(prefilled)
+
+        // Apply value to interview data
+        setInterviewData((prev) => ({ ...prev, [questionId]: value }))
+
+        // Find the question index to navigate to
+        const questionIndex = questions.findIndex((q) => q.id === questionId)
+        if (questionIndex >= 0) {
+          setCurrentStep(questionIndex)
+        }
+
+        // Clear the prefill data
+        sessionStorage.removeItem('prefilled_interview')
+
+        // Show notification to user
+        setNotification('Recommendation applied. Review and save when ready.')
+        setTimeout(() => setNotification(null), 5000)
+      } catch (e) {
+        console.error('Failed to parse prefilled interview data:', e)
+        sessionStorage.removeItem('prefilled_interview')
+      }
+    }
+  }, [])
 
   const currentQuestion = questions[currentStep]
   const isLastStep = currentStep === questions.length - 1
@@ -199,10 +229,20 @@ export function AgentInterview({ projectId, onComplete }: AgentInterviewProps) {
     )
   }
 
+  // Notification Toast
+  const NotificationToast = notification ? (
+    <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in">
+      {notification}
+    </div>
+  ) : null
+
   // Review View with Sub-Tabs
   if (view === 'review') {
     return (
       <div className="mx-auto max-w-3xl">
+        {/* Notification Toast */}
+        {NotificationToast}
+
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">
@@ -355,6 +395,9 @@ export function AgentInterview({ projectId, onComplete }: AgentInterviewProps) {
   // Interview View (existing UI)
   return (
     <div className="mx-auto max-w-2xl">
+      {/* Notification Toast */}
+      {NotificationToast}
+
       {/* Progress bar */}
       <div className="mb-8">
         <div className="mb-2 flex justify-between text-sm text-gray-600">

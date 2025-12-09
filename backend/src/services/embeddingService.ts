@@ -2,6 +2,7 @@ import { prisma } from '../utils/prisma'
 import { getOpenAI } from '../utils/openai'
 import { retryWithBackoff } from '../utils/retry'
 import { LLMError } from '../utils/errors'
+import { chunkText } from './documentChunker'
 
 const EMBEDDING_MODEL = 'text-embedding-3-small'
 const EMBEDDING_DIMENSIONS = 1536
@@ -105,32 +106,50 @@ export async function embedDocumentChunks(documentId: string): Promise<void> {
 
 /**
  * Search for similar chunks using vector similarity
+ * Returns chunks with document info needed for citations
  */
 export async function searchSimilarChunks(
   projectId: string,
   query: string,
   limit: number = 5
-): Promise<Array<{ chunkId: string; content: string; similarity: number; sectionTitle: string | null }>> {
+): Promise<
+  Array<{
+    chunkId: string
+    content: string
+    similarity: number
+    sectionTitle: string | null
+    sectionId: string | null
+    filename: string
+    documentTitle: string
+  }>
+> {
   // Generate embedding for query
   const queryEmbedding = await generateEmbedding(query)
 
   // Search for similar chunks using cosine similarity
+  // Note: PostgreSQL requires quoted identifiers for camelCase column names
   const results = await prisma.$queryRaw<
     Array<{
       id: string
       content: string
-      section_title: string | null
+      sectionTitle: string | null
+      sectionId: string | null
+      filename: string
+      documentTitle: string
       similarity: number
     }>
   >`
     SELECT
       dc.id,
       dc.content,
-      dc.section_title,
+      dc."sectionTitle",
+      dc."sectionId",
+      d.filename,
+      d.title as "documentTitle",
       1 - (dc.embedding <=> ${JSON.stringify(queryEmbedding)}::vector) as similarity
     FROM document_chunks dc
-    INNER JOIN documents d ON dc.document_id = d.id
-    WHERE d.project_id = ${projectId}
+    INNER JOIN documents d ON dc."documentId" = d.id
+    WHERE d."projectId" = ${projectId}
       AND dc.embedding IS NOT NULL
     ORDER BY dc.embedding <=> ${JSON.stringify(queryEmbedding)}::vector
     LIMIT ${limit}
@@ -140,6 +159,61 @@ export async function searchSimilarChunks(
     chunkId: r.id,
     content: r.content,
     similarity: r.similarity,
-    sectionTitle: r.section_title,
+    sectionTitle: r.sectionTitle,
+    sectionId: r.sectionId,
+    filename: r.filename,
+    documentTitle: r.documentTitle,
   }))
+}
+
+/**
+ * Queue embedding regeneration for an edited document
+ * Runs asynchronously to avoid blocking the edit response
+ *
+ * Strategy: Full regeneration (simpler, ensures consistency)
+ */
+export async function queueEmbeddingRegeneration(
+  documentId: string,
+  plainText: string
+): Promise<void> {
+  // Run in background, don't block the response
+  regenerateDocumentEmbeddings(documentId, plainText).catch((error) => {
+    console.error(`[Embedding] Regeneration failed for ${documentId}:`, error)
+  })
+}
+
+/**
+ * Regenerate all embeddings for a document from new plain text
+ */
+async function regenerateDocumentEmbeddings(documentId: string, plainText: string): Promise<void> {
+  console.warn(`[Embedding] Starting regeneration for document ${documentId}`)
+
+  // 1. Delete existing chunks
+  await prisma.documentChunk.deleteMany({ where: { documentId } })
+
+  // 2. Re-chunk the plain text
+  const chunks = chunkText(plainText, 1000, 200)
+
+  if (chunks.length === 0) {
+    console.warn(`[Embedding] No chunks to create for document ${documentId}`)
+    return
+  }
+
+  // 3. Create new chunks in database
+  await prisma.documentChunk.createMany({
+    data: chunks.map((chunk) => ({
+      documentId,
+      content: chunk.content,
+      chunkIndex: chunk.chunkIndex,
+      startChar: chunk.startChar,
+      endChar: chunk.endChar,
+      sectionId: chunk.sectionId,
+      sectionTitle: chunk.sectionTitle,
+    })),
+  })
+
+  // 4. Generate embeddings for the new chunks
+  await embedDocumentChunks(documentId)
+
+  console.warn(`[Embedding] Regenerated ${chunks.length} chunks for document ${documentId}`)
 }

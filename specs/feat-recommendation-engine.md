@@ -1,14 +1,20 @@
 # Recommendation Engine for Testing Feedback
 
 ## Status
-Draft
+✅ **Implemented** (Profile-Direct approach, December 2025)
+
+**Note:** The actual implementation uses a **profile-direct** approach instead of the interview-indirect approach originally described in this spec. See `docs/ideation/profile-direct-additive-recommendations.md` for the implemented architecture. Key differences:
+- Targets profile sections directly (not interview answers)
+- Uses ADD/REMOVE/MODIFY operations
+- Includes version history and rollback
+- Validates diffs to prevent "no-change" recommendations
 
 ## Authors
 Claude Code - November 26, 2025
 
 ## Overview
 
-Add a recommendation engine that analyzes comments from testing sessions and suggests specific updates to interview answers and the AI agent profile. The engine uses LLM to identify patterns in feedback, maps them to relevant interview questions, and generates actionable recommendations with diff previews. Creators can apply recommendations to pre-fill the interview form or dismiss them.
+Add a recommendation engine that analyzes comments from testing sessions and suggests specific updates to the AI agent profile. The engine uses LLM to identify patterns in feedback, generates structured recommendations targeting profile sections directly, and provides diff previews. Creators can apply all recommendations at once with version tracking, or dismiss individual recommendations.
 
 ## Background/Problem Statement
 
@@ -175,6 +181,14 @@ export class RateLimitError extends Error {
 ### Data Structures (Backend)
 
 ```typescript
+// Valid template IDs from CommentOverlay.tsx - used for categorizing feedback
+type CommentTemplateId =
+  | 'identity'        // Agent identity/role issues
+  | 'communication'   // Tone, style, clarity
+  | 'content'         // Information accuracy, completeness
+  | 'engagement'      // Proactivity, questions asked
+  | 'framing'         // Context, assumptions, perspective
+
 interface Recommendation {
   id: string
   questionId: 'audience' | 'purpose' | 'tone' | 'emphasis' | 'questions'
@@ -200,6 +214,11 @@ interface RecommendationResponse {
 ```
 
 ### Backend Implementation
+
+**Note:** AI responses in test messages are formatted via `ProfileSectionContent` component,
+which preprocesses mixed JSON/markdown. This doesn't affect comment analysis since we only
+analyze `comment.content` (user feedback) and `message.content` (for context preview),
+not the original LLM response structure.
 
 #### New File: `backend/src/services/recommendationEngine.ts`
 
@@ -697,14 +716,16 @@ export function RecommendationPanel({
     }
   }
 
+  // IMPORTANT: Use functional setState pattern to avoid stale closure bugs
+  // when users rapidly apply/dismiss multiple recommendations
   const handleApply = async (rec: Recommendation) => {
     try {
       await api.applyRecommendation(projectId, rec.questionId, rec.suggestedAnswer)
       onApply(rec.questionId, rec.suggestedAnswer)
 
-      // Mark as applied locally
-      setRecommendations(
-        recommendations.map((r) =>
+      // Mark as applied locally - use functional update for rapid state changes
+      setRecommendations((prev) =>
+        prev.map((r) =>
           r.id === rec.id ? { ...r, status: 'applied' as const } : r
         )
       )
@@ -714,8 +735,9 @@ export function RecommendationPanel({
   }
 
   const handleDismiss = (recId: string) => {
-    setRecommendations(
-      recommendations.map((r) =>
+    // Use functional update to prevent stale closure when dismissing rapidly
+    setRecommendations((prev) =>
+      prev.map((r) =>
         r.id === recId ? { ...r, status: 'dismissed' as const } : r
       )
     )
@@ -884,6 +906,17 @@ export function RecommendationPanel({
 ```
 
 #### Integration with Testing Dojo
+
+**Navigation Flow:**
+```
+1. TestingDojo -> NavigationModal (user clicks "End & Apply Feedback")
+2. NavigationModal calls onNavigateAway?.('recommendations')
+3. ProjectPage/Router shows RecommendationPanel component
+4. RecommendationPanel -> "Apply" -> sessionStorage stores pre-fill data
+5. Navigate to AgentInterview (pre-filled with suggestion)
+6. User reviews, edits if needed, and saves
+7. Profile auto-regenerates with new interview data
+```
 
 In `TestingDojo.tsx`, add recommendation panel:
 

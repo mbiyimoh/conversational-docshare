@@ -27,7 +27,13 @@
       "WebFetch(domain:docs.voiceflow.com)",
       "WebFetch(domain:www.chatbase.co)",
       "WebFetch(domain:docs.langwatch.ai)",
-      "WebFetch(domain:www.glassix.com)"
+      "WebFetch(domain:www.glassix.com)",
+      "SlashCommand(/docs:sync)",
+      "WebFetch(domain:fabianhertwig.com)",
+      "WebFetch(domain:jsonpatch.com)",
+      "WebFetch(domain:www.shapeof.ai)",
+      "SlashCommand(/research:*)",
+      "SlashCommand(/git:commit)"
     ],
     "deny": [],
     "ask": []

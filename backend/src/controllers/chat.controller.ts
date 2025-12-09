@@ -145,13 +145,19 @@ export async function getConversationHistory(req: Request, res: Response) {
       viewerEmail: conversation.viewerEmail,
       viewerName: conversation.viewerName,
       messageCount: conversation.messageCount,
+      durationSeconds: conversation.durationSeconds,
+      summary: conversation.summary,
+      sentiment: conversation.sentiment,
+      topics: conversation.topics,
       startedAt: conversation.startedAt,
+      endedAt: conversation.endedAt,
       messages: conversation.messages.map((m) => ({
         id: m.id,
         role: m.role,
         content: m.content,
         createdAt: m.createdAt,
       })),
+      recipientMessage: conversation.recipientMessage || null,
     },
   })
 }

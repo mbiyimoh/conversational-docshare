@@ -18,6 +18,7 @@ export async function buildSystemPrompt(projectId: string): Promise<string> {
         where: { status: 'completed' },
         select: {
           id: true,
+          filename: true,
           title: true,
           outline: true,
         },
@@ -66,15 +67,15 @@ export async function buildSystemPrompt(projectId: string): Promise<string> {
     sections.push('')
 
     for (const doc of project.documents) {
-      sections.push(`### Document: ${doc.title}`)
-      sections.push(`Document ID: ${doc.id}`)
+      sections.push(`### ${doc.title}`)
+      sections.push(`**Filename for citations:** ${doc.filename}`)
       sections.push('')
 
       if (doc.outline && Array.isArray(doc.outline)) {
-        sections.push('**Outline:**')
+        sections.push('**Sections (use section ID in citations):**')
         for (const section of doc.outline as Array<{ id: string; title: string; level: number }>) {
           const indent = '  '.repeat(section.level - 1)
-          sections.push(`${indent}- ${section.title} (${section.id})`)
+          sections.push(`${indent}- ${section.title} → section-id: \`${section.id}\``)
         }
         sections.push('')
       }
@@ -85,13 +86,20 @@ export async function buildSystemPrompt(projectId: string): Promise<string> {
   }
 
   // Add citation instructions
-  sections.push('## DOCUMENT REFERENCING')
+  sections.push('## DOCUMENT REFERENCING (CRITICAL)')
   sections.push('')
-  sections.push('When citing content from documents:')
-  sections.push('1. Always cite specific document and section')
-  sections.push('2. Use format: [DOC:filename:section-id]')
-  sections.push('3. The frontend will auto-open and highlight the cited section')
-  sections.push('4. Be specific about which document and section you are referencing')
+  sections.push('You MUST cite documents when providing information. Citations enable the document viewer.')
+  sections.push('')
+  sections.push('**Citation format:** `[DOC:filename:section-id]`')
+  sections.push('')
+  sections.push('**Example:** If discussing content from "Business Plan.pdf" section "executive-summary-1", write:')
+  sections.push('  "Our revenue model is outlined in the business plan [DOC:Business Plan.pdf:executive-summary-1]"')
+  sections.push('')
+  sections.push('**Rules:**')
+  sections.push('1. Use the EXACT filename shown above (including extension)')
+  sections.push('2. Use the EXACT section-id shown in backticks above')
+  sections.push('3. Place citations inline where relevant, not just at the end')
+  sections.push('4. The frontend will auto-open and highlight the cited section for the reader')
   sections.push('')
 
   return sections.join('\n')

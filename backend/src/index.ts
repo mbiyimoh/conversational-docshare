@@ -12,6 +12,15 @@ import chatRoutes from './routes/chat.routes'
 import agentRoutes from './routes/agent.routes'
 import shareLinkRoutes from './routes/shareLink.routes'
 import analyticsRoutes from './routes/analytics.routes'
+import testSessionRoutes from './routes/testSession.routes'
+import recommendationRoutes from './routes/recommendation.routes'
+import conversationRoutes from './routes/conversation.routes'
+import userRoutes from './routes/user.routes'
+import documentCommentRoutes from './routes/documentComment.routes'
+import audienceSynthesisRoutes from './routes/audienceSynthesis.routes'
+import audienceProfileRoutes from './routes/audienceProfile.routes'
+import collaboratorProfileRoutes from './routes/collaboratorProfile.routes'
+import { documentVersionRoutes } from './routes/documentVersion.routes'
 import { startProcessingQueue } from './services/processingQueue'
 import { terminatePool } from './services/worker/workerPool'
 
@@ -43,6 +52,15 @@ app.use('/api', chatRoutes)
 app.use('/api', agentRoutes)
 app.use('/api', shareLinkRoutes)
 app.use('/api', analyticsRoutes)
+app.use('/api', testSessionRoutes)
+app.use('/api', recommendationRoutes)
+app.use('/api/conversations', conversationRoutes)
+app.use('/api/users', userRoutes)
+app.use('/api', documentCommentRoutes)
+app.use('/api', audienceSynthesisRoutes)
+app.use('/api', audienceProfileRoutes)
+app.use('/api', collaboratorProfileRoutes)
+app.use('/api', documentVersionRoutes)
 
 // 404 handler
 app.use(notFoundHandler)

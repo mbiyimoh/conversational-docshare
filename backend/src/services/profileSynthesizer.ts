@@ -16,6 +16,7 @@ interface ProfileSection {
   content: string
   isEdited: boolean
   editedAt?: string
+  editSource?: 'manual' | 'recommendation'
 }
 
 export interface AgentProfile {

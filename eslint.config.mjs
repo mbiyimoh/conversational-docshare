@@ -14,6 +14,6 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['**/dist/**', '**/node_modules/**', '**/.vite/**', '**/build/**'],
+    ignores: ['**/dist/**', '**/node_modules/**', '**/.vite/**', '**/build/**', '**/.quick-checks/**'],
   }
 )

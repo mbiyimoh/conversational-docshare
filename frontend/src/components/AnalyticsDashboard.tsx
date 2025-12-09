@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react'
 import { api } from '../lib/api'
 import { formatDate } from '../lib/utils'
+import { ConversationDetailPanel } from './ConversationDetailPanel'
+import { AudienceSynthesisPanel } from './AudienceSynthesisPanel'
 
 interface Conversation {
   id: string
   viewerEmail: string | null
+  viewerName: string | null
   messageCount: number
   durationSeconds: number | null
   sentiment: string | null
+  topics: string[]
+  summary: string | null
   startedAt: string
   endedAt: string | null
 }
@@ -37,6 +42,8 @@ export function AnalyticsDashboard({ projectId }: AnalyticsDashboardProps) {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     // Only load if we have a valid projectId
@@ -65,13 +72,6 @@ export function AnalyticsDashboard({ projectId }: AnalyticsDashboardProps) {
     }
   }
 
-  const formatDuration = (seconds: number | null) => {
-    if (!seconds) return 'N/A'
-    const minutes = Math.floor(seconds / 60)
-    const remainingSeconds = Math.floor(seconds % 60)
-    return `${minutes}m ${remainingSeconds}s`
-  }
-
   const getSentimentColor = (sentiment: string | null) => {
     switch (sentiment?.toLowerCase()) {
       case 'positive':
@@ -82,6 +82,33 @@ export function AnalyticsDashboard({ projectId }: AnalyticsDashboardProps) {
         return 'text-gray-600 bg-gray-50'
       default:
         return 'text-gray-600 bg-gray-50'
+    }
+  }
+
+  const handleExportCSV = async () => {
+    if (!projectId || projectId === ':projectId') {
+      return
+    }
+
+    try {
+      setExporting(true)
+      const blob = await api.exportConversationsCSV(projectId)
+
+      // Create download link
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = `conversations-${projectId}-${new Date().toISOString().split('T')[0]}.csv`
+      document.body.appendChild(anchor)
+      anchor.click()
+
+      // Cleanup
+      document.body.removeChild(anchor)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to export CSV')
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -107,6 +134,9 @@ export function AnalyticsDashboard({ projectId }: AnalyticsDashboardProps) {
 
   return (
     <div className="space-y-6">
+      {/* Audience Synthesis Panel */}
+      <AudienceSynthesisPanel projectId={projectId} />
+
       {/* Overview Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg bg-white p-6 shadow">
@@ -177,8 +207,15 @@ export function AnalyticsDashboard({ projectId }: AnalyticsDashboardProps) {
 
       {/* Recent Conversations Table */}
       <div className="rounded-lg bg-white shadow">
-        <div className="border-b border-gray-200 px-6 py-4">
+        <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">Recent Conversations</h3>
+          <button
+            onClick={handleExportCSV}
+            disabled={exporting || analytics.recentConversations.length === 0}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+          >
+            {exporting ? 'Exporting...' : 'Export CSV'}
+          </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -191,7 +228,7 @@ export function AnalyticsDashboard({ projectId }: AnalyticsDashboardProps) {
                   Messages
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Duration
+                  Summary
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Sentiment
@@ -213,21 +250,35 @@ export function AnalyticsDashboard({ projectId }: AnalyticsDashboardProps) {
                 </tr>
               ) : (
                 analytics.recentConversations.map((conversation) => (
-                  <tr key={conversation.id} className="hover:bg-gray-50">
-                    <td className="whitespace-nowrap px-6 py-4">
+                  <tr
+                    key={conversation.id}
+                    onClick={() => setSelectedConversationId(conversation.id)}
+                    className="cursor-pointer hover:bg-gray-50 align-top"
+                  >
+                    <td className="whitespace-nowrap px-6 py-6">
                       <div className="text-sm font-medium text-gray-900">
                         {conversation.viewerEmail || 'Anonymous'}
                       </div>
+                      {conversation.viewerName && conversation.viewerEmail && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          {conversation.viewerName}
+                        </div>
+                      )}
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4">
+                    <td className="whitespace-nowrap px-6 py-6">
                       <div className="text-sm text-gray-900">{conversation.messageCount}</div>
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4">
-                      <div className="text-sm text-gray-900">
-                        {formatDuration(conversation.durationSeconds)}
+                    <td className="px-6 py-6" style={{ maxWidth: '400px' }}>
+                      <div
+                        className="text-sm text-gray-900 line-clamp-3 leading-relaxed"
+                        title={conversation.summary || ''}
+                      >
+                        {conversation.summary || (
+                          <span className="text-gray-400 italic">No summary</span>
+                        )}
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4">
+                    <td className="whitespace-nowrap px-6 py-6">
                       {conversation.sentiment ? (
                         <span
                           className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${getSentimentColor(
@@ -240,12 +291,12 @@ export function AnalyticsDashboard({ projectId }: AnalyticsDashboardProps) {
                         <span className="text-sm text-gray-400">-</span>
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4">
+                    <td className="whitespace-nowrap px-6 py-6">
                       <div className="text-sm text-gray-900">
                         {formatDate(conversation.startedAt)}
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4">
+                    <td className="whitespace-nowrap px-6 py-6">
                       {conversation.endedAt ? (
                         <span className="inline-flex rounded-full bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-600">
                           Ended
@@ -263,6 +314,14 @@ export function AnalyticsDashboard({ projectId }: AnalyticsDashboardProps) {
           </table>
         </div>
       </div>
+
+      {/* Conversation Detail Panel */}
+      {selectedConversationId && (
+        <ConversationDetailPanel
+          conversationId={selectedConversationId}
+          onClose={() => setSelectedConversationId(null)}
+        />
+      )}
     </div>
   )
 }

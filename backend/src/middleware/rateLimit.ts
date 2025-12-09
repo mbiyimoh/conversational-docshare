@@ -1,12 +1,15 @@
 import rateLimit from 'express-rate-limit'
 
+// Disable rate limiting in development for testing
+const isDev = process.env.NODE_ENV !== 'production'
+
 /**
  * Rate limiter for authentication endpoints
- * 10 requests per hour per IP
+ * 10 requests per hour per IP (disabled in dev)
  */
 export const authLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10,
+  max: isDev ? 10000 : 10, // Effectively unlimited in dev
   message: {
     error: {
       code: 'RATE_LIMIT_EXCEEDED',
@@ -24,7 +27,7 @@ export const authLimiter = rateLimit({
  */
 export const registrationLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5,
+  max: isDev ? 10000 : 5, // Effectively unlimited in dev
   message: {
     error: {
       code: 'RATE_LIMIT_EXCEEDED',
@@ -42,7 +45,7 @@ export const registrationLimiter = rateLimit({
  */
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: isDev ? 10000 : 100, // Effectively unlimited in dev
   message: {
     error: {
       code: 'RATE_LIMIT_EXCEEDED',

@@ -12,9 +12,9 @@ export async function getProjectAnalytics(req: Request, res: Response) {
 
   const { projectId } = req.params
 
-  // Validate projectId is a valid UUID
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  if (!uuidRegex.test(projectId)) {
+  // Validate projectId is a valid CUID
+  const cuidRegex = /^[0-9a-z]{25,}$/i
+  if (!cuidRegex.test(projectId)) {
     throw new ValidationError('Invalid project ID format')
   }
 
@@ -67,9 +67,12 @@ export async function getProjectAnalytics(req: Request, res: Response) {
     select: {
       id: true,
       viewerEmail: true,
+      viewerName: true,
       messageCount: true,
       durationSeconds: true,
       sentiment: true,
+      topics: true,
+      summary: true,
       startedAt: true,
       endedAt: true,
     },
@@ -79,17 +82,18 @@ export async function getProjectAnalytics(req: Request, res: Response) {
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
+  // Note: PostgreSQL requires quoted identifiers for camelCase column names
   const conversationsByDay = await prisma.$queryRaw<
     Array<{ date: string; count: number }>
   >`
     SELECT
-      DATE(started_at) as date,
+      DATE("startedAt") as date,
       COUNT(*)::int as count
     FROM conversations
-    WHERE project_id = ${projectId}
-      AND started_at >= ${thirtyDaysAgo}
-    GROUP BY DATE(started_at)
-    ORDER BY DATE(started_at) ASC
+    WHERE "projectId" = ${projectId}
+      AND "startedAt" >= ${thirtyDaysAgo}
+    GROUP BY DATE("startedAt")
+    ORDER BY DATE("startedAt") ASC
   `
 
   res.json({
@@ -117,9 +121,9 @@ export async function getConversationAnalytics(req: Request, res: Response) {
 
   const { conversationId } = req.params
 
-  // Validate conversationId is a valid UUID
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  if (!uuidRegex.test(conversationId)) {
+  // Validate conversationId is a valid CUID
+  const cuidRegex = /^[0-9a-z]{25,}$/i
+  if (!cuidRegex.test(conversationId)) {
     throw new ValidationError('Invalid conversation ID format')
   }
 
@@ -174,4 +178,111 @@ export async function getConversationAnalytics(req: Request, res: Response) {
       messages: conversation.messages,
     },
   })
+}
+
+/**
+ * Export project conversations as CSV
+ */
+export async function exportConversationsCSV(req: Request, res: Response) {
+  if (!req.user) {
+    throw new AuthorizationError()
+  }
+
+  const { projectId } = req.params
+
+  // Validate projectId is a valid CUID
+  const cuidRegex = /^[0-9a-z]{25,}$/i
+  if (!cuidRegex.test(projectId)) {
+    throw new ValidationError('Invalid project ID format')
+  }
+
+  // Verify project ownership
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+  })
+
+  if (!project) {
+    throw new NotFoundError('Project')
+  }
+
+  if (project.ownerId !== req.user.userId) {
+    throw new AuthorizationError('You do not own this project')
+  }
+
+  // Get all conversations for the project
+  const conversations = await prisma.conversation.findMany({
+    where: { projectId },
+    orderBy: { startedAt: 'desc' },
+    select: {
+      id: true,
+      viewerEmail: true,
+      viewerName: true,
+      messageCount: true,
+      durationSeconds: true,
+      sentiment: true,
+      topics: true,
+      summary: true,
+      startedAt: true,
+      endedAt: true,
+    },
+  })
+
+  // Helper function to escape CSV fields
+  const escapeCsvField = (field: string | number | boolean | null | undefined | string[]): string => {
+    if (field === null || field === undefined) {
+      return ''
+    }
+    const value = String(field)
+    // Escape quotes by doubling them and wrap in quotes if contains special chars
+    if (value.includes('"') || value.includes(',') || value.includes('\n')) {
+      return `"${value.replace(/"/g, '""')}"`
+    }
+    return value
+  }
+
+  // Build CSV content
+  const headers = [
+    'ID',
+    'Viewer Email',
+    'Viewer Name',
+    'Messages',
+    'Duration (seconds)',
+    'Sentiment',
+    'Topics',
+    'Summary',
+    'Started At',
+    'Ended At',
+  ]
+
+  const csvRows = [headers.join(',')]
+
+  // Add data rows
+  conversations.forEach((conversation) => {
+    const row = [
+      escapeCsvField(conversation.id),
+      escapeCsvField(conversation.viewerEmail),
+      escapeCsvField(conversation.viewerName),
+      escapeCsvField(conversation.messageCount),
+      escapeCsvField(conversation.durationSeconds),
+      escapeCsvField(conversation.sentiment),
+      escapeCsvField(conversation.topics ? conversation.topics.join('; ') : ''),
+      escapeCsvField(conversation.summary),
+      escapeCsvField(conversation.startedAt.toISOString()),
+      escapeCsvField(conversation.endedAt ? conversation.endedAt.toISOString() : ''),
+    ]
+    csvRows.push(row.join(','))
+  })
+
+  const csvContent = csvRows.join('\n')
+
+  // Generate safe filename from project name
+  const safeProjectName = project.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+  const filename = `${safeProjectName}_conversations_${new Date().toISOString().split('T')[0]}.csv`
+
+  // Set response headers
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+
+  // Send CSV content
+  res.send(csvContent)
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { api, AgentProfile as AgentProfileType, ProfileProgressEvent } from '../lib/api'
+import { api, AgentProfile as AgentProfileType, ProfileProgressEvent, VersionHistoryResponse } from '../lib/api'
 import { ProfileSectionContent } from './ProfileSectionContent'
 
 // Section-to-question mapping for source attribution
@@ -64,9 +64,41 @@ export function AgentProfile({
   const [currentSection, setCurrentSection] = useState<string | null>(null)
   const [completedSections, setCompletedSections] = useState<string[]>([])
 
+  // Version history state
+  const [versionHistory, setVersionHistory] = useState<VersionHistoryResponse | null>(null)
+  const [showVersionDropdown, setShowVersionDropdown] = useState(false)
+  const [rollingBack, setRollingBack] = useState(false)
+
   useEffect(() => {
     loadProfile()
+    loadVersionHistory()
   }, [projectId])
+
+  const loadVersionHistory = async () => {
+    try {
+      const history = await api.getVersionHistory(projectId)
+      setVersionHistory(history)
+    } catch (err) {
+      // Version history is optional - don't show error if it fails
+      console.warn('Failed to load version history:', err)
+    }
+  }
+
+  const handleRollback = async (targetVersion: number) => {
+    try {
+      setRollingBack(true)
+      setShowVersionDropdown(false)
+      const response = await api.rollbackProfile(projectId, targetVersion)
+      const restoredProfile = response.profile
+      setProfile(restoredProfile)
+      await loadVersionHistory()
+      showNotification(`Rolled back to version ${targetVersion}`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to rollback')
+    } finally {
+      setRollingBack(false)
+    }
+  }
 
   const loadProfile = async () => {
     try {
@@ -261,11 +293,87 @@ export function AgentProfile({
 
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">AI Agent Profile</h1>
-        <p className="mt-2 text-gray-600">
-          Review how your AI agent will communicate with recipients. Edit any
-          section to fine-tune the behavior.
-        </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">AI Agent Profile</h1>
+            <p className="mt-2 text-gray-600">
+              Review how your AI agent will communicate with recipients. Edit any
+              section to fine-tune the behavior.
+            </p>
+          </div>
+
+          {/* Version History Dropdown */}
+          {versionHistory && versionHistory.versions.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => setShowVersionDropdown(!showVersionDropdown)}
+                disabled={rollingBack}
+                className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                {rollingBack ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full" />
+                    Rolling back...
+                  </>
+                ) : (
+                  <>
+                    <span>v{versionHistory.currentVersion}</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </>
+                )}
+              </button>
+
+              {showVersionDropdown && (
+                <>
+                  {/* Click outside to close */}
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowVersionDropdown(false)}
+                  />
+                  <div className="absolute right-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                    <div className="py-1">
+                      <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide border-b">
+                        Version History
+                      </div>
+                      {versionHistory.versions.map((version) => (
+                        <button
+                          key={version.version}
+                          onClick={() => {
+                            if (version.version !== versionHistory.currentVersion) {
+                              handleRollback(version.version)
+                            } else {
+                              setShowVersionDropdown(false)
+                            }
+                          }}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${
+                            version.version === versionHistory.currentVersion
+                              ? 'text-blue-600 font-medium bg-blue-50'
+                              : 'text-gray-700'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span>
+                              v{version.version}
+                              {version.version === versionHistory.currentVersion && ' (current)'}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {version.source === 'recommendation' ? 'from feedback' : version.source}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-400 mt-0.5">
+                            {new Date(version.createdAt).toLocaleDateString()}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Error */}

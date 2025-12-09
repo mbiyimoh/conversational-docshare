@@ -1,3 +1,32 @@
+  1. Citation display: Show full [DOC:financial.pdf:section-3-2] or abbreviate to just
+  "Financial Projections" with link icon?
+>> full, section- or paragraph-level citation
+
+  2. Multi-document behavior: When clicking citation to a different document:
+    - A) Replace current doc in viewer (simpler)
+    - B) Add tabs for multiple docs (more complex)
+>> replace current doc in viewer
+
+  3. Panel resizing: Is fixed 60/40 split acceptable, or do you want user-resizable
+  panels?
+>> user resizable (with width-adaptive display for both panels) ideally
+
+  4. Filename vs ID mapping: The AI cites by filename (financial.pdf) but DB stores by
+  document ID. Should we:
+    - A) Build filename→ID lookup (what I'm assuming)
+    - B) Change AI prompt to cite by ID (breaking change)
+>> option A
+
+  5. Re-highlight on re-click: If user scrolls away from highlighted section, should
+  clicking the same citation again re-scroll and re-highlight?
+>> yes
+
+  6. Section ID verification: Need to confirm the backend's section ID generation
+  matches what the AI will cite (e.g., section-3-2 format).
+>> no idea
+
+----------
+
 1. **Profile Format & Editability**
    - Should the AI-generated profile be **read-only** (derived entirely from interview), or can creators **directly edit** the profile prose?
    - If editable: Should edits to the profile back-propagate to interview answers?
