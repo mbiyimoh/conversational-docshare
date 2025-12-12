@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "start": "serve dist -l ${PORT:-3000} -s",
+    "start": "serve dist -l tcp://0.0.0.0:${PORT:-3000} -s",
     "lint": "eslint src --ext ts,tsx",
     "format": "prettier --write \"src/**/*.{ts,tsx}\""
   },
