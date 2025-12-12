@@ -80,10 +80,22 @@ function formatErrorResponse(error: AppError | Error, requestId: string) {
 
 /**
  * Global error handler middleware
- * Note: All 4 parameters required by Express error handler signature
+ *
+ * IMPORTANT: Express requires ALL 4 parameters (err, req, res, next) for error handlers.
+ * Express uses the function's arity (parameter count) to distinguish error handlers
+ * from regular middleware. If we remove req or next, Express won't recognize this
+ * as an error handler and errors won't be caught.
+ *
+ * @see https://expressjs.com/en/guide/error-handling.html
+ * "Error-handling middleware always takes four arguments"
  */
-export function errorHandler(err: Error, req: Request, res: Response, next: NextFunction) {
-  // req and next unused but required by Express error handler type signature
+export function errorHandler(
+  err: Error,
+  req: Request,      // Required by Express - used for potential request context logging
+  res: Response,
+  next: NextFunction // Required by Express - could call next(err) to chain error handlers
+) {
+  // Suppress TypeScript unused variable warnings - Express requires these parameters
   void req
   void next
 
