@@ -45,7 +45,7 @@ export async function buildSystemPrompt(projectId: string): Promise<string> {
   const categories = ['audience', 'communication', 'content', 'engagement']
 
   for (const category of categories) {
-    const layers = project.contextLayers.filter((l) => l.category === category)
+    const layers = project.contextLayers.filter((l: { category: string }) => l.category === category)
 
     if (layers.length > 0) {
       sections.push(`## ${category.toUpperCase()} CONFIGURATION`)

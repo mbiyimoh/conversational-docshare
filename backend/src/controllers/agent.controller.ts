@@ -10,6 +10,7 @@ import {
   SectionId,
 } from '../services/profileSynthesizer'
 import { NotFoundError, AuthorizationError, ValidationError } from '../utils/errors'
+import type { ContextLayer } from '@prisma/client'
 
 // Progress event types for SSE streaming
 type ProgressEvent =
@@ -204,7 +205,7 @@ export async function getProjectContextLayers(req: Request, res: Response) {
   const layers = await getContextLayers(projectId)
 
   res.json({
-    contextLayers: layers.map((l) => ({
+    contextLayers: layers.map((l: ContextLayer) => ({
       id: l.id,
       category: l.category,
       priority: l.priority,

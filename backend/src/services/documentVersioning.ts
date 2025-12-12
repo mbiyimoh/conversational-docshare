@@ -90,7 +90,15 @@ export async function getDocumentVersions(documentId: string) {
     },
   })
 
-  return versions.map((v) => ({
+  return versions.map((v: {
+    id: string;
+    version: number;
+    editedById: string | null;
+    editedBy: { id: string; email: string; name: string | null } | null;
+    changeNote: string | null;
+    source: string | null;
+    createdAt: Date;
+  }) => ({
     id: v.id,
     version: v.version,
     editedById: v.editedById,

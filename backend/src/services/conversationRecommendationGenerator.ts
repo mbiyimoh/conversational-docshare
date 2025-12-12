@@ -198,7 +198,7 @@ export async function generateConversationRecommendations(
     }
 
     // 6. Validate and clean evidence quotes
-    const transcript = conversation.messages.map((m) => m.content.toLowerCase()).join(' ')
+    const transcript = conversation.messages.map((m: { content: string }) => m.content.toLowerCase()).join(' ')
 
     filtered.forEach((rec) => {
       rec.evidenceQuotes = rec.evidenceQuotes.filter((quote) => {
@@ -216,7 +216,7 @@ export async function generateConversationRecommendations(
     const validImpacts = ['low', 'medium', 'high'] as const
 
     // Build set of valid document IDs from the project
-    const validDocumentIds = new Set(conversation.project.documents.map((d) => d.id))
+    const validDocumentIds = new Set(conversation.project.documents.map((d: { id: string }) => d.id))
 
     const validatedRecs = filtered.filter((rec) => {
       if (!validTypes.includes(rec.type as ConversationRecommendationType)) {

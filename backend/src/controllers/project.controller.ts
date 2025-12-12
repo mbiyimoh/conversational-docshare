@@ -64,7 +64,7 @@ export async function getUserProjects(req: Request, res: Response) {
   })
 
   res.json({
-    projects: projects.map((p) => ({
+    projects: projects.map((p: typeof projects[0]) => ({
       id: p.id,
       name: p.name,
       description: p.description,

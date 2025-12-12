@@ -31,7 +31,7 @@ export async function getSavedConversations(req: Request, res: Response) {
   const total = conversations.length
 
   res.json({
-    conversations: conversations.map((conv) => ({
+    conversations: conversations.map((conv: typeof conversations[0]) => ({
       id: conv.id,
       projectId: conv.projectId,
       project: {
@@ -113,7 +113,7 @@ export async function getDashboardData(req: Request, res: Response) {
   })
 
   res.json({
-    projects: projects.map((p) => ({
+    projects: projects.map((p: typeof projects[0]) => ({
       id: p.id,
       name: p.name,
       description: p.description,
@@ -126,7 +126,7 @@ export async function getDashboardData(req: Request, res: Response) {
       createdAt: p.createdAt,
       updatedAt: p.updatedAt,
     })),
-    savedConversations: savedConversations.map((conv) => ({
+    savedConversations: savedConversations.map((conv: typeof savedConversations[0]) => ({
       id: conv.id,
       projectId: conv.projectId,
       project: {

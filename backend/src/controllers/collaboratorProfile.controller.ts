@@ -190,19 +190,20 @@ export async function incrementCollaboratorProfileUsage(req: Request, res: Respo
  * Synthesize collaborator profile from raw input
  * POST /api/collaborator-profiles/synthesize
  */
-export async function synthesizeCollaboratorProfileHandler(req: Request, res: Response) {
+export async function synthesizeCollaboratorProfileHandler(req: Request, res: Response): Promise<void> {
   const { rawInput, additionalContext } = req.body
 
   if (!rawInput || typeof rawInput !== 'string' || rawInput.trim().length === 0) {
-    return res.status(400).json({ error: 'rawInput is required' })
+    res.status(400).json({ error: 'rawInput is required' })
+    return
   }
 
   try {
     const profile = await synthesizeCollaboratorProfile(rawInput, additionalContext)
-    return res.json({ profile })
+    res.json({ profile })
   } catch (error) {
     console.error('Collaborator profile synthesis failed:', error)
-    return res.status(500).json({
+    res.status(500).json({
       error: error instanceof Error ? error.message : 'Synthesis failed'
     })
   }

@@ -161,7 +161,7 @@ export async function regenerateAudienceSynthesis(projectId: string) {
   const newVersion = (latestSynthesis?.version ?? 0) + 1
 
   // Calculate totals
-  const totalMessages = conversations.reduce((sum, c) => sum + c.messageCount, 0)
+  const totalMessages = conversations.reduce((sum: number, c) => sum + c.messageCount, 0)
 
   return prisma.audienceSynthesis.create({
     data: {

@@ -194,7 +194,7 @@ export async function generateRecommendations(
   // 3. Format comments for prompt
   const formattedComments = comments
     .map(
-      (c, i) =>
+      (c: { id: string; templateId: string | null; content: string; message: { content: string } }, i: number) =>
         `Comment ${i + 1} (ID: ${c.id})${c.templateId ? ` [${c.templateId}]` : ''}:
   Feedback: "${c.content}"
   On AI response: "${c.message.content.substring(0, 200)}..."`
@@ -517,7 +517,12 @@ export async function getVersionHistory(
   })
 
   return {
-    versions: versions.map((v) => ({
+    versions: versions.map((v: {
+      version: number;
+      source: string;
+      createdAt: Date;
+      recommendationSetId: string | null;
+    }) => ({
       version: v.version,
       source: v.source,
       createdAt: v.createdAt.toISOString(),

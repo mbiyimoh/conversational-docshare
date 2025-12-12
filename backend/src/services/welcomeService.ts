@@ -38,9 +38,9 @@ export async function generateWelcomeMessage(projectId: string): Promise<string>
   }
 
   // Extract context layer info
-  const audienceLayer = project.contextLayers.find((l) => l.category === 'audience')
-  const commLayer = project.contextLayers.find((l) => l.category === 'communication')
-  const contentLayer = project.contextLayers.find((l) => l.category === 'content')
+  const audienceLayer = project.contextLayers.find((l: { category: string }) => l.category === 'audience')
+  const commLayer = project.contextLayers.find((l: { category: string }) => l.category === 'communication')
+  const contentLayer = project.contextLayers.find((l: { category: string; metadata: unknown }) => l.category === 'content')
 
   // Build prompt for LLM
   const prompt = buildWelcomePrompt({

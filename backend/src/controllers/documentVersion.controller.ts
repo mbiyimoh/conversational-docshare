@@ -179,7 +179,7 @@ export async function rollbackDocumentVersion(req: Request, res: Response) {
   const result = await rollbackToVersion(documentId, parseInt(versionNum, 10), req.user.userId)
 
   // Queue embedding regeneration for the rolled-back content
-  const plainText = tipTapToPlainText(result.version.content as DocumentContentJSON)
+  const plainText = tipTapToPlainText(result.version.content as unknown as DocumentContentJSON)
   queueEmbeddingRegeneration(documentId, plainText).catch((err) => {
     console.error('Failed to queue embedding regeneration:', err)
   })

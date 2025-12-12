@@ -229,7 +229,7 @@ export async function getConversationRecommendations(req: Request, res: Response
   })
 
   res.json({
-    recommendations: recommendations.map((r) => ({
+    recommendations: recommendations.map((r: typeof recommendations[0]) => ({
       id: r.id,
       type: r.type,
       title: r.title,

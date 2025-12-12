@@ -257,7 +257,7 @@ export async function exportConversationsCSV(req: Request, res: Response) {
   const csvRows = [headers.join(',')]
 
   // Add data rows
-  conversations.forEach((conversation) => {
+  conversations.forEach((conversation: typeof conversations[0]) => {
     const row = [
       escapeCsvField(conversation.id),
       escapeCsvField(conversation.viewerEmail),

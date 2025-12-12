@@ -185,7 +185,7 @@ export async function getProjectShareLinks(req: Request, res: Response) {
   })
 
   res.json({
-    shareLinks: shareLinks.map((link) => ({
+    shareLinks: shareLinks.map((link: typeof shareLinks[0]) => ({
       id: link.id,
       slug: link.slug,
       accessType: link.accessType,
@@ -345,7 +345,7 @@ export async function verifyShareLinkAccess(req: Request, res: Response) {
 
   if (shareLink.accessType === 'domain' && email) {
     const emailDomain = email.split('@')[1]
-    if (!shareLink.allowedDomains.some((domain) => emailDomain === domain)) {
+    if (!shareLink.allowedDomains.some((domain: string) => emailDomain === domain)) {
       res.status(403).json({
         error: {
           code: 'DOMAIN_NOT_ALLOWED',
@@ -558,7 +558,7 @@ export async function getShareLinkDocuments(req: Request, res: Response) {
   })
 
   res.json({
-    documents: documents.map((doc) => ({
+    documents: documents.map((doc: typeof documents[0]) => ({
       id: doc.id,
       filename: doc.filename,
       title: doc.title,

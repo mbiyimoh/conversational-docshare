@@ -4,6 +4,7 @@ import { NotFoundError, AuthorizationError, ValidationError } from '../utils/err
 import { buildSystemPrompt } from '../services/contextService'
 import { buildDocumentContext } from '../services/chatService'
 import { getOpenAI } from '../utils/openai'
+import type { TestMessage, TestComment } from '@prisma/client'
 
 /**
  * Get all test sessions for a project
@@ -43,7 +44,7 @@ export async function getTestSessions(req: Request, res: Response) {
 
   // Get comment counts for each session
   const sessionsWithCounts = await Promise.all(
-    sessions.map(async (session) => {
+    sessions.map(async (session: typeof sessions[0]) => {
       const commentCount = await prisma.testComment.count({
         where: {
           message: {
@@ -153,13 +154,13 @@ export async function getTestSession(req: Request, res: Response) {
       createdAt: session.createdAt,
       updatedAt: session.updatedAt,
       endedAt: session.endedAt,
-      messages: session.messages.map((m) => ({
+      messages: session.messages.map((m: TestMessage & { comments: TestComment[] }) => ({
         id: m.id,
         sessionId: m.sessionId,
         role: m.role,
         content: m.content,
         createdAt: m.createdAt,
-        comments: m.comments.map((c) => ({
+        comments: m.comments.map((c: TestComment) => ({
           id: c.id,
           messageId: c.messageId,
           content: c.content,
@@ -324,7 +325,7 @@ export async function sendTestMessage(req: Request, res: Response) {
   const chatMessages = [
     { role: 'system' as const, content: systemPrompt },
     ...(documentContext ? [{ role: 'system' as const, content: documentContext }] : []),
-    ...existingMessages.map((m) => ({
+    ...existingMessages.map((m: TestMessage) => ({
       role: m.role as 'user' | 'assistant',
       content: m.content,
     })),

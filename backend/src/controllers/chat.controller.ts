@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { generateChatCompletion, createConversation, getConversation } from '../services/chatService'
 import { NotFoundError, AuthorizationError } from '../utils/errors'
 import { prisma } from '../utils/prisma'
+import type { Message } from '@prisma/client'
 
 /**
  * Start a new conversation
@@ -151,7 +152,7 @@ export async function getConversationHistory(req: Request, res: Response) {
       topics: conversation.topics,
       startedAt: conversation.startedAt,
       endedAt: conversation.endedAt,
-      messages: conversation.messages.map((m) => ({
+      messages: conversation.messages.map((m: Message) => ({
         id: m.id,
         role: m.role,
         content: m.content,
@@ -199,7 +200,7 @@ export async function getProjectConversations(req: Request, res: Response) {
   })
 
   res.json({
-    conversations: conversations.map((c) => ({
+    conversations: conversations.map((c: typeof conversations[0]) => ({
       id: c.id,
       viewerEmail: c.viewerEmail,
       viewerName: c.viewerName,

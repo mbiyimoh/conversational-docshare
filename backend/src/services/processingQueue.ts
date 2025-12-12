@@ -1,4 +1,5 @@
 import { prisma } from '../utils/prisma'
+import { Prisma } from '@prisma/client'
 import { chunkDocumentBySection } from './documentChunker'
 import { getDocumentWorkerPool, processInChildProcess, isDevelopment } from './worker/workerPool'
 import type { ProcessedDocument } from './documentProcessor'
@@ -89,7 +90,7 @@ export async function processDocumentById(documentId: string): Promise<void> {
       )
 
       // Use transaction to ensure atomicity
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         await tx.document.update({
           where: { id: documentId },
           data: {

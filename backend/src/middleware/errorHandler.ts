@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import { AppError } from '../utils/errors'
-import { Prisma } from '@prisma/client'
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 
 /**
  * Generate unique request ID for tracking
@@ -27,7 +27,7 @@ function formatErrorResponse(error: AppError | Error, requestId: string) {
   }
 
   // Handle Prisma errors
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+  if (error instanceof PrismaClientKnownRequestError) {
     if (error.code === 'P2002') {
       return {
         error: {

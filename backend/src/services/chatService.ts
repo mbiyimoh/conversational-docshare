@@ -31,7 +31,7 @@ async function getConversationHistory(conversationId: string, limit: number = 10
     },
   })
 
-  return messages.map((m) => ({
+  return messages.map((m: { role: string; content: string }) => ({
     role: m.role as 'user' | 'assistant' | 'system',
     content: m.content,
   }))

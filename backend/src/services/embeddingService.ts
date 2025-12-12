@@ -85,7 +85,7 @@ export async function embedDocumentChunks(documentId: string): Promise<void> {
   }
 
   // Generate embeddings in batches
-  const texts = chunks.map((c) => c.content)
+  const texts = chunks.map((c: { content: string }) => c.content)
   const embeddings = await generateEmbeddings(texts)
 
   // Update chunks with embeddings
@@ -155,7 +155,15 @@ export async function searchSimilarChunks(
     LIMIT ${limit}
   `
 
-  return results.map((r) => ({
+  return results.map((r: {
+    id: string;
+    content: string;
+    similarity: number;
+    sectionTitle: string | null;
+    sectionId: string | null;
+    filename: string;
+    documentTitle: string;
+  }) => ({
     chunkId: r.id,
     content: r.content,
     similarity: r.similarity,
