@@ -9,6 +9,7 @@ import { DocumentCapsule } from '../components/DocumentCapsule'
 import { DocumentContentViewer } from '../components/DocumentContentViewer'
 import { EndSessionModal } from '../components/EndSessionModal'
 import { cn } from '../lib/utils'
+import { Card, Button, Badge, AccentText } from '../components/ui'
 import {
   initDocumentLookup,
   lookupDocumentByFilename,
@@ -302,8 +303,11 @@ export function SavedThreadPage() {
   // Loading state
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="text-gray-500">Loading conversation...</div>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex items-center gap-2 text-muted">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+          Loading conversation...
+        </div>
       </div>
     )
   }
@@ -311,75 +315,79 @@ export function SavedThreadPage() {
   // Error state
   if (error && !conversation) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="text-red-600 mb-4">{error}</div>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Card className="text-center max-w-md">
+          <div className="text-destructive mb-4">{error}</div>
           <button
             onClick={() => navigate('/dashboard')}
-            className="text-blue-600 hover:text-blue-800 underline"
+            className="text-accent hover:text-accent/80 underline transition-colors"
           >
             Back to Dashboard
           </button>
-        </div>
+        </Card>
       </div>
     )
   }
 
   if (!conversation) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="text-gray-600 mb-4">Conversation not found</div>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Card className="text-center max-w-md">
+          <div className="text-muted mb-4">Conversation not found</div>
           <button
             onClick={() => navigate('/dashboard')}
-            className="text-blue-600 hover:text-blue-800 underline"
+            className="text-accent hover:text-accent/80 underline transition-colors"
           >
             Back to Dashboard
           </button>
-        </div>
+        </Card>
       </div>
     )
   }
 
   // Main split-view experience
   return (
-    <div className="h-screen bg-gray-50 overflow-hidden">
+    <div className="h-screen bg-background overflow-hidden">
       <Resplit.Root direction="horizontal" className="h-full">
         {/* Chat Panel */}
         <Resplit.Pane
           order={0}
           initialSize={`${chatPanelFr}fr`}
           minSize="400px"
-          className="flex flex-col bg-white border-r min-h-0 overflow-hidden"
+          className="flex flex-col bg-background-elevated border-r border-border min-h-0 overflow-hidden"
           onResize={handleChatPanelResize}
         >
           {/* Header */}
-          <div className="border-b p-4 bg-white shrink-0">
+          <div className="border-b border-border p-4 bg-background-elevated shrink-0">
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <button
                   onClick={() => navigate('/dashboard')}
-                  className="text-blue-600 hover:text-blue-800 mb-2 flex items-center gap-1 text-sm"
+                  className="text-accent hover:text-accent/80 mb-2 flex items-center gap-1 text-sm transition-colors"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   Back to Dashboard
                 </button>
-                <h1 className="text-xl font-bold">{conversation.project?.name}</h1>
-                <div className="text-sm text-gray-600 mt-1">
+                <h1 className="font-display text-xl text-foreground">
+                  <AccentText>{conversation.project?.name}</AccentText>
+                </h1>
+                <div className="text-sm text-muted mt-1">
                   {conversation.messages.length} messages
                   {conversation.endedAt && (
-                    <span className="ml-2 text-gray-500">
+                    <span className="ml-2 text-dim">
                       (Ended - send a message to continue)
                     </span>
                   )}
                 </div>
               </div>
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => setShowEndModal(true)}
-                className="ml-4 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="ml-4"
               >
                 End Conversation
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -403,8 +411,8 @@ export function SavedThreadPage() {
                     className={cn(
                       'max-w-[80%] rounded-lg px-4 py-3',
                       isUser
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-900'
+                        ? 'bg-accent text-background'
+                        : 'bg-card-bg border border-border text-foreground'
                     )}
                   >
                     {isUser ? (
@@ -421,7 +429,7 @@ export function SavedThreadPage() {
                                   part.reference!.sectionId
                                 )
                               }
-                              className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 underline mx-1"
+                              className="inline-flex items-center gap-1 text-accent hover:text-accent/80 underline mx-1 transition-colors"
                               title={`Open ${part.reference.filename}`}
                             >
                               <svg
@@ -454,10 +462,10 @@ export function SavedThreadPage() {
             {/* Streaming indicator */}
             {streamingContent && (
               <div className="flex justify-start">
-                <div className="max-w-[80%] rounded-lg px-4 py-3 bg-gray-100 text-gray-900">
+                <div className="max-w-[80%] rounded-lg px-4 py-3 bg-card-bg border border-border text-foreground">
                   <ProfileSectionContent content={streamingContent} />
-                  <div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                  <div className="flex items-center gap-1 mt-2 text-xs text-muted">
+                    <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
                     AI is typing...
                   </div>
                 </div>
@@ -476,7 +484,7 @@ export function SavedThreadPage() {
 
           {/* Error display */}
           {error && (
-            <div className="p-3 bg-red-50 border-t border-red-200 text-red-600 text-sm">
+            <div className="p-3 bg-destructive/10 border-t border-destructive/20 text-destructive text-sm">
               {error}
               <button
                 onClick={() => setError('')}
@@ -492,7 +500,7 @@ export function SavedThreadPage() {
         <Resplit.Splitter
           order={1}
           size="4px"
-          className="bg-gray-200 hover:bg-blue-400 cursor-col-resize transition-colors"
+          className="bg-border hover:bg-accent cursor-col-resize transition-colors"
         />
 
         {/* Document Panel */}
@@ -500,14 +508,14 @@ export function SavedThreadPage() {
           order={2}
           initialSize="1fr"
           minSize="300px"
-          className="bg-white relative flex flex-col min-h-0 overflow-hidden"
+          className="bg-background-elevated relative flex flex-col min-h-0 overflow-hidden"
         >
           {/* Back button header (only in document mode) */}
           {panelMode === 'document' && (
-            <div className="border-b p-3 bg-white shrink-0">
+            <div className="border-b border-border p-3 bg-background-elevated shrink-0">
               <button
                 onClick={handleBackToCapsule}
-                className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm font-medium"
+                className="flex items-center gap-2 text-accent hover:text-accent/80 text-sm font-medium transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back to All Documents
@@ -532,7 +540,7 @@ export function SavedThreadPage() {
                 highlightKey={highlightKey}
               />
             ) : (
-              <div className="flex items-center justify-center h-full text-gray-500">
+              <div className="flex items-center justify-center h-full text-muted">
                 Select a document to view
               </div>
             )}
@@ -557,24 +565,21 @@ export function SavedThreadPage() {
 
       {/* Conversation summary (if available and ended) */}
       {conversation.summary && conversation.endedAt && (
-        <div className="fixed bottom-4 right-4 max-w-md bg-blue-50 rounded-lg p-4 border border-blue-200 shadow-lg">
-          <h3 className="text-sm font-semibold text-blue-900 mb-2">
+        <Card className="fixed bottom-4 right-4 max-w-md" glow>
+          <h3 className="text-sm font-display text-foreground mb-2">
             Conversation Summary
           </h3>
-          <p className="text-sm text-blue-800">{conversation.summary}</p>
+          <p className="text-sm text-muted">{conversation.summary}</p>
           {conversation.topics?.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">
               {conversation.topics.map((topic, idx) => (
-                <span
-                  key={idx}
-                  className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded"
-                >
+                <Badge key={idx} variant="secondary">
                   {topic}
-                </span>
+                </Badge>
               ))}
             </div>
           )}
-        </div>
+        </Card>
       )}
     </div>
   )

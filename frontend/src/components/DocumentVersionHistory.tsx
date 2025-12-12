@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { diffWords } from 'diff'
 import { api } from '../lib/api'
 import { tipTapToPlainText } from '../lib/tiptapUtils'
+import { Badge } from './ui/badge'
 
 interface Version {
   id: string
@@ -71,15 +72,15 @@ export function DocumentVersionHistory({
     if (!diffContent) return null
     const diff = diffWords(diffContent.original, diffContent.current)
     return (
-      <div className="font-mono text-sm whitespace-pre-wrap p-4 bg-gray-50 rounded">
+      <div className="font-mono text-sm whitespace-pre-wrap p-4 bg-background-elevated rounded">
         {diff.map((part, i) => (
           <span
             key={i}
             className={
               part.added
-                ? 'bg-green-100 text-green-800'
+                ? 'bg-success/10 text-success'
                 : part.removed
-                  ? 'bg-red-100 text-red-800 line-through'
+                  ? 'bg-destructive/10 text-destructive line-through'
                   : ''
             }
           >
@@ -91,12 +92,12 @@ export function DocumentVersionHistory({
   }
 
   return (
-    <div className="fixed inset-4 bg-white z-50 flex flex-col rounded-xl shadow-2xl">
-      <div className="px-6 py-4 border-b flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Version History</h2>
+    <div className="fixed inset-4 bg-card-bg z-50 flex flex-col rounded-xl shadow-2xl">
+      <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-foreground">Version History</h2>
         <button
           onClick={onClose}
-          className="text-gray-500 hover:text-gray-700 text-xl"
+          className="text-muted hover:text-foreground text-xl"
         >
           ×
         </button>
@@ -104,35 +105,35 @@ export function DocumentVersionHistory({
 
       <div className="flex-1 flex overflow-hidden min-h-0">
         {/* Version List */}
-        <div className="w-80 border-r overflow-y-auto">
+        <div className="w-80 border-r border-border overflow-y-auto">
           {loading ? (
-            <div className="p-4 text-gray-500">Loading...</div>
+            <div className="p-4 text-muted">Loading...</div>
           ) : (
             versions.map((v) => (
               <div
                 key={v.id}
-                className={`p-4 border-b cursor-pointer hover:bg-gray-50 ${
-                  selectedVersion === v.version ? 'bg-blue-50' : ''
+                className={`p-4 border-b border-border cursor-pointer hover:bg-white/5 transition-colors ${
+                  selectedVersion === v.version ? 'bg-accent/10' : ''
                 }`}
                 onClick={() => handleViewDiff(v.version)}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-medium">
+                  <span className="font-medium text-foreground">
                     Version {v.version}
                     {v.version === currentVersion && (
-                      <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                      <Badge variant="success" className="ml-2">
                         Current
-                      </span>
+                      </Badge>
                     )}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-muted">
                     {new Date(v.createdAt).toLocaleDateString()}
                   </span>
                 </div>
                 {v.changeNote && (
-                  <p className="text-sm text-gray-600 mt-1">{v.changeNote}</p>
+                  <p className="text-sm text-muted mt-1">{v.changeNote}</p>
                 )}
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-dim mt-1">
                   {v.source === 'recommendation'
                     ? 'AI Recommendation'
                     : v.source === 'import'
@@ -149,19 +150,19 @@ export function DocumentVersionHistory({
         <div className="flex-1 overflow-y-auto p-4">
           {loadingDiff ? (
             <div className="flex items-center justify-center py-12">
-              <div className="animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full" />
-              <span className="ml-2 text-gray-500">Loading diff...</span>
+              <div className="animate-spin h-6 w-6 border-2 border-accent border-t-transparent rounded-full" />
+              <span className="ml-2 text-muted">Loading diff...</span>
             </div>
           ) : selectedVersion !== null ? (
             <>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-medium">
+                <h3 className="font-medium text-foreground">
                   Comparing Version {selectedVersion} → {currentVersion}
                 </h3>
                 {selectedVersion !== currentVersion && (
                   <button
                     onClick={() => onRollback(selectedVersion)}
-                    className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+                    className="px-4 py-2 bg-accent text-white rounded hover:bg-accent/90"
                   >
                     Rollback to Version {selectedVersion}
                   </button>
@@ -170,7 +171,7 @@ export function DocumentVersionHistory({
               {renderDiff()}
             </>
           ) : (
-            <div className="text-gray-500 text-center py-12">
+            <div className="text-muted text-center py-12">
               Select a version to view changes
             </div>
           )}

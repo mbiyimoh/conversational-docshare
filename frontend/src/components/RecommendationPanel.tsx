@@ -6,6 +6,8 @@ import type {
   AgentProfile,
 } from '../types/recommendation'
 import { SECTION_DISPLAY_NAMES } from '../types/recommendation'
+import { Card, Button, Badge } from './ui'
+import { RefreshCw, X, ChevronRight, ChevronDown } from 'lucide-react'
 
 interface RecommendationPanelProps {
   projectId: string
@@ -14,9 +16,9 @@ interface RecommendationPanelProps {
 }
 
 const TYPE_LABELS = {
-  add: { label: 'Add', color: 'bg-green-100 text-green-800' },
-  remove: { label: 'Remove', color: 'bg-red-100 text-red-800' },
-  modify: { label: 'Modify', color: 'bg-yellow-100 text-yellow-800' },
+  add: { label: 'Add', variant: 'success' as const },
+  remove: { label: 'Remove', variant: 'destructive' as const },
+  modify: { label: 'Modify', variant: 'warning' as const },
 }
 
 export function RecommendationPanel({
@@ -105,100 +107,89 @@ export function RecommendationPanel({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-lg p-6 w-[calc(100vw-4rem)] max-w-6xl mx-auto">
+      <Card className="p-6 w-[calc(100vw-4rem)] max-w-6xl mx-auto">
         <div className="flex flex-col items-center py-8">
-          <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mb-4" />
-          <div className="text-gray-600">Analyzing your testing feedback...</div>
-          <div className="text-sm text-gray-400 mt-2">This may take up to 30 seconds</div>
+          <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full mb-4" />
+          <div className="text-muted">Analyzing your testing feedback...</div>
+          <div className="text-sm text-dim mt-2">This may take up to 30 seconds</div>
         </div>
-      </div>
+      </Card>
     )
   }
 
   // Success screen after applying recommendations
   if (successInfo) {
     return (
-      <div className="bg-white rounded-lg shadow-lg p-8 w-[calc(100vw-4rem)] max-w-2xl mx-auto">
+      <Card className="p-8 w-[calc(100vw-4rem)] max-w-2xl mx-auto">
         <div className="flex flex-col items-center text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+          <h2 className="font-display text-xl text-foreground mb-2">
             Changes Applied Successfully!
           </h2>
-          <p className="text-gray-600 mb-2">
+          <p className="text-muted mb-2">
             {successInfo.appliedCount} recommendation{successInfo.appliedCount !== 1 ? 's' : ''} applied to your profile.
           </p>
-          <p className="text-sm text-gray-500 mb-6">
+          <p className="text-sm text-dim mb-6">
             Profile updated to version {successInfo.versionNumber}. You can rollback anytime from the profile view.
           </p>
           <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-            >
+            <Button variant="ghost" onClick={onClose}>
               Close
-            </button>
-            <button
-              onClick={handleViewProfile}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
+            </Button>
+            <Button onClick={handleViewProfile}>
               View Updated Profile
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
+      </Card>
     )
   }
 
   const pendingRecs = recommendations.filter((r) => r.status === 'pending')
 
   return (
-    <div className="bg-white rounded-lg shadow-lg w-[calc(100vw-4rem)] max-w-6xl mx-auto h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
+    <div className="bg-card-bg border border-border rounded-lg shadow-lg w-[calc(100vw-4rem)] max-w-6xl mx-auto h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
       {/* Header */}
-      <div className="px-6 py-4 border-b flex items-center justify-between">
+      <div className="px-6 py-4 border-b border-border flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Profile Recommendations</h2>
-          <p className="text-sm text-gray-500">
+          <h2 className="font-display text-lg text-foreground">Profile Recommendations</h2>
+          <p className="text-sm text-muted">
             Based on {stats.totalComments} comments across {stats.sessionsAnalyzed} sessions
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={loadRecommendations}
-            className="text-sm text-blue-600 hover:text-blue-700"
-          >
-            ↻ Regenerate
-          </button>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            ✕
+          <Button variant="ghost" size="sm" onClick={loadRecommendations}>
+            <RefreshCw className="w-4 h-4 mr-1" />
+            Regenerate
+          </Button>
+          <button onClick={onClose} className="text-dim hover:text-foreground transition-colors">
+            <X className="w-5 h-5" />
           </button>
         </div>
       </div>
 
       {/* Error */}
       {error && (
-        <div className="px-6 py-3 bg-red-50 text-red-600 text-sm">{error}</div>
+        <div className="px-6 py-3 bg-destructive/10 text-destructive text-sm">{error}</div>
       )}
 
       {/* Analysis Summary */}
       {!loading && stats.analysisSummary && (
         <div className="px-6 py-4">
-          <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-            <div className="text-sm text-blue-900">
+          <div className="p-4 bg-accent/10 rounded-lg border border-accent/30">
+            <div className="text-sm text-foreground">
               {stats.analysisSummary.overview}
             </div>
             {stats.analysisSummary.feedbackThemes.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1">
                 {stats.analysisSummary.feedbackThemes.map((theme) => (
-                  <span
-                    key={theme}
-                    className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded"
-                  >
+                  <Badge key={theme} variant="secondary">
                     {theme}
-                  </span>
+                  </Badge>
                 ))}
               </div>
             )}
@@ -211,27 +202,27 @@ export function RecommendationPanel({
         {pendingRecs.length === 0 ? (
           <div className="text-center py-8">
             {recommendations.length === 0 && stats.analysisSummary?.configAlignment === 'good' ? (
-              <div className="bg-green-50 rounded-lg p-6 border border-green-100">
-                <div className="text-green-800 font-medium mb-2">
+              <div className="bg-success/10 rounded-lg p-6 border border-success/30">
+                <div className="text-success font-medium mb-2">
                   Good news - no changes needed!
                 </div>
-                <div className="text-sm text-green-700">
+                <div className="text-sm text-muted">
                   {stats.analysisSummary.noChangeReason ||
                     'Your current profile already addresses the feedback themes.'}
                 </div>
               </div>
             ) : recommendations.length === 0 ? (
-              <div className="bg-gray-50 rounded-lg p-6">
-                <div className="text-gray-700 font-medium mb-2">
+              <div className="bg-background-elevated rounded-lg p-6">
+                <div className="text-foreground font-medium mb-2">
                   No specific recommendations
                 </div>
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-muted">
                   {stats.analysisSummary?.noChangeReason ||
                     'Unable to generate specific recommendations from the provided feedback.'}
                 </div>
               </div>
             ) : (
-              <p className="text-gray-500">
+              <p className="text-muted">
                 All recommendations have been processed.
               </p>
             )}
@@ -239,38 +230,36 @@ export function RecommendationPanel({
         ) : (
           <div className="space-y-4">
             {pendingRecs.map((rec) => (
-              <div
+              <Card
                 key={rec.id}
-                className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                className="p-4 hover:border-accent/50 transition-all"
               >
                 {/* Header with section and type */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-gray-900">
+                    <span className="font-display text-foreground">
                       {SECTION_DISPLAY_NAMES[rec.targetSection]}
                     </span>
-                    <span
-                      className={`px-2 py-0.5 text-xs rounded-full ${
-                        TYPE_LABELS[rec.type].color
-                      }`}
-                    >
+                    <Badge variant={TYPE_LABELS[rec.type].variant}>
                       {TYPE_LABELS[rec.type].label}
-                    </span>
+                    </Badge>
                   </div>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => handleDismiss(rec.id)}
-                    className="text-sm text-gray-400 hover:text-gray-600"
+                    className="text-dim hover:text-foreground"
                   >
                     Dismiss
-                  </button>
+                  </Button>
                 </div>
 
                 {/* Summary Bullets */}
                 <div className="mb-4">
                   <ul className="space-y-1">
                     {rec.summaryBullets.map((bullet, idx) => (
-                      <li key={idx} className="text-sm text-gray-700 flex items-start gap-2">
-                        <span className="text-blue-500 mt-0.5">•</span>
+                      <li key={idx} className="text-sm text-muted flex items-start gap-2">
+                        <span className="text-accent mt-0.5">•</span>
                         {bullet}
                       </li>
                     ))}
@@ -279,15 +268,15 @@ export function RecommendationPanel({
 
                 {/* Side-by-side Diff */}
                 <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="bg-red-50 rounded-lg p-4 border border-red-100">
-                    <div className="text-xs font-medium text-red-600 mb-2 uppercase tracking-wide">Before</div>
-                    <div className="text-sm text-red-900 whitespace-pre-wrap max-h-80 overflow-y-auto">
-                      {rec.previewBefore || <em className="text-gray-400">Empty</em>}
+                  <div className="bg-destructive/10 rounded-lg p-4 border border-destructive/20">
+                    <div className="text-xs font-medium text-destructive mb-2 uppercase tracking-wide font-mono">Before</div>
+                    <div className="text-sm text-foreground whitespace-pre-wrap max-h-80 overflow-y-auto">
+                      {rec.previewBefore || <em className="text-dim">Empty</em>}
                     </div>
                   </div>
-                  <div className="bg-green-50 rounded-lg p-4 border border-green-100">
-                    <div className="text-xs font-medium text-green-600 mb-2 uppercase tracking-wide">After</div>
-                    <div className="text-sm text-green-900 whitespace-pre-wrap max-h-80 overflow-y-auto">
+                  <div className="bg-success/10 rounded-lg p-4 border border-success/20">
+                    <div className="text-xs font-medium text-success mb-2 uppercase tracking-wide font-mono">After</div>
+                    <div className="text-sm text-foreground whitespace-pre-wrap max-h-80 overflow-y-auto">
                       {rec.previewAfter}
                     </div>
                   </div>
@@ -298,21 +287,26 @@ export function RecommendationPanel({
                   onClick={() =>
                     setExpandedRec(expandedRec === rec.id ? null : rec.id)
                   }
-                  className="text-sm text-blue-600 hover:text-blue-700"
+                  className="text-sm text-accent hover:text-accent/80 flex items-center gap-1 transition-colors"
                 >
-                  {expandedRec === rec.id ? '▼' : '▶'} Why this change?
+                  {expandedRec === rec.id ? (
+                    <ChevronDown className="w-4 h-4" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4" />
+                  )}
+                  Why this change?
                 </button>
                 {expandedRec === rec.id && (
-                  <div className="mt-2 p-3 bg-gray-50 rounded text-sm text-gray-600">
+                  <div className="mt-2 p-3 bg-background-elevated rounded text-sm text-muted">
                     {rec.rationale}
                     {rec.relatedCommentIds.length > 0 && (
-                      <div className="mt-2 text-xs text-gray-400">
+                      <div className="mt-2 text-xs text-dim">
                         Based on {rec.relatedCommentIds.length} related comments
                       </div>
                     )}
                   </div>
                 )}
-              </div>
+              </Card>
             ))}
           </div>
         )}
@@ -320,20 +314,17 @@ export function RecommendationPanel({
 
       {/* Footer with Apply All */}
       {pendingRecs.length > 0 && (
-        <div className="px-6 py-4 border-t bg-gray-50 flex items-center justify-between">
-          <p className="text-xs text-gray-500">
+        <div className="px-6 py-4 border-t border-border bg-background-elevated flex items-center justify-between">
+          <p className="text-xs text-dim">
             Changes will be applied directly to your profile. You can rollback anytime.
           </p>
-          <button
+          <Button
             onClick={handleApplyAll}
             disabled={applying}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            isLoading={applying}
           >
-            {applying && (
-              <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-            )}
             Apply All ({pendingRecs.length})
-          </button>
+          </Button>
         </div>
       )}
     </div>

@@ -9,6 +9,7 @@ import { EndSessionModal } from '../components/EndSessionModal'
 import { DocumentCommentsDrawer } from '../components/DocumentCommentsDrawer'
 import { CollaboratorCommentPanel } from '../components/CollaboratorCommentPanel'
 import { api } from '../lib/api'
+import { Card, Button, Input, AccentText, GlowPulse } from '../components/ui'
 import {
   initDocumentLookup,
   lookupDocumentByFilename,
@@ -331,8 +332,11 @@ export function SharePage() {
   // Loading state
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-500">Loading...</div>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="flex items-center gap-2 text-muted">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+          Loading...
+        </div>
       </div>
     )
   }
@@ -340,17 +344,14 @@ export function SharePage() {
   // Error state
   if (error && !shareLink) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900">Access Error</h2>
-          <p className="mt-2 text-gray-600">{error}</p>
-          <button
-            onClick={() => navigate('/')}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Card className="text-center max-w-md">
+          <h2 className="font-display text-2xl text-foreground">Access Error</h2>
+          <p className="mt-2 text-muted">{error}</p>
+          <Button onClick={() => navigate('/')} className="mt-4">
             Go Home
-          </button>
-        </div>
+          </Button>
+        </Card>
       </div>
     )
   }
@@ -358,78 +359,74 @@ export function SharePage() {
   // Access gate (before conversation starts)
   if (!accessGranted && shareLink && project) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
-          <h1 className="text-2xl font-bold mb-2">{project.name}</h1>
+      <div className="relative min-h-screen bg-background flex items-center justify-center p-4 overflow-hidden">
+        {/* Atmospheric glow */}
+        <GlowPulse className="w-96 h-96 -top-48 -right-48" />
+        <GlowPulse className="w-80 h-80 -bottom-40 -left-40" color="purple" />
+
+        <Card className="relative max-w-md w-full">
+          <h1 className="font-display text-2xl text-foreground mb-2">
+            <AccentText>{project.name}</AccentText>
+          </h1>
           {project.description && (
-            <p className="text-gray-600 mb-6">{project.description}</p>
+            <p className="text-muted mb-6">{project.description}</p>
           )}
 
-          <div className="border-t pt-6">
-            <h2 className="text-lg font-semibold mb-4">Access Required</h2>
+          <div className="border-t border-border pt-6">
+            <h2 className="font-display text-lg text-foreground mb-4">Access Required</h2>
 
             {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
+              <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
                 {error}
               </div>
             )}
 
             {shareLink.accessType === 'password' && (
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Password</label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleVerifyAccess()}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter password"
-                    disabled={verifying}
-                  />
-                </div>
+                <Input
+                  type="password"
+                  label="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleVerifyAccess()}
+                  placeholder="Enter password"
+                  disabled={verifying}
+                />
               </div>
             )}
 
             {shareLink.accessType === 'email' && (
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Email Address</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="your@email.com"
-                    disabled={verifying}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Name (optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={viewerName}
-                    onChange={(e) => setViewerName(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleVerifyAccess()}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Your name"
-                    disabled={verifying}
-                  />
-                </div>
+                <Input
+                  type="email"
+                  label="Email Address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  disabled={verifying}
+                />
+                <Input
+                  type="text"
+                  label="Name (optional)"
+                  value={viewerName}
+                  onChange={(e) => setViewerName(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleVerifyAccess()}
+                  placeholder="Your name"
+                  disabled={verifying}
+                />
               </div>
             )}
 
-            <button
+            <Button
               onClick={handleVerifyAccess}
               disabled={verifying}
-              className="mt-6 w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              isLoading={verifying}
+              className="mt-6 w-full"
             >
               {verifying ? 'Verifying...' : 'Access Documents'}
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       </div>
     )
   }
@@ -437,44 +434,48 @@ export function SharePage() {
   // Main viewer experience (after access granted)
   if (accessGranted && conversationId && project) {
     return (
-      <div className="h-screen bg-gray-50 overflow-hidden">
+      <div className="h-screen bg-background overflow-hidden">
         <Resplit.Root direction="horizontal" className="h-full">
           {/* Main chat panel */}
           <Resplit.Pane
             order={0}
             initialSize={`${chatPanelFr}fr`}
             minSize="400px"
-            className="flex flex-col bg-white border-r min-h-0 overflow-hidden"
+            className="flex flex-col bg-background-elevated border-r border-border min-h-0 overflow-hidden"
             onResize={handleChatPanelResize}
           >
             {/* Header */}
-            <div className="border-b p-4 bg-white shrink-0">
+            <div className="border-b border-border p-4 bg-background-elevated shrink-0">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h1 className="text-xl font-bold">{project.name}</h1>
+                  <h1 className="font-display text-xl text-foreground">
+                    <AccentText>{project.name}</AccentText>
+                  </h1>
                   {project.description && (
-                    <p className="text-sm text-gray-600 mt-1">{project.description}</p>
+                    <p className="text-sm text-muted mt-1">{project.description}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-2 ml-4">
                   {/* Comments button for collaborators */}
                   {isCollaborator && selectedDocumentId && (
-                    <button
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       onClick={() => setCommentsDrawerOpen(true)}
-                      className="px-3 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
                     >
-                      <MessageSquare className="w-4 h-4" />
+                      <MessageSquare className="w-4 h-4 mr-2" />
                       Comments {comments.length > 0 && `(${comments.length})`}
-                    </button>
+                    </Button>
                   )}
                   {accessGranted && conversationId && (
-                    <button
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       onClick={() => setShowEndModal(true)}
                       data-testid="end-conversation-button"
-                      className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                     >
                       End Conversation
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
@@ -494,7 +495,7 @@ export function SharePage() {
           <Resplit.Splitter
             order={1}
             size="4px"
-            className="bg-gray-200 hover:bg-blue-400 cursor-col-resize transition-colors"
+            className="bg-border hover:bg-accent cursor-col-resize transition-colors"
           />
 
           {/* Document panel - always visible, shows capsule or document */}
@@ -502,14 +503,14 @@ export function SharePage() {
             order={2}
             initialSize="1fr"
             minSize="300px"
-            className="bg-white relative flex flex-col min-h-0 overflow-hidden"
+            className="bg-background-elevated relative flex flex-col min-h-0 overflow-hidden"
           >
             {/* Back button header (only in document mode) */}
             {panelMode === 'document' && (
-              <div className="border-b p-3 bg-white shrink-0">
+              <div className="border-b border-border p-3 bg-background-elevated shrink-0">
                 <button
                   onClick={handleBackToCapsule}
-                  className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  className="flex items-center gap-2 text-accent hover:text-accent/80 text-sm font-medium transition-colors"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   Back to All Documents
@@ -587,8 +588,8 @@ export function SharePage() {
 
   // Fallback
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-gray-500">Something went wrong. Please try again.</div>
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="text-muted">Something went wrong. Please try again.</div>
     </div>
   )
 }

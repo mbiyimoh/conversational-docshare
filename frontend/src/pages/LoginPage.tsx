@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
+import { Card, Button, Input, AccentText, GlowPulse } from '../components/ui'
 
 export function LoginPage() {
   const [email, setEmail] = useState('')
@@ -26,62 +27,65 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow">
-        <div>
-          <h2 className="text-center text-3xl font-bold">Sign in</h2>
-        </div>
+    <div className="relative flex min-h-screen items-center justify-center bg-background overflow-hidden">
+      {/* Atmospheric glow */}
+      <GlowPulse className="w-96 h-96 -top-48 -right-48" />
+      <GlowPulse className="w-80 h-80 -bottom-40 -left-40" color="purple" />
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="rounded bg-red-50 p-3 text-sm text-red-600">{error}</div>
-          )}
+      <div className="relative w-full max-w-md px-4">
+        <Card className="space-y-8">
+          <div className="text-center">
+            <h2 className="font-display text-3xl text-foreground">
+              <AccentText>Sign in</AccentText>
+            </h2>
+          </div>
 
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <input
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            {error && (
+              <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <Input
                 id="email"
                 type="email"
+                label="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                placeholder="you@example.com"
               />
-            </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <input
+              <Input
                 id="password"
                 type="password"
+                label="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                placeholder="Enter your password"
               />
             </div>
-          </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? 'Signing in...' : 'Sign in'}
-          </button>
+            <Button
+              type="submit"
+              disabled={loading}
+              isLoading={loading}
+              className="w-full"
+            >
+              {loading ? 'Signing in...' : 'Sign in'}
+            </Button>
 
-          <p className="text-center text-sm text-gray-600">
-            Don't have an account?{' '}
-            <a href="/register" className="font-medium text-blue-600 hover:text-blue-500">
-              Sign up
-            </a>
-          </p>
-        </form>
+            <p className="text-center text-sm text-muted">
+              Don't have an account?{' '}
+              <a href="/register" className="font-medium text-accent hover:text-accent/80 transition-colors">
+                Sign up
+              </a>
+            </p>
+          </form>
+        </Card>
       </div>
     </div>
   )

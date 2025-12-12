@@ -1,4 +1,5 @@
 import { useState, KeyboardEvent } from 'react'
+import { Button } from './ui'
 
 interface ChatInputProps {
   onSend: (message: string) => void
@@ -24,7 +25,7 @@ export function ChatInput({ onSend, disabled, placeholder = 'Type your message..
   }
 
   return (
-    <div className="border-t bg-white p-4">
+    <div className="border-t border-border bg-background-elevated p-4">
       <div className="flex gap-2">
         <textarea
           value={message}
@@ -33,17 +34,16 @@ export function ChatInput({ onSend, disabled, placeholder = 'Type your message..
           disabled={disabled}
           placeholder={placeholder}
           rows={3}
-          className="flex-1 resize-none rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+          className="flex-1 resize-none rounded-lg border border-border bg-background px-4 py-2 font-body text-foreground placeholder:text-dim focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:bg-background-elevated disabled:text-muted transition-colors"
         />
-        <button
+        <Button
           onClick={handleSend}
           disabled={!message.trim() || disabled}
-          className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
           Send
-        </button>
+        </Button>
       </div>
-      <div className="mt-2 text-xs text-gray-500">
+      <div className="mt-2 text-xs text-dim">
         Press Enter to send, Shift+Enter for new line
       </div>
     </div>

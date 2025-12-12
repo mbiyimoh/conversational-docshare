@@ -20,8 +20,8 @@ export function ChatMessage({ role, content, timestamp, onCitationClick }: ChatM
         className={cn(
           'max-w-[80%] rounded-lg px-4 py-2',
           isUser
-            ? 'bg-blue-600 text-white'
-            : 'bg-gray-100 text-gray-900'
+            ? 'bg-accent text-background'
+            : 'bg-card-bg border border-border text-foreground'
         )}
       >
         <div className="whitespace-pre-wrap break-words">
@@ -33,7 +33,7 @@ export function ChatMessage({ role, content, timestamp, onCitationClick }: ChatM
                 <button
                   key={idx}
                   onClick={() => onCitationClick?.(part.reference!.filename, part.reference!.sectionId)}
-                  className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 underline hover:no-underline font-medium mx-1"
+                  className="inline-flex items-center gap-1 text-accent hover:text-accent/80 underline hover:no-underline font-medium mx-1 transition-colors"
                   title={`Open ${part.reference.filename}, section ${part.reference.sectionId}`}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -50,7 +50,7 @@ export function ChatMessage({ role, content, timestamp, onCitationClick }: ChatM
           <div
             className={cn(
               'mt-1 text-xs',
-              isUser ? 'text-blue-100' : 'text-gray-500'
+              isUser ? 'text-background/70' : 'text-muted'
             )}
           >
             {timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

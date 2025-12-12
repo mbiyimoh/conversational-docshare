@@ -4,6 +4,8 @@ import { api } from '../lib/api'
 import { formatFileSize } from '../lib/utils'
 import { DocumentEditor } from './DocumentEditor'
 import { DocumentVersionHistory } from './DocumentVersionHistory'
+import { Card, Button, Badge } from './ui'
+import { FileText, Upload, Trash2, Clock, Pencil } from 'lucide-react'
 
 interface Document {
   id: string
@@ -22,6 +24,44 @@ interface Document {
 interface DocumentUploadProps {
   projectId: string
   onUploadComplete?: () => void
+}
+
+// Geometric file type icons
+function PDFIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <rect x="4" y="2" width="16" height="20" rx="2" />
+      <path d="M8 6h8M8 10h8M8 14h4" />
+      <circle cx="16" cy="16" r="2" fill="currentColor" className="text-destructive" />
+    </svg>
+  )
+}
+
+function DocIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <rect x="4" y="2" width="16" height="20" rx="2" />
+      <path d="M8 6h8M8 10h8M8 14h8M8 18h4" />
+    </svg>
+  )
+}
+
+function SheetIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <rect x="4" y="2" width="16" height="20" rx="2" />
+      <path d="M4 8h16M4 14h16M10 8v14" />
+    </svg>
+  )
+}
+
+function MarkdownIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <rect x="4" y="2" width="16" height="20" rx="2" />
+      <path d="M7 15V9l2.5 3L12 9v6M15 12h2m0 0v3m0-3l2-3" />
+    </svg>
+  )
 }
 
 export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadProps) {
@@ -136,41 +176,46 @@ export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadPr
     switch (status) {
       case 'pending':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800">
-            <span className="h-1.5 w-1.5 rounded-full bg-yellow-500 animate-pulse" />
+          <Badge variant="warning">
+            <span className="h-1.5 w-1.5 rounded-full bg-warning animate-pulse mr-1" />
             Queued
-          </span>
+          </Badge>
         )
       case 'processing':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
-            <span className="h-3 w-3 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+          <Badge variant="secondary">
+            <span className="h-3 w-3 animate-spin rounded-full border-2 border-accent border-t-transparent mr-1" />
             Processing
-          </span>
+          </Badge>
         )
       case 'completed':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
-            <span>✓</span>
+          <Badge variant="success">
+            <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
             Ready
-          </span>
+          </Badge>
         )
       case 'failed':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
-            <span>✗</span>
+          <Badge variant="destructive">
+            <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
             Failed
-          </span>
+          </Badge>
         )
     }
   }
 
   const getFileIcon = (mimeType: string) => {
-    if (mimeType === 'application/pdf') return '📕'
-    if (mimeType.includes('wordprocessingml')) return '📘'
-    if (mimeType.includes('spreadsheetml')) return '📗'
-    if (mimeType.includes('markdown') || mimeType === 'text/markdown') return '📝'
-    return '📄'
+    const className = "w-6 h-6 text-accent"
+    if (mimeType === 'application/pdf') return <PDFIcon className={className} />
+    if (mimeType.includes('wordprocessingml')) return <DocIcon className={className} />
+    if (mimeType.includes('spreadsheetml')) return <SheetIcon className={className} />
+    if (mimeType.includes('markdown') || mimeType === 'text/markdown') return <MarkdownIcon className={className} />
+    return <FileText className={className} />
   }
 
   const completedCount = documents.filter(d => d.status === 'completed').length
@@ -183,22 +228,24 @@ export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadPr
         {...getRootProps()}
         className={`cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
           isDragActive
-            ? 'border-blue-500 bg-blue-50'
-            : 'border-gray-300 bg-gray-50 hover:border-gray-400'
+            ? 'border-accent bg-accent/10'
+            : 'border-border bg-card-bg hover:border-accent/50'
         } ${uploading ? 'cursor-not-allowed opacity-50' : ''}`}
       >
         <input {...getInputProps()} />
 
         <div className="space-y-2">
-          <div className="text-4xl">📄</div>
+          <div className="flex justify-center">
+            <Upload className="w-10 h-10 text-accent" />
+          </div>
           {isDragActive ? (
-            <p className="text-lg font-medium text-blue-600">Drop files here...</p>
+            <p className="text-lg font-display text-accent">Drop files here...</p>
           ) : (
             <>
-              <p className="text-lg font-medium text-gray-700">
+              <p className="text-lg font-display text-foreground">
                 Drop files here or click to browse
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted">
                 Supports PDF, DOCX, XLSX, and Markdown files (max 50MB)
               </p>
             </>
@@ -208,73 +255,76 @@ export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadPr
 
       {/* Error message */}
       {error && (
-        <div className="rounded-lg bg-red-50 p-4 text-red-600">
+        <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4 text-destructive">
           {error}
         </div>
       )}
 
       {/* Uploading indicator */}
       {uploading && (
-        <div className="rounded-lg bg-blue-50 p-4">
+        <Card className="bg-accent/10 border-accent/30">
           <div className="flex items-center gap-3">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-            <span className="text-blue-900">Uploading...</span>
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+            <span className="text-foreground">Uploading...</span>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Status Summary */}
       {documents.length > 0 && (
-        <div className="rounded-lg bg-gray-50 p-4">
+        <Card>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
-                <strong>{documents.length}</strong> document{documents.length !== 1 ? 's' : ''} uploaded
+              <span className="text-sm text-muted">
+                <strong className="text-foreground">{documents.length}</strong> document{documents.length !== 1 ? 's' : ''} uploaded
               </span>
               {completedCount > 0 && (
-                <span className="text-sm text-green-600">
+                <span className="text-sm text-success">
                   <strong>{completedCount}</strong> ready for chat
                 </span>
               )}
               {processingCount > 0 && (
-                <span className="text-sm text-blue-600">
+                <span className="text-sm text-accent">
                   <strong>{processingCount}</strong> processing...
                 </span>
               )}
             </div>
             {completedCount > 0 && (
-              <p className="text-sm text-gray-500">
-                ✓ Documents are saved automatically
+              <p className="text-sm text-muted flex items-center gap-1">
+                <svg className="w-4 h-4 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Documents are saved automatically
               </p>
             )}
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Documents List */}
       {loading ? (
         <div className="flex items-center justify-center py-8">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-          <span className="ml-2 text-gray-500">Loading documents...</span>
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+          <span className="ml-2 text-muted">Loading documents...</span>
         </div>
       ) : documents.length > 0 ? (
         <div className="space-y-2">
-          <h3 className="font-semibold text-gray-700">Project Documents</h3>
-          <div className="divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white">
+          <h3 className="font-display text-foreground">Project Documents</h3>
+          <div className="divide-y divide-border rounded-lg border border-border bg-card-bg">
             {documents.map((doc) => (
               <div key={doc.id} className="flex items-center justify-between p-4">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <span className="text-2xl flex-shrink-0">{getFileIcon(doc.mimeType)}</span>
+                  <span className="flex-shrink-0">{getFileIcon(doc.mimeType)}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-gray-900 truncate">{doc.originalName}</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="font-medium text-foreground truncate">{doc.originalName}</p>
+                    <p className="text-sm text-muted">
                       {formatFileSize(doc.fileSize)}
                       {doc.processedAt && (
                         <> · Processed {new Date(doc.processedAt).toLocaleDateString()}</>
                       )}
                     </p>
                     {doc.status === 'failed' && doc.processingError && (
-                      <p className="text-sm text-red-600 mt-1">{doc.processingError}</p>
+                      <p className="text-sm text-destructive mt-1">{doc.processingError}</p>
                     )}
                   </div>
                 </div>
@@ -282,28 +332,32 @@ export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadPr
                   {getStatusBadge(doc.status)}
                   {doc.isEditable && doc.status === 'completed' && (
                     <>
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleEditDocument(doc.id)}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                         title="Edit document"
                       >
+                        <Pencil className="w-4 h-4 mr-1" />
                         Edit
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleViewHistory(doc.id, doc.currentVersion || 1)}
-                        className="text-gray-600 hover:text-gray-800 text-sm"
                         title="View version history"
                       >
+                        <Clock className="w-4 h-4 mr-1" />
                         History
-                      </button>
+                      </Button>
                     </>
                   )}
                   <button
                     onClick={() => handleDelete(doc.id)}
-                    className="text-gray-400 hover:text-red-600 transition-colors p-1"
+                    className="text-dim hover:text-destructive transition-colors p-1"
                     title="Delete document"
                   >
-                    🗑️
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -311,9 +365,9 @@ export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadPr
           </div>
         </div>
       ) : (
-        <div className="rounded-lg border-2 border-dashed border-gray-200 p-8 text-center">
-          <p className="text-gray-500">No documents uploaded yet</p>
-          <p className="text-sm text-gray-400 mt-1">
+        <div className="rounded-lg border-2 border-dashed border-border p-8 text-center">
+          <p className="text-muted">No documents uploaded yet</p>
+          <p className="text-sm text-dim mt-1">
             Upload documents above to get started
           </p>
         </div>
@@ -321,14 +375,14 @@ export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadPr
 
       {/* Next Steps Guide */}
       {documents.length > 0 && completedCount > 0 && (
-        <div className="rounded-lg bg-blue-50 border border-blue-200 p-4">
-          <h4 className="font-medium text-blue-900 mb-2">✨ Next Steps</h4>
-          <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-            <li>Configure your AI agent in the <strong>AI Agent</strong> tab</li>
-            <li>Create a share link in the <strong>Share</strong> tab</li>
+        <Card className="border-accent/30" glow>
+          <h4 className="font-display text-foreground mb-2">Next Steps</h4>
+          <ol className="text-sm text-muted space-y-1 list-decimal list-inside">
+            <li>Configure your AI agent in the <strong className="text-foreground">AI Agent</strong> tab</li>
+            <li>Create a share link in the <strong className="text-foreground">Share</strong> tab</li>
             <li>Send the link to your audience to start conversations!</li>
           </ol>
-        </div>
+        </Card>
       )}
 
       {/* Document Editor Modal */}

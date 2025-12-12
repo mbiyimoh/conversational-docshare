@@ -5,6 +5,8 @@ import { DojoChat } from './DojoChat'
 import { CommentSidebar } from './CommentSidebar'
 import { NavigationModal } from './NavigationModal'
 import { RecommendationPanel } from '../RecommendationPanel'
+import { Button, Badge } from '../ui'
+import { Beaker, X } from 'lucide-react'
 import type { TestSessionSummary, TestMessage, TestComment } from '../../types/testing'
 
 interface TestSessionWithMessages {
@@ -177,7 +179,10 @@ export function TestingDojo({ projectId, onNavigateAway }: TestingDojoProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="text-gray-500">Loading Testing Dojo...</div>
+        <div className="flex items-center gap-2 text-muted">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+          Loading Testing Dojo...
+        </div>
       </div>
     )
   }
@@ -185,12 +190,11 @@ export function TestingDojo({ projectId, onNavigateAway }: TestingDojoProps) {
   return (
     <div className="h-[calc(100vh-200px)] flex flex-col">
       {/* Header with Session Manager */}
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-white">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card-bg">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold">Testing Dojo</h2>
-          <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded">
-            TEST MODE
-          </span>
+          <Beaker className="w-5 h-5 text-accent" />
+          <h2 className="font-display text-lg text-foreground">Testing Dojo</h2>
+          <Badge variant="warning">TEST MODE</Badge>
         </div>
 
         <SessionManager
@@ -204,10 +208,10 @@ export function TestingDojo({ projectId, onNavigateAway }: TestingDojoProps) {
 
       {/* Error Banner */}
       {error && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 flex items-center justify-between">
-          <span className="text-red-700">{error}</span>
-          <button onClick={() => setError('')} className="text-red-700 hover:text-red-900">
-            ✕
+        <div className="bg-destructive/10 border-l-4 border-destructive p-4 flex items-center justify-between">
+          <span className="text-destructive">{error}</span>
+          <button onClick={() => setError('')} className="text-destructive hover:text-destructive/80">
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -227,7 +231,7 @@ export function TestingDojo({ projectId, onNavigateAway }: TestingDojoProps) {
           </div>
 
           {/* Comments Sidebar (right) */}
-          <div className="w-80 border-l bg-gray-50 flex flex-col">
+          <div className="w-80 border-l border-border bg-background-elevated flex flex-col">
             <div className="flex-1 overflow-y-auto">
               <CommentSidebar
                 messages={activeSession.messages}
@@ -240,40 +244,37 @@ export function TestingDojo({ projectId, onNavigateAway }: TestingDojoProps) {
               />
             </div>
             {/* Get Recommendations Button */}
-            <div className="p-4 border-t bg-white">
-              <button
+            <div className="p-4 border-t border-border bg-card-bg">
+              <Button
                 onClick={() => setShowRecommendations(true)}
                 disabled={!hasComments}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full"
               >
                 Get Recommendations
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       ) : (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-gray-500 mb-4">No active test session</p>
-            <button
-              onClick={handleCreateSession}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
+            <p className="text-muted mb-4">No active test session</p>
+            <Button onClick={handleCreateSession}>
               Start New Session
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {/* End Session Button */}
       {activeSession?.status === 'active' && (
-        <div className="px-4 py-3 border-t bg-white flex justify-end">
-          <button
+        <div className="px-4 py-3 border-t border-border bg-card-bg flex justify-end">
+          <Button
+            variant="ghost"
             onClick={() => setShowNavigationModal(true)}
-            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
           >
             End Session
-          </button>
+          </Button>
         </div>
       )}
 
@@ -287,7 +288,7 @@ export function TestingDojo({ projectId, onNavigateAway }: TestingDojoProps) {
 
       {/* Recommendation Panel */}
       {showRecommendations && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
           <RecommendationPanel
             projectId={projectId}
             onApplyAll={(_profile, _versionNumber) => {

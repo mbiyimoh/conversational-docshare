@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { api } from '../lib/api'
 import type { AudienceProfile, CollaboratorProfile } from './SavedProfilesSection'
+import { Card, Button, Badge, Input } from './ui'
+import { Link, Copy, Trash2, Users, UserCheck } from 'lucide-react'
 
 interface ShareLink {
   id: string
@@ -24,6 +26,7 @@ export function ShareLinkManager({ projectId }: ShareLinkManagerProps) {
   const [password, setPassword] = useState('')
   const [recipientRole, setRecipientRole] = useState<'viewer' | 'collaborator'>('viewer')
   const [error, setError] = useState('')
+  const [notification, setNotification] = useState<string | null>(null)
 
   // Profile import state
   const [audienceProfiles, setAudienceProfiles] = useState<AudienceProfile[]>([])
@@ -128,6 +131,7 @@ export function ShareLinkManager({ projectId }: ShareLinkManagerProps) {
       setAccessType('password')
       setRecipientRole('viewer')
       setSelectedProfileId('')
+      showNotification('Share link created successfully')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create share link')
     } finally {
@@ -143,6 +147,7 @@ export function ShareLinkManager({ projectId }: ShareLinkManagerProps) {
     try {
       await api.deleteShareLink(linkId)
       setShareLinks(shareLinks.filter(link => link.id !== linkId))
+      showNotification('Share link deleted')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete share link')
     }
@@ -151,43 +156,61 @@ export function ShareLinkManager({ projectId }: ShareLinkManagerProps) {
   const copyToClipboard = (slug: string) => {
     const url = `${window.location.origin}/share/${slug}`
     navigator.clipboard.writeText(url)
-    alert('Link copied to clipboard!')
+    showNotification('Link copied to clipboard')
+  }
+
+  const showNotification = (message: string) => {
+    setNotification(message)
+    setTimeout(() => setNotification(null), 3000)
   }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <div className="text-gray-500">Loading share links...</div>
+        <div className="flex items-center gap-2 text-muted">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+          Loading share links...
+        </div>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
+      {/* Notification Toast */}
+      {notification && (
+        <div className="fixed top-4 right-4 bg-success text-background px-4 py-2 rounded-lg shadow-lg z-50">
+          {notification}
+        </div>
+      )}
+
       {/* Error Message */}
       {error && (
-        <div className="rounded-lg bg-red-50 p-4 text-red-600">
+        <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4 text-destructive">
           {error}
         </div>
       )}
 
       {/* Create New Link */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold mb-4">Create Share Link</h2>
+      <Card className="p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Link className="w-5 h-5 text-accent" />
+          <h2 className="font-display text-xl text-foreground">Create Share Link</h2>
+        </div>
 
         <div className="space-y-4">
           {/* Profile Import Section */}
           {(audienceProfiles.length > 0 || collaboratorProfiles.length > 0) && (
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <label className="block text-sm font-medium mb-2">Import from Saved Profile</label>
+            <div className="bg-background-elevated rounded-lg p-4 border border-border">
+              <label className="block text-sm font-medium text-foreground mb-2">Import from Saved Profile</label>
               <div className="grid grid-cols-2 gap-3">
                 {audienceProfiles.length > 0 && (
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Audience Profile</label>
+                    <label className="block text-xs text-dim mb-1 font-mono uppercase tracking-wide">Audience Profile</label>
                     <select
                       value={profileType === 'audience' ? selectedProfileId : ''}
                       onChange={(e) => handleProfileImport(e.target.value, 'audience')}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-card-bg border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                     >
                       <option value="">-- Select --</option>
                       {audienceProfiles.map((p) => (
@@ -200,11 +223,11 @@ export function ShareLinkManager({ projectId }: ShareLinkManagerProps) {
                 )}
                 {collaboratorProfiles.length > 0 && (
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Collaborator Profile</label>
+                    <label className="block text-xs text-dim mb-1 font-mono uppercase tracking-wide">Collaborator Profile</label>
                     <select
                       value={profileType === 'collaborator' ? selectedProfileId : ''}
                       onChange={(e) => handleProfileImport(e.target.value, 'collaborator')}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-card-bg border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                     >
                       <option value="">-- Select --</option>
                       {collaboratorProfiles.map((p) => (
@@ -217,7 +240,7 @@ export function ShareLinkManager({ projectId }: ShareLinkManagerProps) {
                 )}
               </div>
               {selectedProfileId && (
-                <p className="mt-2 text-xs text-blue-600">
+                <p className="mt-2 text-xs text-accent">
                   Settings imported from profile. You can customize below.
                 </p>
               )}
@@ -225,17 +248,17 @@ export function ShareLinkManager({ projectId }: ShareLinkManagerProps) {
           )}
 
           <div>
-            <label className="block text-sm font-medium mb-2">Access Type</label>
+            <label className="block text-sm font-medium text-foreground mb-2">Access Type</label>
             <select
               value={accessType}
               onChange={(e) => setAccessType(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-card-bg border border-border rounded-lg px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
             >
               <option value="password">Password Protected</option>
               <option value="email">Email Required</option>
               <option value="public">Public (No Protection)</option>
             </select>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-muted">
               {accessType === 'password' && 'Viewers must enter a password to access'}
               {accessType === 'email' && 'Viewers must provide their email address'}
               {accessType === 'public' && 'Anyone with the link can access'}
@@ -244,115 +267,124 @@ export function ShareLinkManager({ projectId }: ShareLinkManagerProps) {
 
           {accessType === 'password' && (
             <div>
-              <label className="block text-sm font-medium mb-2">Password</label>
-              <input
+              <label className="block text-sm font-medium text-foreground mb-2">Password</label>
+              <Input
                 type="text"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Enter a password"
               />
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium mb-2">Recipient Role</label>
+            <label className="block text-sm font-medium text-foreground mb-2">Recipient Role</label>
             <div className="space-y-2">
-              <label className="flex items-start cursor-pointer">
+              <label className="flex items-start cursor-pointer p-3 rounded-lg border border-border hover:border-accent/50 transition-colors">
                 <input
                   type="radio"
                   name="recipientRole"
                   value="viewer"
                   checked={recipientRole === 'viewer'}
                   onChange={() => setRecipientRole('viewer')}
-                  className="mt-1 mr-3"
+                  className="mt-1 mr-3 accent-accent"
                 />
-                <div>
-                  <span className="font-medium">Viewer</span>
-                  <span className="text-gray-500 text-sm ml-2">Can chat and view documents</span>
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-accent" />
+                  <div>
+                    <span className="font-medium text-foreground">Viewer</span>
+                    <span className="text-muted text-sm ml-2">Can chat and view documents</span>
+                  </div>
                 </div>
               </label>
-              <label className="flex items-start cursor-pointer">
+              <label className="flex items-start cursor-pointer p-3 rounded-lg border border-border hover:border-accent/50 transition-colors">
                 <input
                   type="radio"
                   name="recipientRole"
                   value="collaborator"
                   checked={recipientRole === 'collaborator'}
                   onChange={() => setRecipientRole('collaborator')}
-                  className="mt-1 mr-3"
+                  className="mt-1 mr-3 accent-accent"
                 />
-                <div>
-                  <span className="font-medium">Collaborator</span>
-                  <span className="text-gray-500 text-sm ml-2">Can also leave comments on documents</span>
+                <div className="flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-accent" />
+                  <div>
+                    <span className="font-medium text-foreground">Collaborator</span>
+                    <span className="text-muted text-sm ml-2">Can also leave comments on documents</span>
+                  </div>
                 </div>
               </label>
             </div>
           </div>
 
-          <button
+          <Button
             onClick={handleCreate}
             disabled={creating || (accessType === 'password' && !password)}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            isLoading={creating}
+            className="w-full"
           >
             {creating ? 'Creating...' : 'Create Share Link'}
-          </button>
+          </Button>
         </div>
-      </div>
+      </Card>
 
       {/* Existing Links */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b">
-          <h2 className="text-xl font-bold">Existing Links</h2>
+      <Card className="p-0 overflow-hidden">
+        <div className="px-6 py-4 border-b border-border">
+          <h2 className="font-display text-xl text-foreground">Existing Links</h2>
         </div>
 
         {shareLinks.length === 0 ? (
-          <div className="px-6 py-8 text-center text-gray-500">
+          <div className="px-6 py-8 text-center text-muted">
             No share links yet. Create one above to start sharing!
           </div>
         ) : (
-          <div className="divide-y">
+          <div className="divide-y divide-border">
             {shareLinks.map(link => (
               <div key={link.id} className="px-6 py-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <code className="text-sm bg-gray-100 px-2 py-1 rounded">
+                      <code className="text-sm bg-background-elevated text-foreground px-2 py-1 rounded font-mono">
                         {window.location.origin}/share/{link.slug}
                       </code>
                       {!link.isActive && (
-                        <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">
-                          Inactive
-                        </span>
+                        <Badge variant="destructive">Inactive</Badge>
                       )}
                     </div>
-                    <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
+                    <div className="mt-2 flex items-center gap-4 text-sm text-muted">
                       <span className="capitalize">{link.accessType}</span>
-                      <span>•</span>
+                      <span className="text-dim">•</span>
                       <span>{link.currentViews} views</span>
-                      <span>•</span>
+                      <span className="text-dim">•</span>
                       <span>Created {new Date(link.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
                   <div className="flex gap-2 ml-4">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => copyToClipboard(link.slug)}
-                      className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg"
                     >
+                      <Copy className="w-4 h-4 mr-1" />
                       Copy
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleDelete(link.id)}
-                      className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
                     >
+                      <Trash2 className="w-4 h-4 mr-1" />
                       Delete
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </Card>
     </div>
   )
 }

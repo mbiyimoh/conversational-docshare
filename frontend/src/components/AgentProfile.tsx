@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { api, AgentProfile as AgentProfileType, ProfileProgressEvent, VersionHistoryResponse } from '../lib/api'
 import { ProfileSectionContent } from './ProfileSectionContent'
+import { Card, Button, Textarea } from './ui'
 
 // Section-to-question mapping for source attribution
 const sectionSourceMap: Record<string, string[]> = {
@@ -210,7 +211,10 @@ export function AgentProfile({
     return (
       <div className="mx-auto max-w-3xl">
         <div className="flex items-center justify-center py-12">
-          <div className="text-gray-500">Loading profile...</div>
+          <div className="flex items-center gap-2 text-muted">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+            Loading profile...
+          </div>
         </div>
       </div>
     )
@@ -229,8 +233,8 @@ export function AgentProfile({
     return (
       <div className="mx-auto max-w-3xl">
         <div className="flex flex-col items-center justify-center py-12">
-          <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mb-4" />
-          <div className="text-gray-600 font-medium mb-6">{generationStep}</div>
+          <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full mb-4" />
+          <div className="text-muted font-medium mb-6">{generationStep}</div>
 
           {/* Section progress list */}
           <div className="space-y-3 w-full max-w-xs">
@@ -243,7 +247,7 @@ export function AgentProfile({
                 <div key={section.id} className="flex items-center gap-3">
                   {isCompleted ? (
                     <svg
-                      className="h-5 w-5 text-green-500"
+                      className="h-5 w-5 text-success"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -256,19 +260,19 @@ export function AgentProfile({
                       />
                     </svg>
                   ) : isCurrent ? (
-                    <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full" />
+                    <div className="animate-spin h-5 w-5 border-2 border-accent border-t-transparent rounded-full" />
                   ) : (
-                    <div className="h-5 w-5 rounded-full border-2 border-gray-300" />
+                    <div className="h-5 w-5 rounded-full border-2 border-border" />
                   )}
                   <span
                     className={
                       isCompleted
-                        ? 'text-green-600 font-medium'
+                        ? 'text-success font-medium'
                         : isCurrent
-                          ? 'text-blue-600 font-medium'
+                          ? 'text-accent font-medium'
                           : isPending
-                            ? 'text-gray-400'
-                            : 'text-gray-400'
+                            ? 'text-dim'
+                            : 'text-dim'
                     }
                   >
                     {section.name}
@@ -286,7 +290,7 @@ export function AgentProfile({
     <div className="mx-auto max-w-3xl">
       {/* Notification Toast */}
       {notification && (
-        <div className="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
+        <div className="fixed top-4 right-4 bg-success text-background px-4 py-2 rounded-lg shadow-lg z-50">
           {notification}
         </div>
       )}
@@ -295,8 +299,8 @@ export function AgentProfile({
       <div className="mb-8">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">AI Agent Profile</h1>
-            <p className="mt-2 text-gray-600">
+            <h1 className="font-display text-2xl text-foreground">AI Agent Profile</h1>
+            <p className="mt-2 text-muted">
               Review how your AI agent will communicate with recipients. Edit any
               section to fine-tune the behavior.
             </p>
@@ -308,11 +312,11 @@ export function AgentProfile({
               <button
                 onClick={() => setShowVersionDropdown(!showVersionDropdown)}
                 disabled={rollingBack}
-                className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                className="flex items-center gap-2 px-3 py-2 text-sm border border-border rounded-lg hover:bg-card-bg disabled:opacity-50 text-foreground transition-colors"
               >
                 {rollingBack ? (
                   <>
-                    <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full" />
+                    <div className="animate-spin h-4 w-4 border-2 border-accent border-t-transparent rounded-full" />
                     Rolling back...
                   </>
                 ) : (
@@ -332,9 +336,9 @@ export function AgentProfile({
                     className="fixed inset-0 z-40"
                     onClick={() => setShowVersionDropdown(false)}
                   />
-                  <div className="absolute right-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                  <div className="absolute right-0 mt-1 w-56 bg-card-bg border border-border rounded-lg shadow-lg z-50">
                     <div className="py-1">
-                      <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide border-b">
+                      <div className="px-3 py-2 text-xs font-medium text-dim uppercase tracking-wide border-b border-border font-mono">
                         Version History
                       </div>
                       {versionHistory.versions.map((version) => (
@@ -347,10 +351,10 @@ export function AgentProfile({
                               setShowVersionDropdown(false)
                             }
                           }}
-                          className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-white/5 transition-colors ${
                             version.version === versionHistory.currentVersion
-                              ? 'text-blue-600 font-medium bg-blue-50'
-                              : 'text-gray-700'
+                              ? 'text-accent font-medium bg-accent/10'
+                              : 'text-foreground'
                           }`}
                         >
                           <div className="flex items-center justify-between">
@@ -358,11 +362,11 @@ export function AgentProfile({
                               v{version.version}
                               {version.version === versionHistory.currentVersion && ' (current)'}
                             </span>
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-dim">
                               {version.source === 'recommendation' ? 'from feedback' : version.source}
                             </span>
                           </div>
-                          <div className="text-xs text-gray-400 mt-0.5">
+                          <div className="text-xs text-dim mt-0.5">
                             {new Date(version.createdAt).toLocaleDateString()}
                           </div>
                         </button>
@@ -378,7 +382,7 @@ export function AgentProfile({
 
       {/* Error */}
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 p-4 text-red-600">{error}</div>
+        <div className="mb-4 rounded-lg bg-destructive/10 border border-destructive/20 p-4 text-destructive">{error}</div>
       )}
 
       {/* Profile Sections */}
@@ -389,59 +393,53 @@ export function AgentProfile({
             const isEditing = editingSection === sectionKey
 
             return (
-              <div
-                key={sectionKey}
-                className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
-              >
+              <Card key={sectionKey} className="p-6">
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h3 className="font-semibold text-gray-900">
+                    <h3 className="font-display text-foreground">
                       {section.title}
                     </h3>
                     {/* Source attribution */}
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-dim mt-1">
                       Based on: {getSourceLabel(sectionKey)}
                     </p>
                     {section.isEdited && (
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-dim">
                         • Manually edited
                       </span>
                     )}
                   </div>
                   {!isEditing && (
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() =>
                         handleEditSection(sectionKey, section.content)
                       }
-                      className="text-sm text-blue-600 hover:text-blue-700"
                     >
                       Edit
-                    </button>
+                    </Button>
                   )}
                 </div>
 
                 {isEditing ? (
                   <div>
-                    <textarea
+                    <Textarea
                       value={editContent}
                       onChange={(e) => setEditContent(e.target.value)}
                       rows={4}
-                      className="w-full rounded-lg border border-gray-300 p-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <div className="mt-3 flex justify-end gap-2">
-                      <button
-                        onClick={handleCancelEdit}
-                        className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                      >
+                      <Button variant="ghost" onClick={handleCancelEdit}>
                         Cancel
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={handleSaveSection}
                         disabled={saving}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                        isLoading={saving}
                       >
                         {saving ? 'Saving...' : 'Save'}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -450,19 +448,19 @@ export function AgentProfile({
 
                 {/* Expandable original response comparison */}
                 {interviewData && !isEditing && (
-                  <details className="mt-4 pt-4 border-t border-gray-100">
-                    <summary className="text-xs text-blue-600 cursor-pointer hover:text-blue-700 select-none">
+                  <details className="mt-4 pt-4 border-t border-border">
+                    <summary className="text-xs text-accent cursor-pointer hover:text-accent/80 select-none transition-colors">
                       Show original response
                     </summary>
-                    <div className="mt-2 p-3 bg-gray-50 rounded-lg text-sm italic">
+                    <div className="mt-2 p-3 bg-background-elevated rounded-lg text-sm italic">
                       <ProfileSectionContent
                         content={getOriginalResponses(sectionKey, interviewData)}
-                        className="text-gray-600"
+                        className="text-muted"
                       />
                     </div>
                   </details>
                 )}
-              </div>
+              </Card>
             )
           })}
         </div>
@@ -473,37 +471,31 @@ export function AgentProfile({
         <button
           onClick={() => generateProfile()}
           disabled={generating}
-          className="text-sm text-gray-500 hover:text-gray-700"
+          className="text-sm text-muted hover:text-foreground transition-colors"
         >
           Regenerate profile from interview
         </button>
       </div>
 
       {/* Tip */}
-      <div className="mt-6 rounded-lg bg-blue-50 p-4 text-sm text-blue-900">
-        <p className="font-semibold">Tip:</p>
-        <p className="mt-1">
+      <Card className="mt-6 border-accent/30" glow>
+        <p className="font-display text-foreground">Tip:</p>
+        <p className="mt-1 text-sm text-muted">
           This profile shapes how your AI agent communicates. Test it in the
           Testing Dojo, then return here to make adjustments based on what you
           observe.
         </p>
-      </div>
+      </Card>
 
       {/* Action Buttons */}
       <div className="mt-8 flex items-center justify-between">
-        <button
-          onClick={onEditInterview}
-          className="rounded-lg px-6 py-2 text-gray-600 hover:bg-gray-100"
-        >
+        <Button variant="ghost" onClick={onEditInterview}>
           Edit Interview
-        </button>
+        </Button>
 
-        <button
-          onClick={onContinueToTesting}
-          className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700"
-        >
+        <Button onClick={onContinueToTesting}>
           Continue to Testing
-        </button>
+        </Button>
       </div>
     </div>
   )

@@ -27,7 +27,7 @@ export function SynthesisVersionSelector({
     <select
       value={currentVersion}
       onChange={(e) => onSelect(parseInt(e.target.value, 10))}
-      className="text-sm border rounded px-2 py-1.5 bg-white"
+      className="px-3 py-2 bg-card-bg border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-accent text-sm"
     >
       {versions.map((v) => (
         <option key={v.id} value={v.version}>

@@ -4,6 +4,20 @@ import { api } from '../lib/api'
 import { formatDate } from '../lib/utils'
 import { SavedThreadsSection, type SavedThread } from '../components/SavedThreadsSection'
 import { SavedProfilesSection } from '../components/SavedProfilesSection'
+import {
+  Card,
+  Button,
+  Input,
+  Textarea,
+  Badge,
+  SectionLabel,
+  Modal,
+  ModalHeader,
+  ModalTitle,
+  ModalContent,
+  ModalFooter,
+  AccentText
+} from '../components/ui'
 
 interface Project {
   id: string
@@ -22,6 +36,33 @@ interface DashboardData {
     projectCount: number
     savedConversationCount: number
   }
+}
+
+// Geometric SVG for empty state (folder icon)
+function EmptyFolderIcon() {
+  return (
+    <svg
+      width="80"
+      height="80"
+      viewBox="0 0 80 80"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="mx-auto text-accent"
+    >
+      {/* Back folder layer */}
+      <rect x="8" y="24" width="64" height="44" rx="4" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.3" />
+      {/* Front folder layer */}
+      <path
+        d="M8 28C8 25.7909 9.79086 24 12 24H30L36 16H68C70.2091 16 72 17.7909 72 20V60C72 62.2091 70.2091 64 68 64H12C9.79086 64 8 62.2091 8 60V28Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        fill="none"
+      />
+      {/* Plus sign in center */}
+      <line x1="40" y1="34" x2="40" y2="54" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line x1="30" y1="44" x2="50" y2="44" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
 }
 
 export function DashboardPage() {
@@ -59,56 +100,52 @@ export function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex items-center gap-2 text-muted">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+          Loading...
+        </div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-500 mb-4">Failed to load dashboard</div>
-          <div className="text-gray-600 text-sm mb-4">{error}</div>
-          <button
-            onClick={loadDashboard}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-          >
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Card className="text-center max-w-md">
+          <div className="text-destructive mb-4">Failed to load dashboard</div>
+          <div className="text-muted text-sm mb-4">{error}</div>
+          <Button onClick={loadDashboard}>
             Retry
-          </button>
-        </div>
+          </Button>
+        </Card>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b bg-white">
+      <div className="border-b border-border bg-background-elevated">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold">Dashboard</h1>
+            <h1 className="font-display text-2xl text-foreground">
+              <AccentText>Dashboard</AccentText>
+            </h1>
             <div className="flex gap-2">
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-              >
+              <Button onClick={() => setShowCreateModal(true)}>
                 New Project
-              </button>
-              <button
-                onClick={handleLogout}
-                className="rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
-              >
+              </Button>
+              <Button variant="ghost" onClick={handleLogout}>
                 Logout
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
       {/* Dashboard content */}
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 space-y-12">
         {/* Saved Threads Section - always shown */}
         <SavedThreadsSection threads={dashboardData?.savedConversations ?? []} />
 
@@ -117,59 +154,52 @@ export function DashboardPage() {
 
         {/* My Projects Section - always shown */}
         <section>
-          <h2 className="text-xl font-bold text-gray-900 mb-4">My Projects</h2>
+          <SectionLabel number={3} title="MY PROJECTS" />
 
           {!dashboardData || dashboardData.projects.length === 0 ? (
-            <div className="rounded-lg bg-white p-12 text-center shadow">
-              <div className="text-6xl">📁</div>
-              <h2 className="mt-4 text-xl font-semibold text-gray-900">No projects yet</h2>
-              <p className="mt-2 text-gray-600">
+            <Card className="p-12 text-center">
+              <EmptyFolderIcon />
+              <h2 className="mt-6 font-display text-xl text-foreground">No projects yet</h2>
+              <p className="mt-2 text-muted">
                 Create your first project to start sharing documents with AI-powered conversations
               </p>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="mt-6 rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700"
-              >
+              <Button onClick={() => setShowCreateModal(true)} className="mt-6">
                 Create Project
-              </button>
-            </div>
+              </Button>
+            </Card>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {dashboardData.projects.map((project) => (
-                <div
+                <Card
                   key={project.id}
+                  className="cursor-pointer transition-all hover:border-accent/50 hover:shadow-[0_0_20px_hsl(var(--color-accent-glow))]"
                   onClick={() => navigate(`/projects/${project.id}`)}
-                  className="cursor-pointer rounded-lg bg-white p-6 shadow transition-shadow hover:shadow-lg"
                 >
-                  <h3 className="text-lg font-semibold text-gray-900">{project.name}</h3>
+                  <h3 className="font-display text-lg text-foreground">{project.name}</h3>
                   {project.description && (
-                    <p className="mt-2 text-sm text-gray-600 line-clamp-2">{project.description}</p>
+                    <p className="mt-2 text-sm text-muted line-clamp-2">{project.description}</p>
                   )}
 
-                  <div className="mt-4 flex gap-4 text-sm text-gray-500">
+                  <div className="mt-4 flex gap-4 text-sm text-muted">
                     <div>
-                      <span className="font-medium">{project.documentCount}</span> documents
+                      <span className="font-medium text-accent">{project.documentCount}</span> documents
                     </div>
                     <div>
-                      <span className="font-medium">{project.conversationCount}</span> conversations
+                      <span className="font-medium text-accent">{project.conversationCount}</span> conversations
                     </div>
                   </div>
 
                   <div className="mt-4 flex items-center justify-between">
-                    <div className="text-xs text-gray-400">
+                    <div className="text-xs text-dim">
                       Created {formatDate(project.createdAt)}
                     </div>
                     {project.agentConfigured ? (
-                      <span className="rounded-full bg-green-100 px-2 py-1 text-xs text-green-700">
-                        Configured
-                      </span>
+                      <Badge variant="success">Configured</Badge>
                     ) : (
-                      <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs text-yellow-700">
-                        Setup needed
-                      </span>
+                      <Badge variant="warning">Setup needed</Badge>
                     )}
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
           )}
@@ -177,25 +207,25 @@ export function DashboardPage() {
       </div>
 
       {/* Create project modal */}
-      {showCreateModal && (
-        <CreateProjectModal
-          onClose={() => setShowCreateModal(false)}
-          onCreated={() => {
-            setShowCreateModal(false)
-            loadDashboard()
-          }}
-        />
-      )}
+      <CreateProjectModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreated={() => {
+          setShowCreateModal(false)
+          loadDashboard()
+        }}
+      />
     </div>
   )
 }
 
 interface CreateProjectModalProps {
+  isOpen: boolean
   onClose: () => void
   onCreated: () => void
 }
 
-function CreateProjectModal({ onClose, onCreated }: CreateProjectModalProps) {
+function CreateProjectModal({ isOpen, onClose, onCreated }: CreateProjectModalProps) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [creating, setCreating] = useState(false)
@@ -208,6 +238,8 @@ function CreateProjectModal({ onClose, onCreated }: CreateProjectModalProps) {
 
     try {
       await api.createProject(name, description)
+      setName('')
+      setDescription('')
       onCreated()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create project')
@@ -217,60 +249,47 @@ function CreateProjectModal({ onClose, onCreated }: CreateProjectModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-        <h2 className="text-xl font-bold">Create New Project</h2>
+    <Modal isOpen={isOpen} onClose={onClose} size="md">
+      <ModalHeader>
+        <ModalTitle>Create New Project</ModalTitle>
+      </ModalHeader>
 
-        <form onSubmit={handleCreate} className="mt-4 space-y-4">
+      <form onSubmit={handleCreate}>
+        <ModalContent className="space-y-4">
           {error && (
-            <div className="rounded bg-red-50 p-3 text-sm text-red-600">{error}</div>
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+              {error}
+            </div>
           )}
 
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-              Project Name *
-            </label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
+          <Input
+            id="name"
+            label="Project Name *"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            placeholder="My Project"
+          />
 
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-              Description (optional)
-            </label>
-            <textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
+          <Textarea
+            id="description"
+            label="Description (optional)"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={3}
+            placeholder="What is this project about?"
+          />
+        </ModalContent>
 
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={creating || !name.trim()}
-              className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              {creating ? 'Creating...' : 'Create'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <ModalFooter>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={creating || !name.trim()} isLoading={creating}>
+            {creating ? 'Creating...' : 'Create'}
+          </Button>
+        </ModalFooter>
+      </form>
+    </Modal>
   )
 }

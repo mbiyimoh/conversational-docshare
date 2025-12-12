@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { prisma } from '../utils/prisma'
 import { AuthorizationError, NotFoundError, ValidationError } from '../utils/errors'
+import { synthesizeAudienceProfile } from '../services/profileBrainDumpSynthesizer'
 
 /**
  * List all audience profiles for the authenticated user
@@ -168,4 +169,26 @@ export async function incrementAudienceProfileUsage(req: Request, res: Response)
   })
 
   res.json({ profile })
+}
+
+/**
+ * Synthesize audience profile from raw input
+ * POST /api/audience-profiles/synthesize
+ */
+export async function synthesizeAudienceProfileHandler(req: Request, res: Response) {
+  const { rawInput, additionalContext } = req.body
+
+  if (!rawInput || typeof rawInput !== 'string' || rawInput.trim().length === 0) {
+    return res.status(400).json({ error: 'rawInput is required' })
+  }
+
+  try {
+    const profile = await synthesizeAudienceProfile(rawInput, additionalContext)
+    return res.json({ profile })
+  } catch (error) {
+    console.error('Audience profile synthesis failed:', error)
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : 'Synthesis failed'
+    })
+  }
 }

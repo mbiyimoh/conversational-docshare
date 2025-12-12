@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { FileText, ChevronDown, ChevronRight } from 'lucide-react'
+import { Card } from './ui'
 
 interface DocumentOutlineSection {
   id: string
@@ -45,14 +46,14 @@ export function DocumentCapsule({
   }
 
   return (
-    <div className="flex flex-col h-full bg-white min-h-0">
+    <div className="flex flex-col h-full bg-background-elevated min-h-0">
       {/* Header */}
-      <div className="p-4 border-b shrink-0">
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <FileText className="w-5 h-5 text-blue-600" />
+      <div className="p-4 border-b border-border shrink-0">
+        <h2 className="font-display text-lg text-foreground flex items-center gap-2">
+          <FileText className="w-5 h-5 text-accent" />
           Document Capsule
         </h2>
-        <p className="text-sm text-gray-500 mt-1">{projectName}</p>
+        <p className="text-sm text-muted mt-1">{projectName}</p>
       </div>
 
       {/* Document List */}
@@ -64,45 +65,45 @@ export function DocumentCapsule({
           {documents.map((doc) => {
             const isExpanded = expandedDocs.has(doc.id)
             return (
-              <div key={doc.id} className="border rounded-lg overflow-hidden">
+              <Card key={doc.id} className="p-0 overflow-hidden">
                 {/* Document Header (clickable to expand) */}
                 <button
                   onClick={() => toggleExpanded(doc.id)}
-                  className="w-full flex items-start gap-3 p-4 hover:bg-gray-50 text-left transition-colors"
+                  className="w-full flex items-start gap-3 p-4 hover:bg-white/5 text-left transition-colors"
                 >
-                  <FileText className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                  <FileText className="w-5 h-5 text-accent shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-gray-900">
+                    <div className="font-display text-foreground">
                       {doc.title || doc.filename}
                     </div>
                     {doc.summary && (
-                      <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                      <p className="text-sm text-muted mt-1 line-clamp-2">
                         {doc.summary}
                       </p>
                     )}
                   </div>
                   {isExpanded ? (
-                    <ChevronDown className="w-5 h-5 text-gray-400 shrink-0" />
+                    <ChevronDown className="w-5 h-5 text-muted shrink-0" />
                   ) : (
-                    <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+                    <ChevronRight className="w-5 h-5 text-muted shrink-0" />
                   )}
                 </button>
 
                 {/* Expanded Content */}
                 {isExpanded && (
-                  <div className="px-4 pb-4 border-t bg-gray-50">
+                  <div className="px-4 pb-4 border-t border-border bg-background">
                     {/* View Full Document Button */}
                     <button
                       onClick={() => onDocumentClick(doc.id)}
-                      className="w-full text-left px-3 py-2 mt-3 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 text-sm font-medium transition-colors"
+                      className="w-full text-left px-3 py-2 mt-3 bg-accent/10 text-accent rounded-lg hover:bg-accent/20 text-sm font-medium transition-colors"
                     >
-                      View Full Document →
+                      View Full Document
                     </button>
 
                     {/* Outline Sections */}
                     {doc.outline && doc.outline.length > 0 && (
                       <div className="mt-3">
-                        <div className="text-xs text-gray-400 uppercase tracking-wide mb-2 px-1">
+                        <div className="text-xs text-dim uppercase tracking-wide mb-2 px-1 font-mono">
                           Sections
                         </div>
                         <div className="space-y-1">
@@ -110,10 +111,10 @@ export function DocumentCapsule({
                             <button
                               key={section.id}
                               onClick={() => onSectionClick(doc.id, section.id)}
-                              className="w-full text-left px-3 py-1.5 rounded hover:bg-white text-sm flex items-center gap-2 transition-colors text-gray-700"
+                              className="w-full text-left px-3 py-1.5 rounded-lg hover:bg-card-bg text-sm flex items-center gap-2 transition-colors text-muted hover:text-foreground"
                               style={{ paddingLeft: `${(section.level - 1) * 12 + 12}px` }}
                             >
-                              <ChevronRight className="w-3 h-3 text-gray-400 shrink-0" />
+                              <ChevronRight className="w-3 h-3 text-accent shrink-0" />
                               <span className="truncate">{section.title}</span>
                             </button>
                           ))}
@@ -122,19 +123,19 @@ export function DocumentCapsule({
                     )}
 
                     {(!doc.outline || doc.outline.length === 0) && (
-                      <p className="mt-3 text-sm text-gray-500 italic px-1">
+                      <p className="mt-3 text-sm text-dim italic px-1">
                         No sections available
                       </p>
                     )}
                   </div>
                 )}
-              </div>
+              </Card>
             )
           })}
         </div>
 
         {documents.length === 0 && (
-          <div className="text-center text-gray-500 py-8">
+          <div className="text-center text-muted py-8">
             No documents in this capsule
           </div>
         )}

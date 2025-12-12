@@ -43,21 +43,21 @@ export function AnalyticsCommentsSection({
   if (comments.length === 0) return null
 
   return (
-    <div className="border-t pt-4 mt-4">
-      <h4 className="text-sm font-semibold text-gray-700 mb-3">
+    <div className="border-t border-border pt-4 mt-4">
+      <h4 className="text-sm font-semibold text-muted mb-3">
         Document Comments ({comments.length})
       </h4>
-      <div className="space-y-3">
+      <div className="space-y-2">
         {comments.map((comment) => (
-          <div key={comment.id} className="bg-gray-50 rounded-lg p-3">
-            <div className="text-xs text-gray-500 mb-1 italic">
+          <div key={comment.id} className="p-3 bg-card-bg rounded-lg border border-border mb-2">
+            <div className="text-xs text-dim mb-1 italic">
               "{comment.highlightedText.slice(0, 80)}..."
             </div>
-            <div className="text-sm text-gray-800 mb-2">
+            <div className="text-sm text-foreground mb-2">
               {comment.content}
             </div>
             <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-500">
+              <span className="text-dim">
                 {comment.viewerName || comment.viewerEmail || 'Anonymous'}
               </span>
               {isOwner && (
@@ -65,7 +65,7 @@ export function AnalyticsCommentsSection({
                   value={comment.status}
                   onChange={(e) => handleStatusChange(comment.id, e.target.value)}
                   disabled={updating === comment.id}
-                  className="text-xs border rounded px-2 py-1"
+                  className="text-xs border border-border rounded px-2 py-1 bg-card-bg text-foreground"
                 >
                   <option value="pending">Pending</option>
                   <option value="addressed">Addressed</option>

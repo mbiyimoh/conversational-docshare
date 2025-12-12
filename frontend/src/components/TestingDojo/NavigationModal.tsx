@@ -1,3 +1,5 @@
+import { Button } from '../ui'
+
 interface NavigationModalProps {
   isOpen: boolean
   onClose: () => void
@@ -14,11 +16,11 @@ export function NavigationModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-        <h3 className="text-lg font-semibold mb-4">End Testing Session?</h3>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-[rgba(255,255,255,0.03)] backdrop-blur-sm border border-border rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+        <h3 className="text-lg font-semibold text-foreground mb-4">End Testing Session?</h3>
 
-        <p className="text-gray-600 mb-6">
+        <p className="text-muted mb-6">
           {hasComments
             ? "You have comments in this session. Would you like to keep the session active or end it and apply your feedback to the AI profile?"
             : "Would you like to keep this session active for later, or end it now?"}
@@ -27,20 +29,20 @@ export function NavigationModal({
         <div className="space-y-3">
           <button
             onClick={() => onConfirm(true, false)}
-            className="w-full px-4 py-3 text-left border rounded-lg hover:bg-gray-50"
+            className="w-full px-4 py-3 text-left border border-border rounded-lg hover:bg-white/5 transition-colors"
           >
-            <div className="font-medium">Keep Session Live</div>
-            <div className="text-sm text-gray-500">
+            <div className="font-medium text-foreground">Keep Session Live</div>
+            <div className="text-sm text-muted">
               Return to the same spot next time you open Testing Dojo
             </div>
           </button>
 
           <button
             onClick={() => onConfirm(false, false)}
-            className="w-full px-4 py-3 text-left border rounded-lg hover:bg-gray-50"
+            className="w-full px-4 py-3 text-left border border-border rounded-lg hover:bg-white/5 transition-colors"
           >
-            <div className="font-medium">End Session</div>
-            <div className="text-sm text-gray-500">
+            <div className="font-medium text-foreground">End Session</div>
+            <div className="text-sm text-muted">
               Save conversation history but mark session as complete
             </div>
           </button>
@@ -48,22 +50,23 @@ export function NavigationModal({
           {hasComments && (
             <button
               onClick={() => onConfirm(false, true)}
-              className="w-full px-4 py-3 text-left border border-blue-200 bg-blue-50 rounded-lg hover:bg-blue-100"
+              className="w-full px-4 py-3 text-left border border-accent/30 bg-accent/10 rounded-lg hover:bg-accent/20 transition-colors"
             >
-              <div className="font-medium text-blue-700">End & Apply Feedback</div>
-              <div className="text-sm text-blue-600">
+              <div className="font-medium text-accent">End & Apply Feedback</div>
+              <div className="text-sm text-accent/80">
                 Generate recommendations from your comments
               </div>
             </button>
           )}
         </div>
 
-        <button
+        <Button
           onClick={onClose}
-          className="mt-4 w-full px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+          variant="ghost"
+          className="mt-4 w-full"
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
   )

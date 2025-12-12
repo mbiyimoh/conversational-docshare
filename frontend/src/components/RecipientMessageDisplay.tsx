@@ -21,11 +21,11 @@ export function RecipientMessageDisplay({ message }: RecipientMessageDisplayProp
   }
 
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <div className="bg-accent/10 border border-accent/30 rounded-lg p-4">
       <div className="flex items-start gap-3">
-        <div className="p-2 bg-blue-100 rounded-full flex-shrink-0">
+        <div className="p-2 bg-accent/10 rounded-full flex-shrink-0">
           <svg
-            className="w-5 h-5 text-blue-600"
+            className="w-5 h-5 text-accent"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -40,14 +40,14 @@ export function RecipientMessageDisplay({ message }: RecipientMessageDisplayProp
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-            <h4 className="font-medium text-blue-900">
+            <h4 className="font-medium text-foreground">
               Message from {senderIdentity}
             </h4>
-            <span className="text-sm text-blue-600">
+            <span className="text-sm text-accent">
               {formatDate(message.createdAt)}
             </span>
           </div>
-          <p className="text-blue-800 whitespace-pre-wrap break-words">
+          <p className="text-foreground whitespace-pre-wrap break-words">
             {message.content}
           </p>
         </div>

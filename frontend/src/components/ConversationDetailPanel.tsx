@@ -3,6 +3,8 @@ import { api } from '../lib/api'
 import { ProfileSectionContent } from './ProfileSectionContent'
 import { RecipientMessageDisplay } from './RecipientMessageDisplay'
 import { ConversationRecommendations } from './ConversationRecommendations'
+import { Card, Badge } from './ui'
+import { X, ArrowLeft, Lightbulb, Clock, MessageSquare, User } from 'lucide-react'
 
 interface ConversationMessage {
   id: string
@@ -76,16 +78,16 @@ export function ConversationDetailPanel({
     return `${minutes}m ${remainingSeconds}s`
   }
 
-  const getSentimentColor = (sentiment: string | null) => {
+  const getSentimentBadge = (sentiment: string | null) => {
     switch (sentiment?.toLowerCase()) {
       case 'positive':
-        return 'bg-green-100 text-green-800'
+        return <Badge variant="success">{sentiment}</Badge>
       case 'negative':
-        return 'bg-red-100 text-red-800'
+        return <Badge variant="destructive">{sentiment}</Badge>
       case 'neutral':
-        return 'bg-gray-100 text-gray-800'
+        return <Badge variant="secondary">{sentiment}</Badge>
       default:
-        return 'bg-gray-100 text-gray-600'
+        return <Badge variant="secondary">{sentiment || 'Unknown'}</Badge>
     }
   }
 
@@ -103,32 +105,32 @@ export function ConversationDetailPanel({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black bg-opacity-50 z-40"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
         onClick={onClose}
       />
 
       {/* Nearly Fullscreen Modal */}
-      <div className="fixed inset-4 bg-white shadow-2xl z-50 flex flex-col rounded-xl overflow-hidden">
+      <div className="fixed inset-4 bg-card-bg border border-border shadow-2xl z-50 flex flex-col rounded-xl overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4 border-b flex items-center justify-between bg-gray-50">
+        <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-background-elevated">
           <div className="flex items-center">
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 mr-3"
+              className="text-dim hover:text-foreground mr-3 transition-colors"
               aria-label="Close panel"
             >
-              ←
+              <ArrowLeft className="w-5 h-5" />
             </button>
-            <span className="text-lg font-semibold text-gray-900">
+            <span className="font-display text-lg text-foreground">
               Conversation Details
             </span>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-200 rounded-lg transition-colors"
+            className="text-dim hover:text-foreground p-2 hover:bg-white/5 rounded-lg transition-colors"
             aria-label="Close"
           >
-            ✕
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -136,8 +138,8 @@ export function ConversationDetailPanel({
         {loading && (
           <div className="flex-1 flex items-center justify-center">
             <div className="flex flex-col items-center">
-              <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mb-4" />
-              <div className="text-gray-600">Loading conversation...</div>
+              <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full mb-4" />
+              <div className="text-muted">Loading conversation...</div>
             </div>
           </div>
         )}
@@ -145,7 +147,7 @@ export function ConversationDetailPanel({
         {/* Error State */}
         {error && !loading && (
           <div className="flex-1 flex items-center justify-center p-6">
-            <div className="bg-red-50 text-red-600 rounded-lg p-4 w-full">
+            <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-lg p-4 w-full">
               {error}
             </div>
           </div>
@@ -156,18 +158,16 @@ export function ConversationDetailPanel({
           <>
             {/* AI Summary - Prominent at Top */}
             {conversation.summary && (
-              <div className="px-6 py-5 bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
+              <div className="px-6 py-5 bg-accent/10 border-b border-accent/30">
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                    </svg>
+                  <div className="flex-shrink-0 w-8 h-8 bg-accent/20 rounded-lg flex items-center justify-center">
+                    <Lightbulb className="w-4 h-4 text-accent" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">
+                    <div className="text-xs font-semibold text-accent uppercase tracking-wide mb-1 font-mono">
                       AI Summary
                     </div>
-                    <div className="text-gray-800 leading-relaxed">
+                    <div className="text-foreground leading-relaxed">
                       {conversation.summary}
                     </div>
                   </div>
@@ -176,53 +176,50 @@ export function ConversationDetailPanel({
             )}
 
             {/* Metadata Section */}
-            <div className="px-6 py-4 bg-gray-50 border-b">
+            <div className="px-6 py-4 bg-background-elevated border-b border-border">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {/* Viewer Info */}
                 <div>
-                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  <div className="flex items-center gap-1 text-xs font-medium text-dim uppercase tracking-wide font-mono">
+                    <User className="w-3 h-3" />
                     Viewer
                   </div>
-                  <div className="text-sm text-gray-900 mt-1">
+                  <div className="text-sm text-foreground mt-1">
                     {conversation.viewerName || conversation.viewerEmail || 'Anonymous'}
                   </div>
                 </div>
 
                 {/* Duration */}
                 <div>
-                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  <div className="flex items-center gap-1 text-xs font-medium text-dim uppercase tracking-wide font-mono">
+                    <Clock className="w-3 h-3" />
                     Duration
                   </div>
-                  <div className="text-sm text-gray-900 mt-1">
+                  <div className="text-sm text-foreground mt-1">
                     {formatDuration(conversation.durationSeconds)}
                   </div>
                 </div>
 
                 {/* Messages */}
                 <div>
-                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  <div className="flex items-center gap-1 text-xs font-medium text-dim uppercase tracking-wide font-mono">
+                    <MessageSquare className="w-3 h-3" />
                     Messages
                   </div>
-                  <div className="text-sm text-gray-900 mt-1">
+                  <div className="text-sm text-foreground mt-1">
                     {conversation.messageCount}
                   </div>
                 </div>
 
                 {/* Sentiment Badge */}
                 <div>
-                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                  <div className="text-xs font-medium text-dim uppercase tracking-wide mb-1 font-mono">
                     Sentiment
                   </div>
                   {conversation.sentiment ? (
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getSentimentColor(
-                        conversation.sentiment
-                      )}`}
-                    >
-                      {conversation.sentiment}
-                    </span>
+                    getSentimentBadge(conversation.sentiment)
                   ) : (
-                    <span className="text-sm text-gray-400">-</span>
+                    <span className="text-sm text-dim">-</span>
                   )}
                 </div>
               </div>
@@ -230,24 +227,21 @@ export function ConversationDetailPanel({
               {/* Topics */}
               {conversation.topics && conversation.topics.length > 0 && (
                 <div className="mt-4">
-                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                  <div className="text-xs font-medium text-dim uppercase tracking-wide mb-2 font-mono">
                     Topics
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {conversation.topics.map((topic, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs"
-                      >
+                      <Badge key={idx} variant="secondary">
                         {topic}
-                      </span>
+                      </Badge>
                     ))}
                   </div>
                 </div>
               )}
 
               {/* Timestamps */}
-              <div className="mt-4 pt-3 border-t text-xs text-gray-500 flex gap-4">
+              <div className="mt-4 pt-3 border-t border-border text-xs text-dim flex gap-4">
                 <div>Started: {formatDate(conversation.startedAt)}</div>
                 {conversation.endedAt && (
                   <div>Ended: {formatDate(conversation.endedAt)}</div>
@@ -257,14 +251,14 @@ export function ConversationDetailPanel({
 
             {/* Recipient Message (if exists) */}
             {conversation.recipientMessage && (
-              <div className="px-6 py-4 border-b">
+              <div className="px-6 py-4 border-b border-border">
                 <RecipientMessageDisplay message={conversation.recipientMessage} />
               </div>
             )}
 
             {/* AI Recommendations */}
             {conversation.endedAt && (
-              <div className="px-6 py-4 border-b">
+              <div className="px-6 py-4 border-b border-border">
                 <ConversationRecommendations
                   conversationId={conversation.id}
                   projectId={conversation.projectId}
@@ -275,29 +269,29 @@ export function ConversationDetailPanel({
             {/* Messages List */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
               {conversation.messages.length === 0 ? (
-                <div className="text-center text-gray-500 py-8">
+                <div className="text-center text-muted py-8">
                   No messages in this conversation
                 </div>
               ) : (
                 conversation.messages.map((message) => (
-                  <div
+                  <Card
                     key={message.id}
-                    className={`rounded-lg p-4 ${
+                    className={`p-4 ${
                       message.role === 'user'
-                        ? 'ml-8 bg-blue-50 border border-blue-100'
-                        : 'mr-8 bg-gray-50 border border-gray-200'
+                        ? 'ml-8 bg-accent/10 border-accent/30'
+                        : 'mr-8'
                     }`}
                   >
                     {/* Message Header */}
                     <div className="flex items-center justify-between mb-2">
                       <span
-                        className={`text-xs font-semibold uppercase tracking-wide ${
-                          message.role === 'user' ? 'text-blue-700' : 'text-gray-700'
+                        className={`text-xs font-semibold uppercase tracking-wide font-mono ${
+                          message.role === 'user' ? 'text-accent' : 'text-muted'
                         }`}
                       >
                         {message.role === 'user' ? 'Viewer' : 'AI Agent'}
                       </span>
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-dim">
                         {formatDate(message.createdAt)}
                       </span>
                     </div>
@@ -309,11 +303,11 @@ export function ConversationDetailPanel({
                         className="text-sm"
                       />
                     ) : (
-                      <div className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                      <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
                         {message.content}
                       </div>
                     )}
-                  </div>
+                  </Card>
                 ))
               )}
             </div>

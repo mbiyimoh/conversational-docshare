@@ -1,4 +1,13 @@
 import { useState } from 'react'
+import {
+  Modal,
+  ModalHeader,
+  ModalTitle,
+  ModalContent,
+  ModalFooter,
+  Button,
+  Textarea
+} from './ui'
 
 interface LeaveMessageModalProps {
   isOpen: boolean
@@ -35,16 +44,12 @@ export function LeaveMessageModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div
-        className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center gap-2 mb-4">
-          <div className="p-2 bg-blue-100 rounded-full">
+    <Modal isOpen={isOpen} onClose={onSkip} size="md" showCloseButton={false}>
+      <ModalHeader>
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-accent/10 rounded-full">
             <svg
-              className="w-5 h-5 text-blue-600"
+              className="w-5 h-5 text-accent"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -57,52 +62,46 @@ export function LeaveMessageModal({
               />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold">Before you go...</h3>
+          <ModalTitle>Before you go...</ModalTitle>
         </div>
+      </ModalHeader>
 
-        {/* Content */}
-        <div className="space-y-4 mb-6">
-          <p className="text-gray-600">
-            Is there anything specific you'd like me to share with{' '}
-            <span className="font-medium text-gray-900">{senderName}</span>{' '}
-            now that you've explored this document capsule?
-          </p>
+      <ModalContent className="space-y-4">
+        <p className="text-muted">
+          Is there anything specific you'd like me to share with{' '}
+          <span className="font-medium text-foreground">{senderName}</span>{' '}
+          now that you've explored this document capsule?
+        </p>
 
-          <textarea
-            placeholder="Share your thoughts, questions, or feedback..."
-            value={message}
-            onChange={(e) => setMessage(e.target.value.slice(0, maxCharacters))}
-            rows={5}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-          />
+        <Textarea
+          placeholder="Share your thoughts, questions, or feedback..."
+          value={message}
+          onChange={(e) => setMessage(e.target.value.slice(0, maxCharacters))}
+          rows={5}
+        />
 
-          <div className="flex justify-between items-center text-sm text-gray-500">
-            <span>
-              Examples: Feedback, questions for follow-up, clarifications...
-            </span>
-            <span className={characterCount > maxCharacters * 0.9 ? 'text-orange-500' : ''}>
-              {characterCount}/{maxCharacters}
-            </span>
-          </div>
+        <div className="flex justify-between items-center text-sm text-muted">
+          <span>
+            Examples: Feedback, questions for follow-up, clarifications...
+          </span>
+          <span className={characterCount > maxCharacters * 0.9 ? 'text-warning' : ''}>
+            {characterCount}/{maxCharacters}
+          </span>
         </div>
+      </ModalContent>
 
-        {/* Actions */}
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={onSkip}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            Skip
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? 'Sending...' : 'Send & Continue'}
-          </button>
-        </div>
-      </div>
-    </div>
+      <ModalFooter>
+        <Button variant="ghost" onClick={onSkip}>
+          Skip
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          isLoading={isSubmitting}
+        >
+          {isSubmitting ? 'Sending...' : 'Send & Continue'}
+        </Button>
+      </ModalFooter>
+    </Modal>
   )
 }

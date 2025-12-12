@@ -173,7 +173,7 @@ export function DocumentViewer({
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="text-gray-500">Loading document...</div>
+        <div className="text-muted">Loading document...</div>
       </div>
     )
   }
@@ -181,11 +181,11 @@ export function DocumentViewer({
   if (error) {
     return (
       <div className="flex h-full flex-col items-center justify-center p-4">
-        <div className="text-red-500 mb-4">{error}</div>
+        <div className="text-destructive mb-4">{error}</div>
         {onClose && (
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+            className="px-4 py-2 bg-card-bg text-foreground rounded hover:bg-white/5"
           >
             Close
           </button>
@@ -197,20 +197,20 @@ export function DocumentViewer({
   if (!document) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="text-red-500">Failed to load document</div>
+        <div className="text-destructive">Failed to load document</div>
       </div>
     )
   }
 
   return (
-    <div className="flex h-full flex-col bg-white">
+    <div className="flex h-full flex-col bg-card-bg">
       {/* Header */}
-      <div className="border-b p-4 shrink-0">
-        <h2 className="text-xl font-bold pr-8">{document.title}</h2>
+      <div className="border-b border-border p-4 shrink-0">
+        <h2 className="text-xl font-bold pr-8 text-foreground">{document.title}</h2>
         <div className="mt-2 flex gap-2">
           <button
             onClick={handleDownload}
-            className="rounded bg-blue-600 px-4 py-1 text-sm text-white hover:bg-blue-700"
+            className="rounded bg-accent px-4 py-1 text-sm text-background hover:bg-accent/90"
           >
             Download
           </button>
@@ -219,7 +219,7 @@ export function DocumentViewer({
 
       {/* Document Outline */}
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 min-h-0">
-        <h3 className="mb-4 font-semibold text-gray-700">Document Outline</h3>
+        <h3 className="mb-4 text-sm font-medium text-muted uppercase tracking-wide">Document Outline</h3>
         <div className="space-y-2">
           {document.outline.map((section) => (
             <div
@@ -227,8 +227,8 @@ export function DocumentViewer({
               id={`section-${section.id}`}
               className={`cursor-pointer rounded p-3 transition-colors ${
                 selectedSection === section.id
-                  ? 'bg-blue-100 border-l-4 border-blue-600'
-                  : 'hover:bg-gray-50'
+                  ? 'bg-accent/10 border-l-4 border-accent text-accent'
+                  : 'text-foreground hover:text-accent hover:bg-white/5'
               }`}
               style={{ paddingLeft: `${(section.level - 1) * 16 + 12}px` }}
               onClick={() => handleSectionClick(section.id)}
@@ -242,18 +242,18 @@ export function DocumentViewer({
                 }
               }}
             >
-              <div className="font-medium text-gray-900">{section.title}</div>
+              <div className="font-medium">{section.title}</div>
             </div>
           ))}
         </div>
 
         {document.outline.length === 0 && (
-          <div className="text-gray-500">No outline available for this document</div>
+          <div className="text-dim">No outline available for this document</div>
         )}
       </div>
 
       {/* Document viewer note */}
-      <div className="border-t bg-gray-50 p-4 text-sm text-gray-600 shrink-0">
+      <div className="border-t border-border bg-background-elevated p-4 text-sm text-muted shrink-0">
         <p>
           Note: Full document preview requires PDF.js integration. Currently showing document outline.
           Use the Download button to view the complete document.

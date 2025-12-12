@@ -7,6 +7,7 @@ import {
   updateCollaboratorProfile,
   deleteCollaboratorProfile,
   incrementCollaboratorProfileUsage,
+  synthesizeCollaboratorProfileHandler,
 } from '../controllers/collaboratorProfile.controller'
 
 const router = Router()
@@ -16,5 +17,6 @@ router.post('/collaborator-profiles', authenticate, asyncHandler(createCollabora
 router.patch('/collaborator-profiles/:id', authenticate, asyncHandler(updateCollaboratorProfile))
 router.delete('/collaborator-profiles/:id', authenticate, asyncHandler(deleteCollaboratorProfile))
 router.post('/collaborator-profiles/:id/use', authenticate, asyncHandler(incrementCollaboratorProfileUsage))
+router.post('/collaborator-profiles/synthesize', authenticate, asyncHandler(synthesizeCollaboratorProfileHandler))
 
 export default router

@@ -39,11 +39,11 @@ export function DocumentCommentsDrawer({
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'addressed':
-        return 'bg-green-100 text-green-800'
+        return 'bg-success/10 text-success'
       case 'dismissed':
-        return 'bg-gray-100 text-gray-600'
+        return 'bg-white/5 text-dim'
       default:
-        return 'bg-yellow-100 text-yellow-800'
+        return 'bg-accent/10 text-accent'
     }
   }
 
@@ -56,44 +56,44 @@ export function DocumentCommentsDrawer({
       />
 
       {/* Drawer */}
-      <div className="fixed inset-y-0 right-0 w-80 bg-white shadow-xl z-50 flex flex-col">
+      <div className="fixed inset-y-0 right-0 w-80 bg-background-elevated border-l border-border shadow-xl z-50 flex flex-col h-full">
         {/* Header */}
-        <div className="px-4 py-3 border-b flex items-center justify-between">
-          <h3 className="font-semibold">Comments ({comments.length})</h3>
+        <div className="p-4 border-b border-border flex items-center justify-between">
+          <h3 className="font-medium text-foreground">Comments ({comments.length})</h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-dim hover:text-muted transition-colors"
           >
             ✕
           </button>
         </div>
 
         {/* Comments list */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {comments.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
+            <div className="text-center text-muted py-8">
               No comments yet
             </div>
           ) : (
             comments.map((comment) => (
               <div
                 key={comment.id}
-                className="border rounded-lg p-3 cursor-pointer hover:bg-gray-50"
+                className="bg-card-bg rounded-lg border border-border p-3 cursor-pointer hover:bg-white/5 transition-colors"
                 onClick={() => onCommentClick(comment)}
               >
                 {/* Highlighted text */}
-                <div className="text-xs text-gray-500 mb-1">
+                <div className="text-xs text-dim mb-1">
                   "{comment.highlightedText.slice(0, 50)}..."
                 </div>
 
                 {/* Comment content */}
-                <div className="text-sm text-gray-800 mb-2">
+                <div className="text-sm text-foreground mb-2">
                   {comment.content}
                 </div>
 
                 {/* Footer */}
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-500">
+                  <span className="text-muted">
                     {comment.viewerName || comment.viewerEmail || 'Anonymous'}
                   </span>
                   <div className="flex items-center gap-2">
@@ -102,7 +102,7 @@ export function DocumentCommentsDrawer({
                     >
                       {comment.status}
                     </span>
-                    <span className="text-gray-400">
+                    <span className="text-dim">
                       {formatDate(comment.createdAt)}
                     </span>
                   </div>

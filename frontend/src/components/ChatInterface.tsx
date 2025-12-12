@@ -160,14 +160,17 @@ export function ChatInterface({ conversationId, onCitationClick, onMessagesChang
     <div className="flex h-full flex-col">
       {/* Error banner */}
       {loadError && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4">
+        <div className="bg-destructive/10 border-l-4 border-destructive p-4">
           <div className="flex items-center">
-            <span className="text-red-700">{loadError}</span>
+            <span className="text-destructive">{loadError}</span>
             <button
               onClick={() => setLoadError('')}
-              className="ml-auto text-red-700 hover:text-red-900"
+              className="ml-auto text-destructive hover:text-destructive/80 transition-colors"
             >
-              ✕
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
             </button>
           </div>
         </div>
@@ -197,11 +200,11 @@ export function ChatInterface({ conversationId, onCitationClick, onMessagesChang
         {/* Loading indicator */}
         {isStreaming && !streamingContent && (
           <div className="flex justify-start">
-            <div className="rounded-lg bg-gray-100 px-4 py-2">
+            <div className="rounded-lg bg-card-bg border border-border px-4 py-2">
               <div className="flex space-x-2">
-                <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400" style={{ animationDelay: '0ms' }} />
-                <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400" style={{ animationDelay: '150ms' }} />
-                <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400" style={{ animationDelay: '300ms' }} />
+                <div className="h-2 w-2 animate-bounce rounded-full bg-accent" style={{ animationDelay: '0ms' }} />
+                <div className="h-2 w-2 animate-bounce rounded-full bg-accent" style={{ animationDelay: '150ms' }} />
+                <div className="h-2 w-2 animate-bounce rounded-full bg-accent" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           </div>

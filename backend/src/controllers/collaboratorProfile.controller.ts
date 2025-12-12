@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { prisma } from '../utils/prisma'
 import { AuthorizationError, NotFoundError, ValidationError } from '../utils/errors'
+import { synthesizeCollaboratorProfile } from '../services/profileBrainDumpSynthesizer'
 
 /**
  * List all collaborator profiles for the authenticated user
@@ -183,4 +184,26 @@ export async function incrementCollaboratorProfileUsage(req: Request, res: Respo
   })
 
   res.json({ profile })
+}
+
+/**
+ * Synthesize collaborator profile from raw input
+ * POST /api/collaborator-profiles/synthesize
+ */
+export async function synthesizeCollaboratorProfileHandler(req: Request, res: Response) {
+  const { rawInput, additionalContext } = req.body
+
+  if (!rawInput || typeof rawInput !== 'string' || rawInput.trim().length === 0) {
+    return res.status(400).json({ error: 'rawInput is required' })
+  }
+
+  try {
+    const profile = await synthesizeCollaboratorProfile(rawInput, additionalContext)
+    return res.json({ profile })
+  } catch (error) {
+    console.error('Collaborator profile synthesis failed:', error)
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : 'Synthesis failed'
+    })
+  }
 }

@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { Button } from './ui/button'
+import { Textarea } from './ui/textarea'
 
 interface CollaboratorCommentPanelProps {
   documentId: string
@@ -41,47 +43,46 @@ export function CollaboratorCommentPanel({
 
   return (
     <div
-      className="absolute z-50 bg-white rounded-lg shadow-xl border border-gray-200 w-80"
+      className="absolute z-50 w-80 p-4 bg-card-bg backdrop-blur-sm border border-border rounded-lg shadow-lg"
       style={{ left: position.x, top: position.y }}
     >
       {/* Header with highlighted text preview */}
-      <div className="px-4 py-3 border-b bg-yellow-50">
-        <div className="text-xs text-gray-500 mb-1">Commenting on:</div>
-        <div className="text-sm text-gray-700 italic line-clamp-2">
+      <div className="mb-4 pb-3 border-b border-border">
+        <div className="text-xs font-mono text-accent mb-1.5 uppercase tracking-wider">Commenting on:</div>
+        <div className="text-sm font-body text-muted italic line-clamp-2">
           "{selectedText}"
         </div>
       </div>
 
       {/* Comment input */}
-      <div className="p-4">
-        <textarea
+      <div>
+        <Textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="Write your comment..."
-          className="w-full h-24 px-3 py-2 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="h-24"
           autoFocus
+          error={error}
         />
-
-        {error && (
-          <div className="mt-2 text-sm text-red-600">{error}</div>
-        )}
 
         {/* Actions */}
         <div className="flex justify-end gap-2 mt-3">
-          <button
+          <Button
             onClick={onCancel}
             disabled={submitting}
-            className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50"
+            variant="ghost"
+            size="sm"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleSubmit}
             disabled={submitting || !content.trim()}
-            className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+            size="sm"
+            isLoading={submitting}
           >
             {submitting ? 'Submitting...' : 'Comment'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

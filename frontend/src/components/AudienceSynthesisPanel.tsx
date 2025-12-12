@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { api } from '../lib/api'
+import { Card } from './ui'
 import { SynthesisVersionSelector } from './SynthesisVersionSelector'
 import { CommonQuestionsCard } from './CommonQuestionsCard'
 import { KnowledgeGapsCard } from './KnowledgeGapsCard'
@@ -107,20 +108,20 @@ export function AudienceSynthesisPanel({ projectId, onNavigateToDocument }: Audi
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
+      <Card className="p-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-20 bg-gray-200 rounded"></div>
+          <div className="h-4 bg-card-bg rounded w-1/3"></div>
+          <div className="h-20 bg-card-bg rounded"></div>
         </div>
-      </div>
+      </Card>
     )
   }
 
   if (!synthesis) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Audience Insights</h3>
-        <div className="text-center py-8 text-gray-500">
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold mb-4 text-foreground">Audience Insights</h3>
+        <div className="text-center py-8 text-muted">
           <p className="mb-4">No synthesis available yet.</p>
           <p className="text-sm">
             Insights will appear after multiple conversations with 5+ messages.
@@ -128,23 +129,23 @@ export function AudienceSynthesisPanel({ projectId, onNavigateToDocument }: Audi
           <button
             onClick={handleRegenerate}
             disabled={regenerating}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+            className="mt-4 px-4 py-2 bg-accent text-background rounded hover:bg-accent/90 disabled:opacity-50 transition-colors"
           >
             {regenerating ? 'Generating...' : 'Generate Now'}
           </button>
         </div>
-      </div>
+      </Card>
     )
   }
 
   return (
-    <div className="bg-white rounded-lg shadow">
+    <Card>
       {/* Header */}
-      <div className="px-6 py-4 border-b flex items-center justify-between">
+      <div className="px-6 py-4 border-b border-border flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Audience Insights</h3>
-          <p className="text-sm text-gray-500">
-            {synthesis.conversationCount} conversations • {synthesis.totalMessages} messages
+          <h3 className="text-lg font-semibold text-foreground">Audience Insights</h3>
+          <p className="text-sm text-muted">
+            <span className="text-accent font-display">{synthesis.conversationCount}</span> conversations • <span className="text-accent font-display">{synthesis.totalMessages}</span> messages
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -158,7 +159,7 @@ export function AudienceSynthesisPanel({ projectId, onNavigateToDocument }: Audi
           <button
             onClick={handleRegenerate}
             disabled={regenerating}
-            className="px-3 py-1.5 text-sm border rounded hover:bg-gray-50 disabled:opacity-50"
+            className="px-3 py-1.5 text-sm border border-border rounded hover:bg-background-elevated disabled:opacity-50 transition-colors text-foreground"
           >
             {regenerating ? 'Regenerating...' : 'Refresh'}
           </button>
@@ -166,18 +167,18 @@ export function AudienceSynthesisPanel({ projectId, onNavigateToDocument }: Audi
       </div>
 
       {error && (
-        <div className="px-6 py-3 bg-red-50 text-red-600 text-sm">
+        <div className="px-6 py-3 bg-destructive/10 text-destructive text-sm">
           {error}
         </div>
       )}
 
       {/* Overview */}
-      <div className="px-6 py-4 border-b">
-        <h4 className="text-sm font-medium text-gray-500 mb-2">Overview</h4>
-        <p className="text-gray-700">{synthesis.overview}</p>
+      <div className="px-6 py-4 border-b border-border">
+        <h4 className="text-sm font-medium text-muted mb-2">Overview</h4>
+        <p className="text-foreground">{synthesis.overview}</p>
         <div className="mt-3 flex items-center gap-4 text-sm">
-          <span className="flex items-center gap-1">
-            Sentiment: {getSentimentIcon(synthesis.sentimentTrend)} {synthesis.sentimentTrend}
+          <span className="flex items-center gap-1 text-muted">
+            Sentiment: <span className="text-accent">{getSentimentIcon(synthesis.sentimentTrend)} {synthesis.sentimentTrend}</span>
           </span>
         </div>
       </div>
@@ -205,17 +206,17 @@ export function AudienceSynthesisPanel({ projectId, onNavigateToDocument }: Audi
       {/* Insights */}
       {synthesis.insights.length > 0 && (
         <div className="px-6 pb-6">
-          <h4 className="text-sm font-medium text-gray-500 mb-2">Key Insights</h4>
+          <h4 className="text-sm font-medium text-muted mb-2">Key Insights</h4>
           <ul className="space-y-2">
             {synthesis.insights.map((insight, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                <span className="text-blue-500">•</span>
+              <li key={i} className="flex items-start gap-2 text-sm text-foreground">
+                <span className="text-accent">•</span>
                 {insight}
               </li>
             ))}
           </ul>
         </div>
       )}
-    </div>
+    </Card>
   )
 }

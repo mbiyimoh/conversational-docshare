@@ -1,5 +1,58 @@
 import { useState, useEffect } from 'react'
 import { api } from '../lib/api'
+import { AudienceProfileAIModal } from './AudienceProfileAIModal'
+import { CollaboratorProfileAIModal } from './CollaboratorProfileAIModal'
+import {
+  Card,
+  Button,
+  Badge,
+  SectionLabel,
+  Input,
+  Textarea,
+  Modal,
+  ModalHeader,
+  ModalTitle,
+  ModalContent,
+  ModalFooter
+} from './ui'
+
+// Geometric SVG for empty audience state (people icon)
+function EmptyAudienceIcon() {
+  return (
+    <svg
+      width="80"
+      height="80"
+      viewBox="0 0 80 80"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="mx-auto text-accent"
+    >
+      <circle cx="40" cy="28" r="12" stroke="currentColor" strokeWidth="2" fill="none" />
+      <path d="M20 64C20 52.954 28.954 44 40 44C51.046 44 60 52.954 60 64" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
+      <circle cx="20" cy="32" r="8" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.5" />
+      <circle cx="60" cy="32" r="8" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.5" />
+    </svg>
+  )
+}
+
+// Geometric SVG for empty collaborator state (handshake icon)
+function EmptyCollaboratorIcon() {
+  return (
+    <svg
+      width="80"
+      height="80"
+      viewBox="0 0 80 80"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="mx-auto text-accent"
+    >
+      <path d="M15 40L30 30L40 38L50 30L65 40" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M30 30V50" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M50 30V50" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="40" cy="38" r="6" stroke="currentColor" strokeWidth="2" fill="none" />
+    </svg>
+  )
+}
 
 // Types matching API responses
 export interface AudienceProfile {
@@ -42,6 +95,8 @@ export function SavedProfilesSection() {
   const [showCollaboratorModal, setShowCollaboratorModal] = useState(false)
   const [editingAudienceProfile, setEditingAudienceProfile] = useState<AudienceProfile | null>(null)
   const [editingCollaboratorProfile, setEditingCollaboratorProfile] = useState<CollaboratorProfile | null>(null)
+  const [audienceModalMode, setAudienceModalMode] = useState<'ai' | 'manual'>('ai')
+  const [collaboratorModalMode, setCollaboratorModalMode] = useState<'ai' | 'manual'>('ai')
 
   useEffect(() => {
     loadProfiles()
@@ -108,10 +163,13 @@ export function SavedProfilesSection() {
   if (loading) {
     return (
       <section className="mb-8" data-testid="saved-profiles-section">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Saved Profiles</h2>
-        <div className="rounded-lg bg-white p-8 shadow text-center text-gray-500">
-          Loading profiles...
-        </div>
+        <SectionLabel number={2} title="SAVED PROFILES" />
+        <Card className="p-8 text-center">
+          <div className="flex items-center justify-center gap-2 text-muted">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+            Loading profiles...
+          </div>
+        </Card>
       </section>
     )
   }
@@ -119,13 +177,13 @@ export function SavedProfilesSection() {
   if (error) {
     return (
       <section className="mb-8" data-testid="saved-profiles-section">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Saved Profiles</h2>
-        <div className="rounded-lg bg-red-50 p-8 shadow text-center text-red-600">
-          {error}
-          <button onClick={loadProfiles} className="ml-2 underline">
+        <SectionLabel number={2} title="SAVED PROFILES" />
+        <Card className="p-8 text-center">
+          <span className="text-destructive">{error}</span>
+          <button onClick={loadProfiles} className="ml-2 text-accent underline hover:no-underline">
             Retry
           </button>
-        </div>
+        </Card>
       </section>
     )
   }
@@ -133,8 +191,9 @@ export function SavedProfilesSection() {
   return (
     <section className="mb-8" data-testid="saved-profiles-section">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-gray-900">Saved Profiles</h2>
-        <button
+        <SectionLabel number={2} title="SAVED PROFILES" className="mb-0" />
+        <Button
+          size="sm"
           onClick={() => {
             if (activeTab === 'audience') {
               setEditingAudienceProfile(null)
@@ -144,30 +203,29 @@ export function SavedProfilesSection() {
               setShowCollaboratorModal(true)
             }
           }}
-          className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
         >
           + New {activeTab === 'audience' ? 'Audience' : 'Collaborator'} Profile
-        </button>
+        </Button>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-4">
         <button
           onClick={() => setActiveTab('audience')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`px-4 py-2 rounded-lg text-sm font-medium font-body transition-colors ${
             activeTab === 'audience'
-              ? 'bg-blue-100 text-blue-700'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-accent/10 text-accent border border-accent/20'
+              : 'bg-card-bg text-muted border border-border hover:border-accent/30'
           }`}
         >
           Audience Profiles ({audienceProfiles.length})
         </button>
         <button
           onClick={() => setActiveTab('collaborator')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`px-4 py-2 rounded-lg text-sm font-medium font-body transition-colors ${
             activeTab === 'collaborator'
-              ? 'bg-blue-100 text-blue-700'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-accent/10 text-accent border border-accent/20'
+              : 'bg-card-bg text-muted border border-border hover:border-accent/30'
           }`}
         >
           Collaborator Profiles ({collaboratorProfiles.length})
@@ -178,38 +236,38 @@ export function SavedProfilesSection() {
       {activeTab === 'audience' && (
         <>
           {audienceProfiles.length === 0 ? (
-            <div className="rounded-lg bg-white p-12 text-center shadow">
-              <div className="text-6xl">👥</div>
-              <h3 className="mt-4 text-xl font-semibold text-gray-900">No audience profiles yet</h3>
-              <p className="mt-2 text-gray-600">
+            <Card className="p-12 text-center">
+              <EmptyAudienceIcon />
+              <h3 className="mt-6 font-display text-xl text-foreground">No audience profiles yet</h3>
+              <p className="mt-2 text-muted">
                 Save reusable audience settings (board members, investors, etc.) to quickly configure share links.
               </p>
-              <button
+              <Button
                 onClick={() => {
                   setEditingAudienceProfile(null)
                   setShowAudienceModal(true)
                 }}
-                className="mt-6 rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700"
+                className="mt-6"
               >
                 Create Audience Profile
-              </button>
-            </div>
+              </Button>
+            </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {audienceProfiles.map((profile) => (
-                <div
+                <Card
                   key={profile.id}
-                  className="bg-white rounded-lg p-4 shadow border border-gray-200 hover:border-blue-300 transition-colors"
+                  className="transition-all hover:border-accent/50"
                 >
                   <div className="flex items-start justify-between mb-2">
-                    <div className="font-medium text-gray-900 truncate">{profile.name}</div>
+                    <div className="font-display text-foreground truncate">{profile.name}</div>
                     <div className="flex gap-1">
                       <button
                         onClick={() => {
                           setEditingAudienceProfile(profile)
                           setShowAudienceModal(true)
                         }}
-                        className="p-1 text-gray-400 hover:text-blue-600"
+                        className="p-1 text-muted hover:text-accent transition-colors"
                         title="Edit"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -218,7 +276,7 @@ export function SavedProfilesSection() {
                       </button>
                       <button
                         onClick={() => handleDeleteAudienceProfile(profile.id)}
-                        className="p-1 text-gray-400 hover:text-red-600"
+                        className="p-1 text-muted hover:text-destructive transition-colors"
                         title="Delete"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -229,14 +287,14 @@ export function SavedProfilesSection() {
                   </div>
 
                   {profile.description && (
-                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">{profile.description}</p>
+                    <p className="text-sm text-muted mb-2 line-clamp-2">{profile.description}</p>
                   )}
 
-                  <div className="flex items-center gap-3 text-xs text-gray-500">
-                    <span className="px-2 py-0.5 rounded bg-gray-100">{profile.accessType}</span>
-                    <span>Used {profile.timesUsed}x</span>
+                  <div className="flex items-center gap-3 text-xs text-muted">
+                    <Badge variant="secondary">{profile.accessType}</Badge>
+                    <span>Used <span className="text-accent">{profile.timesUsed}</span>x</span>
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
           )}
@@ -247,34 +305,34 @@ export function SavedProfilesSection() {
       {activeTab === 'collaborator' && (
         <>
           {collaboratorProfiles.length === 0 ? (
-            <div className="rounded-lg bg-white p-12 text-center shadow">
-              <div className="text-6xl">🤝</div>
-              <h3 className="mt-4 text-xl font-semibold text-gray-900">No collaborator profiles yet</h3>
-              <p className="mt-2 text-gray-600">
+            <Card className="p-12 text-center">
+              <EmptyCollaboratorIcon />
+              <h3 className="mt-6 font-display text-xl text-foreground">No collaborator profiles yet</h3>
+              <p className="mt-2 text-muted">
                 Save named contacts with preferences to quickly configure share links for collaborators.
               </p>
-              <button
+              <Button
                 onClick={() => {
                   setEditingCollaboratorProfile(null)
                   setShowCollaboratorModal(true)
                 }}
-                className="mt-6 rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700"
+                className="mt-6"
               >
                 Create Collaborator Profile
-              </button>
-            </div>
+              </Button>
+            </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {collaboratorProfiles.map((profile) => (
-                <div
+                <Card
                   key={profile.id}
-                  className="bg-white rounded-lg p-4 shadow border border-gray-200 hover:border-blue-300 transition-colors"
+                  className="transition-all hover:border-accent/50"
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <div className="font-medium text-gray-900 truncate">{profile.name}</div>
+                      <div className="font-display text-foreground truncate">{profile.name}</div>
                       {profile.email && (
-                        <div className="text-sm text-gray-500 truncate">{profile.email}</div>
+                        <div className="text-sm text-muted truncate">{profile.email}</div>
                       )}
                     </div>
                     <div className="flex gap-1">
@@ -283,7 +341,7 @@ export function SavedProfilesSection() {
                           setEditingCollaboratorProfile(profile)
                           setShowCollaboratorModal(true)
                         }}
-                        className="p-1 text-gray-400 hover:text-blue-600"
+                        className="p-1 text-muted hover:text-accent transition-colors"
                         title="Edit"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -292,7 +350,7 @@ export function SavedProfilesSection() {
                       </button>
                       <button
                         onClick={() => handleDeleteCollaboratorProfile(profile.id)}
-                        className="p-1 text-gray-400 hover:text-red-600"
+                        className="p-1 text-muted hover:text-destructive transition-colors"
                         title="Delete"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -303,21 +361,21 @@ export function SavedProfilesSection() {
                   </div>
 
                   {profile.description && (
-                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">{profile.description}</p>
+                    <p className="text-sm text-muted mb-2 line-clamp-2">{profile.description}</p>
                   )}
 
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
                     {profile.feedbackStyle && (
-                      <span className="px-2 py-0.5 rounded bg-gray-100">{profile.feedbackStyle}</span>
+                      <Badge variant="secondary">{profile.feedbackStyle}</Badge>
                     )}
                     {profile.expertiseAreas.length > 0 && (
-                      <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700">
+                      <Badge variant="info">
                         {profile.expertiseAreas.length} expertise areas
-                      </span>
+                      </Badge>
                     )}
-                    <span>Used {profile.timesUsed}x</span>
+                    <span>Used <span className="text-accent">{profile.timesUsed}</span>x</span>
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
           )}
@@ -326,26 +384,54 @@ export function SavedProfilesSection() {
 
       {/* Audience Profile Modal */}
       {showAudienceModal && (
-        <AudienceProfileModal
-          profile={editingAudienceProfile}
-          onClose={() => {
-            setShowAudienceModal(false)
-            setEditingAudienceProfile(null)
-          }}
-          onSaved={handleAudienceProfileSaved}
-        />
+        audienceModalMode === 'ai' ? (
+          <AudienceProfileAIModal
+            profile={editingAudienceProfile}
+            onClose={() => {
+              setShowAudienceModal(false)
+              setEditingAudienceProfile(null)
+              setAudienceModalMode('ai')
+            }}
+            onSaved={handleAudienceProfileSaved}
+            onSwitchToManual={() => setAudienceModalMode('manual')}
+          />
+        ) : (
+          <AudienceProfileModal
+            profile={editingAudienceProfile}
+            onClose={() => {
+              setShowAudienceModal(false)
+              setEditingAudienceProfile(null)
+              setAudienceModalMode('ai')
+            }}
+            onSaved={handleAudienceProfileSaved}
+          />
+        )
       )}
 
       {/* Collaborator Profile Modal */}
       {showCollaboratorModal && (
-        <CollaboratorProfileModal
-          profile={editingCollaboratorProfile}
-          onClose={() => {
-            setShowCollaboratorModal(false)
-            setEditingCollaboratorProfile(null)
-          }}
-          onSaved={handleCollaboratorProfileSaved}
-        />
+        collaboratorModalMode === 'ai' ? (
+          <CollaboratorProfileAIModal
+            profile={editingCollaboratorProfile}
+            onClose={() => {
+              setShowCollaboratorModal(false)
+              setEditingCollaboratorProfile(null)
+              setCollaboratorModalMode('ai')
+            }}
+            onSaved={handleCollaboratorProfileSaved}
+            onSwitchToManual={() => setCollaboratorModalMode('manual')}
+          />
+        ) : (
+          <CollaboratorProfileModal
+            profile={editingCollaboratorProfile}
+            onClose={() => {
+              setShowCollaboratorModal(false)
+              setEditingCollaboratorProfile(null)
+              setCollaboratorModalMode('ai')
+            }}
+            onSaved={handleCollaboratorProfileSaved}
+          />
+        )
       )}
     </section>
   )
@@ -408,96 +494,71 @@ function AudienceProfileModal({ profile, onClose, onSaved }: AudienceProfileModa
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">
-          {isEditing ? 'Edit Audience Profile' : 'Create Audience Profile'}
-        </h2>
+    <Modal isOpen={true} onClose={onClose} size="lg">
+      <ModalHeader>
+        <ModalTitle>{isEditing ? 'Edit Audience Profile' : 'Create Audience Profile'}</ModalTitle>
+      </ModalHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit}>
+        <ModalContent className="space-y-4 max-h-[60vh] overflow-y-auto">
           {error && (
-            <div className="rounded bg-red-50 p-3 text-sm text-red-600">{error}</div>
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+              {error}
+            </div>
           )}
 
-          <div>
-            <label htmlFor="ap-name" className="block text-sm font-medium text-gray-700">
-              Profile Name *
-            </label>
-            <input
-              id="ap-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Board Members, Series A Investors"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
+          <Input
+            id="ap-name"
+            label="Profile Name *"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g., Board Members, Series A Investors"
+          />
+
+          <Input
+            id="ap-desc"
+            label="Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Brief description of this audience type"
+          />
+
+          <Textarea
+            id="ap-audience"
+            label="Audience Description"
+            value={audienceDescription}
+            onChange={(e) => setAudienceDescription(e.target.value)}
+            rows={2}
+            placeholder="Who is this audience? What do they care about?"
+          />
+
+          <Textarea
+            id="ap-comms"
+            label="Communication Style"
+            value={communicationStyle}
+            onChange={(e) => setCommunicationStyle(e.target.value)}
+            rows={2}
+            placeholder="How should the AI communicate with this audience?"
+          />
+
+          <Textarea
+            id="ap-topics"
+            label="Topics to Emphasize"
+            value={topicsEmphasis}
+            onChange={(e) => setTopicsEmphasis(e.target.value)}
+            rows={2}
+            placeholder="What topics should be highlighted for this audience?"
+          />
 
           <div>
-            <label htmlFor="ap-desc" className="block text-sm font-medium text-gray-700">
-              Description
-            </label>
-            <input
-              id="ap-desc"
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description of this audience type"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="ap-audience" className="block text-sm font-medium text-gray-700">
-              Audience Description
-            </label>
-            <textarea
-              id="ap-audience"
-              value={audienceDescription}
-              onChange={(e) => setAudienceDescription(e.target.value)}
-              rows={2}
-              placeholder="Who is this audience? What do they care about?"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="ap-comms" className="block text-sm font-medium text-gray-700">
-              Communication Style
-            </label>
-            <textarea
-              id="ap-comms"
-              value={communicationStyle}
-              onChange={(e) => setCommunicationStyle(e.target.value)}
-              rows={2}
-              placeholder="How should the AI communicate with this audience?"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="ap-topics" className="block text-sm font-medium text-gray-700">
-              Topics to Emphasize
-            </label>
-            <textarea
-              id="ap-topics"
-              value={topicsEmphasis}
-              onChange={(e) => setTopicsEmphasis(e.target.value)}
-              rows={2}
-              placeholder="What topics should be highlighted for this audience?"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="ap-access" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="ap-access" className="block text-sm font-medium font-body text-muted mb-1.5">
               Default Access Type
             </label>
             <select
               id="ap-access"
               value={accessType}
               onChange={(e) => setAccessType(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-border bg-background-elevated px-3 py-2 font-body text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             >
               <option value="open">Open (no verification)</option>
               <option value="email">Email required</option>
@@ -505,26 +566,18 @@ function AudienceProfileModal({ profile, onClose, onSaved }: AudienceProfileModa
               <option value="domain">Domain whitelist</option>
             </select>
           </div>
+        </ModalContent>
 
-          <div className="flex gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving || !name.trim()}
-              className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Create'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <ModalFooter>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={saving || !name.trim()} isLoading={saving}>
+            {saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Create'}
+          </Button>
+        </ModalFooter>
+      </form>
+    </Modal>
   )
 }
 
@@ -588,97 +641,73 @@ function CollaboratorProfileModal({ profile, onClose, onSaved }: CollaboratorPro
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">
-          {isEditing ? 'Edit Collaborator Profile' : 'Create Collaborator Profile'}
-        </h2>
+    <Modal isOpen={true} onClose={onClose} size="lg">
+      <ModalHeader>
+        <ModalTitle>{isEditing ? 'Edit Collaborator Profile' : 'Create Collaborator Profile'}</ModalTitle>
+      </ModalHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit}>
+        <ModalContent className="space-y-4 max-h-[60vh] overflow-y-auto">
           {error && (
-            <div className="rounded bg-red-50 p-3 text-sm text-red-600">{error}</div>
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+              {error}
+            </div>
           )}
 
-          <div>
-            <label htmlFor="cp-name" className="block text-sm font-medium text-gray-700">
-              Name *
-            </label>
-            <input
-              id="cp-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., John Smith"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
+          <Input
+            id="cp-name"
+            label="Name *"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g., John Smith"
+          />
+
+          <Input
+            id="cp-email"
+            type="email"
+            label="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="john@example.com"
+          />
+
+          <Input
+            id="cp-desc"
+            label="Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Brief description of this collaborator"
+          />
+
+          <Textarea
+            id="cp-comms"
+            label="Communication Notes"
+            value={communicationNotes}
+            onChange={(e) => setCommunicationNotes(e.target.value)}
+            rows={2}
+            placeholder="How should the AI communicate with this person?"
+          />
 
           <div>
-            <label htmlFor="cp-email" className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
-            <input
-              id="cp-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="john@example.com"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="cp-desc" className="block text-sm font-medium text-gray-700">
-              Description
-            </label>
-            <input
-              id="cp-desc"
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description of this collaborator"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="cp-comms" className="block text-sm font-medium text-gray-700">
-              Communication Notes
-            </label>
-            <textarea
-              id="cp-comms"
-              value={communicationNotes}
-              onChange={(e) => setCommunicationNotes(e.target.value)}
-              rows={2}
-              placeholder="How should the AI communicate with this person?"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="cp-expertise" className="block text-sm font-medium text-gray-700">
-              Expertise Areas
-            </label>
-            <input
+            <Input
               id="cp-expertise"
-              type="text"
+              label="Expertise Areas"
               value={expertiseAreas}
               onChange={(e) => setExpertiseAreas(e.target.value)}
               placeholder="Finance, Legal, Marketing (comma-separated)"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
-            <p className="mt-1 text-xs text-gray-500">Comma-separated list of expertise areas</p>
+            <p className="mt-1 text-xs text-dim">Comma-separated list of expertise areas</p>
           </div>
 
           <div>
-            <label htmlFor="cp-feedback" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="cp-feedback" className="block text-sm font-medium font-body text-muted mb-1.5">
               Preferred Feedback Style
             </label>
             <select
               id="cp-feedback"
               value={feedbackStyle}
               onChange={(e) => setFeedbackStyle(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-border bg-background-elevated px-3 py-2 font-body text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             >
               <option value="">-- Select style --</option>
               <option value="direct">Direct</option>
@@ -687,25 +716,17 @@ function CollaboratorProfileModal({ profile, onClose, onSaved }: CollaboratorPro
               <option value="high-level">High-level</option>
             </select>
           </div>
+        </ModalContent>
 
-          <div className="flex gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving || !name.trim()}
-              className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Create'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <ModalFooter>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={saving || !name.trim()} isLoading={saving}>
+            {saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Create'}
+          </Button>
+        </ModalFooter>
+      </form>
+    </Modal>
   )
 }

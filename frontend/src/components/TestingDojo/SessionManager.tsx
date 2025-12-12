@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { Badge, Button } from '../ui'
+import { ChevronDown, Plus, X } from 'lucide-react'
 import type { TestSessionSummary } from '../../types/testing'
 
 interface SessionManagerProps {
@@ -36,52 +38,48 @@ export function SessionManager({
       {/* Dropdown Trigger */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 border rounded-lg hover:bg-gray-50"
+        className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg hover:bg-white/5 transition-colors text-foreground"
       >
         <span className="text-sm font-medium">
           {activeSession?.name || 'Select Session'}
         </span>
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-muted">
           {activeSession?.status === 'active' ? '● Active' : '○ Ended'}
         </span>
-        <svg
+        <ChevronDown
           className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+        />
       </button>
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-72 bg-white border rounded-lg shadow-lg z-50">
+        <div className="absolute right-0 mt-2 w-72 bg-card-bg border border-border rounded-lg shadow-lg z-50">
           {/* New Session Button */}
-          <div className="p-2 border-b">
+          <div className="p-2 border-b border-border">
             <button
               onClick={() => {
                 onCreateSession()
                 setIsOpen(false)
               }}
-              className="w-full px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg text-left"
+              className="w-full px-3 py-2 text-sm text-accent hover:bg-accent/10 rounded-lg text-left flex items-center gap-2 transition-colors"
             >
-              + New Session
+              <Plus className="w-4 h-4" />
+              New Session
             </button>
           </div>
 
           {/* Session List */}
           <div className="max-h-60 overflow-y-auto">
             {sessions.length === 0 ? (
-              <div className="p-4 text-sm text-gray-500 text-center">
+              <div className="p-4 text-sm text-muted text-center">
                 No sessions yet
               </div>
             ) : (
               sessions.map((session, index) => (
                 <div
                   key={session.id}
-                  className={`p-3 border-b last:border-b-0 hover:bg-gray-50 cursor-pointer ${
-                    session.id === activeSessionId ? 'bg-blue-50' : ''
+                  className={`p-3 border-b border-border last:border-b-0 hover:bg-white/5 cursor-pointer transition-colors ${
+                    session.id === activeSessionId ? 'bg-accent/10' : ''
                   }`}
                 >
                   <div
@@ -92,43 +90,45 @@ export function SessionManager({
                     className="flex items-start justify-between"
                   >
                     <div>
-                      <div className="font-medium text-sm">
+                      <div className="font-medium text-sm text-foreground">
                         {session.name || `Session #${index + 1}`}
                       </div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-muted">
                         {formatDate(session.createdAt)}
                       </div>
-                      <div className="text-xs text-gray-400 mt-1">
+                      <div className="text-xs text-dim mt-1">
                         {session.messageCount} messages · {session.commentCount} comments
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       {session.status === 'active' && (
-                        <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">
-                          Active
-                        </span>
+                        <Badge variant="success">Active</Badge>
                       )}
                       {confirmDelete === session.id ? (
                         <div className="flex gap-1">
-                          <button
+                          <Button
+                            size="sm"
+                            variant="secondary"
                             onClick={(e) => {
                               e.stopPropagation()
                               onDeleteSession(session.id)
                               setConfirmDelete(null)
                             }}
-                            className="text-xs px-2 py-1 bg-red-500 text-white rounded"
+                            className="text-xs bg-destructive text-background hover:bg-destructive/90"
                           >
                             Confirm
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
                             onClick={(e) => {
                               e.stopPropagation()
                               setConfirmDelete(null)
                             }}
-                            className="text-xs px-2 py-1 bg-gray-300 rounded"
+                            className="text-xs"
                           >
                             Cancel
-                          </button>
+                          </Button>
                         </div>
                       ) : (
                         <button
@@ -136,9 +136,9 @@ export function SessionManager({
                             e.stopPropagation()
                             setConfirmDelete(session.id)
                           }}
-                          className="text-xs text-gray-400 hover:text-red-500"
+                          className="text-dim hover:text-destructive transition-colors"
                         >
-                          ✕
+                          <X className="w-4 h-4" />
                         </button>
                       )}
                     </div>

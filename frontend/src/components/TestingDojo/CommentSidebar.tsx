@@ -18,12 +18,12 @@ function getPreviewText(content: string, maxLength = 100): string {
     .substring(0, maxLength)
 }
 
-const TEMPLATE_LABELS: Record<string, { icon: string; label: string }> = {
-  identity: { icon: '👤', label: 'Identity/Role' },
-  communication: { icon: '💬', label: 'Communication' },
-  content: { icon: '📋', label: 'Content' },
-  engagement: { icon: '🎯', label: 'Engagement' },
-  framing: { icon: '🖼️', label: 'Framing' },
+const TEMPLATE_LABELS: Record<string, { label: string }> = {
+  identity: { label: 'Identity/Role' },
+  communication: { label: 'Communication' },
+  content: { label: 'Content' },
+  engagement: { label: 'Engagement' },
+  framing: { label: 'Framing' },
 }
 
 interface CommentSidebarProps {
@@ -53,11 +53,11 @@ export function CommentSidebar({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-background-elevated">
       {/* Header */}
-      <div className="px-4 py-3 border-b bg-white sticky top-0">
-        <h3 className="font-semibold text-gray-900">Comments</h3>
-        <p className="text-sm text-gray-500">
+      <div className="p-4 border-b border-border sticky top-0 bg-background-elevated">
+        <h3 className="text-sm font-medium text-foreground uppercase tracking-wide font-mono">Comments</h3>
+        <p className="text-sm text-dim mt-1">
           {totalComments} {totalComments === 1 ? 'comment' : 'comments'}
         </p>
       </div>
@@ -66,8 +66,10 @@ export function CommentSidebar({
       <div className="flex-1 overflow-y-auto p-4">
         {messagesWithComments.length === 0 ? (
           <div className="text-center py-8">
-            <div className="text-gray-400 text-4xl mb-2">💭</div>
-            <p className="text-sm text-gray-500">
+            <svg className="mx-auto mb-3 w-12 h-12 text-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+            </svg>
+            <p className="text-sm text-dim">
               No comments yet. Click on an AI response to add feedback.
             </p>
           </div>
@@ -78,10 +80,10 @@ export function CommentSidebar({
                 {/* Message Preview */}
                 <button
                   onClick={() => onScrollToMessage(message.id)}
-                  className="w-full text-left p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="w-full text-left p-2 bg-card-bg rounded-lg hover:bg-white/5 transition-colors border border-border"
                 >
-                  <div className="text-xs text-gray-500 mb-1">AI Response</div>
-                  <div className="text-sm text-gray-700 line-clamp-2">
+                  <div className="text-xs text-dim mb-1 font-mono uppercase tracking-wide">AI Response</div>
+                  <div className="text-sm text-muted line-clamp-2">
                     {getPreviewText(message.content)}...
                   </div>
                 </button>
@@ -91,27 +93,26 @@ export function CommentSidebar({
                   {message.comments.map((comment) => (
                     <div
                       key={comment.id}
-                      className="p-3 bg-white border border-yellow-200 rounded-lg"
+                      className="p-3 bg-card-bg border border-[#d4a54a]/20 rounded-lg hover:bg-white/5 transition-colors"
                     >
                       {/* Template Badge */}
                       {comment.templateId && TEMPLATE_LABELS[comment.templateId] && (
-                        <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
-                          <span>{TEMPLATE_LABELS[comment.templateId].icon}</span>
+                        <div className="flex items-center gap-1 text-xs text-[#d4a54a] mb-1 font-mono uppercase tracking-wide">
                           <span>{TEMPLATE_LABELS[comment.templateId].label}</span>
                         </div>
                       )}
 
                       {/* Comment Content */}
-                      <p className="text-sm text-gray-800">{comment.content}</p>
+                      <p className="text-sm text-foreground">{comment.content}</p>
 
                       {/* Footer */}
                       <div className="flex items-center justify-between mt-2">
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-dim">
                           {formatTime(comment.createdAt)}
                         </span>
                         <button
                           onClick={() => onDeleteComment(comment.id)}
-                          className="text-xs text-gray-400 hover:text-red-500"
+                          className="text-xs text-dim hover:text-destructive transition-colors"
                         >
                           Delete
                         </button>
@@ -127,8 +128,8 @@ export function CommentSidebar({
 
       {/* Footer with summary */}
       {totalComments > 0 && (
-        <div className="px-4 py-3 border-t bg-gray-50">
-          <div className="text-xs text-gray-500">
+        <div className="px-4 py-3 border-t border-border bg-background-elevated">
+          <div className="text-xs text-dim font-mono uppercase tracking-wide">
             Feedback on {messagesWithComments.length} AI{' '}
             {messagesWithComments.length === 1 ? 'response' : 'responses'}
           </div>

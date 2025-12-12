@@ -2,6 +2,16 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { LeaveMessageModal } from './LeaveMessageModal'
+import {
+  Card,
+  Button,
+  Input,
+  Modal,
+  ModalHeader,
+  ModalTitle,
+  ModalContent,
+  ModalFooter
+} from './ui'
 
 type ModalMode = 'message' | 'confirm' | 'register' | 'success'
 
@@ -124,186 +134,186 @@ export function EndSessionModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-        {mode === 'confirm' && (
-          <>
-            <h3 className="text-lg font-semibold mb-4">End Your Session?</h3>
+    <Modal isOpen={true} onClose={onClose} size="md" showCloseButton={false}>
+      {mode === 'confirm' && (
+        <>
+          <ModalHeader>
+            <ModalTitle>End Your Session?</ModalTitle>
+          </ModalHeader>
 
-            <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Project:</span>
-                <span className="font-medium">{projectName}</span>
+          <ModalContent>
+            <Card className="mb-6">
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted">Project:</span>
+                  <span className="font-medium text-foreground">{projectName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted">Messages:</span>
+                  <span className="font-medium text-accent">{messageCount}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted">Duration:</span>
+                  <span className="font-medium text-foreground">{duration} minutes</span>
+                </div>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Messages:</span>
-                <span className="font-medium">{messageCount}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Duration:</span>
-                <span className="font-medium">{duration} minutes</span>
-              </div>
-            </div>
+            </Card>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <h4 className="font-medium text-blue-900 mb-2">Save this conversation</h4>
-              <p className="text-sm text-blue-700 mb-3">
+            <Card className="mb-6 border-accent/30" glow>
+              <h4 className="font-display text-foreground mb-2">Save this conversation</h4>
+              <p className="text-sm text-muted mb-3">
                 Create a free account to save this conversation and access it anytime from your dashboard.
               </p>
-              <ul className="text-sm text-blue-600 space-y-1">
-                <li>Access your conversation history</li>
-                <li>Continue conversations later</li>
-                <li>Explore other shared documents</li>
+              <ul className="text-sm text-muted space-y-1">
+                <li className="flex items-center gap-2">
+                  <span className="w-1 h-1 bg-accent rounded-full"></span>
+                  Access your conversation history
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1 h-1 bg-accent rounded-full"></span>
+                  Continue conversations later
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1 h-1 bg-accent rounded-full"></span>
+                  Explore other shared documents
+                </li>
               </ul>
-            </div>
+            </Card>
 
             {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+              <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
                 {error}
               </div>
             )}
 
             <div className="space-y-3">
-              <button
+              <Button
                 onClick={() => setMode('register')}
-                className="w-full px-4 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                className="w-full"
               >
                 Save & Create Account
-              </button>
+              </Button>
 
-              <button
+              <Button
+                variant="secondary"
                 onClick={handleJustEnd}
                 disabled={ending}
-                className="w-full px-4 py-3 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                isLoading={ending}
+                className="w-full"
               >
                 {ending ? 'Ending...' : 'Just End'}
-              </button>
+              </Button>
             </div>
 
             <button
               onClick={onClose}
-              className="mt-4 w-full text-sm text-gray-600 hover:text-gray-800 transition-colors"
+              className="mt-4 w-full text-sm text-muted hover:text-foreground transition-colors"
             >
               Cancel
             </button>
-          </>
-        )}
+          </ModalContent>
+        </>
+      )}
 
-        {mode === 'register' && (
-          <>
-            <h3 className="text-lg font-semibold mb-2">Create Your Account</h3>
-            <p className="text-sm text-gray-600 mb-6">
+      {mode === 'register' && (
+        <>
+          <ModalHeader>
+            <ModalTitle>Create Your Account</ModalTitle>
+            <p className="text-sm text-muted mt-1">
               Save this conversation and access it anytime
             </p>
+          </ModalHeader>
 
+          <ModalContent className="space-y-4">
             {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-sm text-destructive">
                 {error}
               </div>
             )}
 
-            <div className="space-y-4 mb-6">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Name (optional)
-                </label>
-                <input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Your name"
-                />
-              </div>
+            <Input
+              id="name"
+              label="Name (optional)"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your name"
+            />
 
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="your@email.com"
-                  required
-                />
-              </div>
+            <Input
+              id="email"
+              type="email"
+              label="Email *"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your@email.com"
+            />
 
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                  Password <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Create a password"
-                  required
-                />
-              </div>
-            </div>
+            <Input
+              id="password"
+              type="password"
+              label="Password *"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Create a password"
+            />
+          </ModalContent>
 
-            <div className="space-y-3">
-              <button
-                onClick={handleSaveAndRegister}
-                disabled={saving}
-                className="w-full px-4 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {saving ? 'Creating Account...' : 'Create Account & Save'}
-              </button>
-
-              <button
-                onClick={() => {
-                  setMode('confirm')
-                  setError('')
-                }}
-                disabled={saving}
-                className="w-full px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Back
-              </button>
-            </div>
-          </>
-        )}
-
-        {mode === 'success' && (
-          <>
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-                <svg
-                  className="w-8 h-8 text-green-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Account Created!</h3>
-              <p className="text-sm text-gray-600">
-                Your conversation has been saved to your account. You can access it anytime from your dashboard.
-              </p>
-            </div>
-
-            <button
-              onClick={handleGoToDashboard}
-              className="w-full px-4 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          <ModalFooter className="flex-col">
+            <Button
+              onClick={handleSaveAndRegister}
+              disabled={saving}
+              isLoading={saving}
+              className="w-full"
             >
+              {saving ? 'Creating Account...' : 'Create Account & Save'}
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setMode('confirm')
+                setError('')
+              }}
+              disabled={saving}
+              className="w-full"
+            >
+              Back
+            </Button>
+          </ModalFooter>
+        </>
+      )}
+
+      {mode === 'success' && (
+        <>
+          <ModalContent className="text-center py-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-success/10 rounded-full mb-4">
+              <svg
+                className="w-8 h-8 text-success"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+            <h3 className="font-display text-xl text-foreground mb-2">Account Created!</h3>
+            <p className="text-sm text-muted">
+              Your conversation has been saved to your account. You can access it anytime from your dashboard.
+            </p>
+          </ModalContent>
+
+          <ModalFooter>
+            <Button onClick={handleGoToDashboard} className="w-full">
               Go to Dashboard
-            </button>
-          </>
-        )}
-      </div>
-    </div>
+            </Button>
+          </ModalFooter>
+        </>
+      )}
+    </Modal>
   )
 }

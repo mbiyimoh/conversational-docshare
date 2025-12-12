@@ -3,6 +3,8 @@ import { api } from '../lib/api'
 import { formatDate } from '../lib/utils'
 import { ConversationDetailPanel } from './ConversationDetailPanel'
 import { AudienceSynthesisPanel } from './AudienceSynthesisPanel'
+import { Card, Button, Badge } from './ui'
+import { Download, MessageSquare, Users, Eye, BarChart3 } from 'lucide-react'
 
 interface Conversation {
   id: string
@@ -72,16 +74,16 @@ export function AnalyticsDashboard({ projectId }: AnalyticsDashboardProps) {
     }
   }
 
-  const getSentimentColor = (sentiment: string | null) => {
+  const getSentimentBadge = (sentiment: string | null) => {
     switch (sentiment?.toLowerCase()) {
       case 'positive':
-        return 'text-green-600 bg-green-50'
+        return <Badge variant="success">{sentiment}</Badge>
       case 'negative':
-        return 'text-red-600 bg-red-50'
+        return <Badge variant="destructive">{sentiment}</Badge>
       case 'neutral':
-        return 'text-gray-600 bg-gray-50'
+        return <Badge variant="secondary">{sentiment}</Badge>
       default:
-        return 'text-gray-600 bg-gray-50'
+        return <Badge variant="secondary">{sentiment || 'Unknown'}</Badge>
     }
   }
 
@@ -115,14 +117,17 @@ export function AnalyticsDashboard({ projectId }: AnalyticsDashboardProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <div className="text-gray-500">Loading analytics...</div>
+        <div className="flex items-center gap-2 text-muted">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+          Loading analytics...
+        </div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="rounded-lg bg-red-50 p-4 text-red-600">
+      <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4 text-destructive">
         {error}
       </div>
     )
@@ -139,39 +144,51 @@ export function AnalyticsDashboard({ projectId }: AnalyticsDashboardProps) {
 
       {/* Overview Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-lg bg-white p-6 shadow">
-          <div className="text-sm font-medium text-gray-500">Total Conversations</div>
-          <div className="mt-2 text-3xl font-bold text-gray-900">
+        <Card className="p-6">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted">
+            <MessageSquare className="w-4 h-4 text-accent" />
+            Total Conversations
+          </div>
+          <div className="mt-2 font-display text-3xl text-foreground">
             {analytics.overview.totalConversations}
           </div>
-        </div>
+        </Card>
 
-        <div className="rounded-lg bg-white p-6 shadow">
-          <div className="text-sm font-medium text-gray-500">Total Messages</div>
-          <div className="mt-2 text-3xl font-bold text-gray-900">
+        <Card className="p-6">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted">
+            <BarChart3 className="w-4 h-4 text-accent" />
+            Total Messages
+          </div>
+          <div className="mt-2 font-display text-3xl text-foreground">
             {analytics.overview.totalMessages}
           </div>
-        </div>
+        </Card>
 
-        <div className="rounded-lg bg-white p-6 shadow">
-          <div className="text-sm font-medium text-gray-500">Total Views</div>
-          <div className="mt-2 text-3xl font-bold text-gray-900">
+        <Card className="p-6">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted">
+            <Eye className="w-4 h-4 text-accent" />
+            Total Views
+          </div>
+          <div className="mt-2 font-display text-3xl text-foreground">
             {analytics.overview.totalViews}
           </div>
-        </div>
+        </Card>
 
-        <div className="rounded-lg bg-white p-6 shadow">
-          <div className="text-sm font-medium text-gray-500">Avg Messages/Conversation</div>
-          <div className="mt-2 text-3xl font-bold text-gray-900">
+        <Card className="p-6">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted">
+            <Users className="w-4 h-4 text-accent" />
+            Avg Messages/Conv
+          </div>
+          <div className="mt-2 font-display text-3xl text-foreground">
             {analytics.overview.avgMessagesPerConversation.toFixed(1)}
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Conversations by Day Chart */}
       {analytics.conversationsByDay.length > 0 && (
-        <div className="rounded-lg bg-white p-6 shadow">
-          <h3 className="mb-4 text-lg font-semibold text-gray-900">
+        <Card className="p-6">
+          <h3 className="mb-4 font-display text-lg text-foreground">
             Conversations Over Time (Last 30 Days)
           </h3>
           <div className="space-y-2">
@@ -179,72 +196,75 @@ export function AnalyticsDashboard({ projectId }: AnalyticsDashboardProps) {
               const maxCount = Math.max(...analytics.conversationsByDay.map((d) => d.count), 1)
               return (
                 <div key={day.date} className="flex items-center gap-4">
-                  <div className="w-24 text-sm text-gray-600">
+                  <div className="w-24 text-sm text-muted">
                     {new Date(day.date).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
                     })}
                   </div>
                   <div className="flex-1">
-                    <div className="relative h-8 overflow-hidden rounded bg-gray-100">
+                    <div className="relative h-8 overflow-hidden rounded bg-background-elevated">
                       <div
-                        className="h-full bg-blue-500 transition-all"
+                        className="h-full bg-accent transition-all"
                         style={{
                           width: `${(day.count / maxCount) * 100}%`,
                         }}
                       />
                     </div>
                   </div>
-                  <div className="w-12 text-right text-sm font-medium text-gray-900">
+                  <div className="w-12 text-right text-sm font-medium text-foreground">
                     {day.count}
                   </div>
                 </div>
               )
             })}
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Recent Conversations Table */}
-      <div className="rounded-lg bg-white shadow">
-        <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">Recent Conversations</h3>
-          <button
+      <Card className="p-0 overflow-hidden">
+        <div className="border-b border-border px-6 py-4 flex items-center justify-between">
+          <h3 className="font-display text-lg text-foreground">Recent Conversations</h3>
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={handleExportCSV}
             disabled={exporting || analytics.recentConversations.length === 0}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+            isLoading={exporting}
           >
+            <Download className="w-4 h-4 mr-1" />
             {exporting ? 'Exporting...' : 'Export CSV'}
-          </button>
+          </Button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-background-elevated">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-dim font-mono">
                   Viewer
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-dim font-mono">
                   Messages
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-dim font-mono">
                   Summary
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-dim font-mono">
                   Sentiment
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-dim font-mono">
                   Started
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-dim font-mono">
                   Status
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
+            <tbody className="divide-y divide-border">
               {analytics.recentConversations.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-8 text-center text-muted">
                     No conversations yet
                   </td>
                 </tr>
@@ -253,58 +273,48 @@ export function AnalyticsDashboard({ projectId }: AnalyticsDashboardProps) {
                   <tr
                     key={conversation.id}
                     onClick={() => setSelectedConversationId(conversation.id)}
-                    className="cursor-pointer hover:bg-gray-50 align-top"
+                    className="cursor-pointer hover:bg-white/5 align-top transition-colors"
                   >
                     <td className="whitespace-nowrap px-6 py-6">
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-foreground">
                         {conversation.viewerEmail || 'Anonymous'}
                       </div>
                       {conversation.viewerName && conversation.viewerEmail && (
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-xs text-muted mt-1">
                           {conversation.viewerName}
                         </div>
                       )}
                     </td>
                     <td className="whitespace-nowrap px-6 py-6">
-                      <div className="text-sm text-gray-900">{conversation.messageCount}</div>
+                      <div className="text-sm text-foreground">{conversation.messageCount}</div>
                     </td>
                     <td className="px-6 py-6" style={{ maxWidth: '400px' }}>
                       <div
-                        className="text-sm text-gray-900 line-clamp-3 leading-relaxed"
+                        className="text-sm text-muted line-clamp-3 leading-relaxed"
                         title={conversation.summary || ''}
                       >
                         {conversation.summary || (
-                          <span className="text-gray-400 italic">No summary</span>
+                          <span className="text-dim italic">No summary</span>
                         )}
                       </div>
                     </td>
                     <td className="whitespace-nowrap px-6 py-6">
                       {conversation.sentiment ? (
-                        <span
-                          className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${getSentimentColor(
-                            conversation.sentiment
-                          )}`}
-                        >
-                          {conversation.sentiment}
-                        </span>
+                        getSentimentBadge(conversation.sentiment)
                       ) : (
-                        <span className="text-sm text-gray-400">-</span>
+                        <span className="text-sm text-dim">-</span>
                       )}
                     </td>
                     <td className="whitespace-nowrap px-6 py-6">
-                      <div className="text-sm text-gray-900">
+                      <div className="text-sm text-foreground">
                         {formatDate(conversation.startedAt)}
                       </div>
                     </td>
                     <td className="whitespace-nowrap px-6 py-6">
                       {conversation.endedAt ? (
-                        <span className="inline-flex rounded-full bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-600">
-                          Ended
-                        </span>
+                        <Badge variant="secondary">Ended</Badge>
                       ) : (
-                        <span className="inline-flex rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-600">
-                          Active
-                        </span>
+                        <Badge variant="success">Active</Badge>
                       )}
                     </td>
                   </tr>
@@ -313,7 +323,7 @@ export function AnalyticsDashboard({ projectId }: AnalyticsDashboardProps) {
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
 
       {/* Conversation Detail Panel */}
       {selectedConversationId && (

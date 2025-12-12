@@ -183,47 +183,47 @@ export function ProfileSectionContent({ content, className = '' }: ProfileSectio
   const displayContent = jsonConverted ?? preprocessContent(content)
 
   return (
-    <div className={`prose prose-sm prose-gray max-w-none ${className}`}>
+    <div className={`prose prose-sm prose-invert max-w-none ${className}`}>
       <ReactMarkdown
         components={{
           h2: ({ children }) => (
-            <h2 className="text-base font-bold text-gray-900 mt-4 mb-2 first:mt-0 border-b border-gray-100 pb-1">
+            <h2 className="text-base font-bold text-foreground mt-4 mb-2 first:mt-0 border-b border-white/10 pb-1">
               {children}
             </h2>
           ),
           h3: ({ children }) => (
-            <h3 className="text-sm font-semibold text-gray-800 mt-3 mb-1 first:mt-0">
+            <h3 className="text-sm font-semibold text-foreground mt-3 mb-1 first:mt-0">
               {children}
             </h3>
           ),
           p: ({ children }) => (
-            <p className="text-gray-700 mb-3 last:mb-0 leading-relaxed">{children}</p>
+            <p className="text-muted mb-3 last:mb-0 leading-relaxed">{children}</p>
           ),
           strong: ({ children }) => (
-            <strong className="font-semibold text-gray-900">{children}</strong>
+            <strong className="font-semibold text-foreground">{children}</strong>
           ),
           em: ({ children }) => (
-            <em className="text-gray-600">{children}</em>
+            <em className="text-dim">{children}</em>
           ),
           ul: ({ children }) => (
-            <ul className="list-disc list-outside ml-5 space-y-1 text-gray-700 my-2">{children}</ul>
+            <ul className="list-disc list-outside ml-5 space-y-1 text-muted my-2">{children}</ul>
           ),
           ol: ({ children }) => (
-            <ol className="list-decimal list-outside ml-5 space-y-1 text-gray-700 my-2">{children}</ol>
+            <ol className="list-decimal list-outside ml-5 space-y-1 text-muted my-2">{children}</ol>
           ),
           li: ({ children }) => (
-            <li className="text-gray-700 leading-relaxed">{children}</li>
+            <li className="text-muted leading-relaxed">{children}</li>
           ),
           blockquote: ({ children }) => (
-            <blockquote className="border-l-4 border-blue-300 bg-blue-50 pl-4 pr-3 py-2 my-3 rounded-r-lg">
+            <blockquote className="border-l-4 border-[#d4a54a] bg-white/5 pl-4 pr-3 py-2 my-3 rounded-r-lg">
               {children}
             </blockquote>
           ),
           hr: () => (
-            <hr className="my-4 border-gray-200" />
+            <hr className="my-4 border-white/10" />
           ),
           code: ({ children }) => (
-            <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono text-gray-800">{children}</code>
+            <code className="bg-white/5 px-1.5 py-0.5 rounded text-sm font-mono text-foreground">{children}</code>
           ),
         }}
       >

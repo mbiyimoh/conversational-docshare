@@ -238,8 +238,8 @@ export function DocumentContentViewer({
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-        <span className="ml-3 text-gray-600">Loading document...</span>
+        <Loader2 className="w-8 h-8 animate-spin text-accent" />
+        <span className="ml-3 text-muted">Loading document...</span>
       </div>
     )
   }
@@ -247,21 +247,21 @@ export function DocumentContentViewer({
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-8">
-        <div className="text-red-500 mb-4">{error}</div>
+        <div className="text-warning mb-4">{error}</div>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-white min-h-0">
+    <div className="flex flex-col h-full overflow-hidden bg-card-bg min-h-0">
       {/* Document Header */}
-      <div className="p-4 border-b shrink-0 min-h-0">
+      <div className="p-4 border-b border-border shrink-0 min-h-0">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <FileText className="w-6 h-6 text-blue-600" />
+            <FileText className="w-6 h-6 text-accent" />
             <div>
-              <h2 className="text-xl font-bold">{docData?.title}</h2>
-              <p className="text-sm text-gray-500">{docData?.filename}</p>
+              <h2 className="text-xl font-display text-foreground">{docData?.title}</h2>
+              <p className="text-sm text-dim">{docData?.filename}</p>
             </div>
           </div>
           <button
@@ -270,7 +270,7 @@ export function DocumentContentViewer({
               const url = `${import.meta.env.VITE_API_URL || ''}/api/documents/${documentId}/download`
               window.open(url, '_blank')
             }}
-            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 shrink-0"
+            className="flex items-center gap-2 px-3 py-1.5 bg-accent text-background text-sm rounded hover:opacity-90 transition-opacity shrink-0"
           >
             <Download className="w-4 h-4" />
             Download
@@ -298,12 +298,12 @@ export function DocumentContentViewer({
               className="mb-8 scroll-mt-20"
             >
               {section.sectionTitle && (
-                <h2 className="text-xl font-semibold text-blue-700 mb-4 pb-2 border-b border-blue-100">
+                <h2 className="text-xl font-display text-foreground mb-4 pb-2 border-b border-border">
                   {section.sectionTitle}
                 </h2>
               )}
 
-              <div className="text-gray-700 leading-relaxed">
+              <div className="text-muted leading-relaxed">
                 {section.chunks.map((chunk) => (
                   <div
                     key={chunk.id}
@@ -311,7 +311,7 @@ export function DocumentContentViewer({
                     ref={(el) => {
                       if (el) chunkRefs.current.set(chunk.id, el)
                     }}
-                    className="mb-4 prose prose-slate max-w-none"
+                    className="mb-4 prose prose-invert max-w-none"
                   >
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {chunk.content}
@@ -325,7 +325,7 @@ export function DocumentContentViewer({
           {/* Text Selection Popover for Collaborators */}
           {textSelection && isCollaborator && onAddComment && (
             <div
-              className="comment-popover absolute z-50 bg-white rounded-lg shadow-lg border border-gray-200 p-1"
+              className="comment-popover absolute z-50 bg-background-elevated rounded-lg shadow-lg border border-border p-1 backdrop-blur-sm"
               style={{
                 left: textSelection.position.x,
                 top: textSelection.position.y,
@@ -342,7 +342,7 @@ export function DocumentContentViewer({
                   })
                   setTextSelection(null)
                 }}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-accent hover:bg-card-bg rounded transition-colors"
               >
                 <MessageSquarePlus className="w-4 h-4" />
                 Add Comment
@@ -351,7 +351,7 @@ export function DocumentContentViewer({
           )}
 
           {chunks.length === 0 && (
-            <div className="text-center text-gray-500 py-8">
+            <div className="text-center text-dim py-8">
               No content available for this document
             </div>
           )}

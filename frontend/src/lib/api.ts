@@ -33,6 +33,25 @@ export interface AgentProfile {
   source: 'interview' | 'manual' | 'feedback'
 }
 
+// Synthesized profile types
+export interface SynthesizedAudienceProfile {
+  name: string
+  description: string | null
+  audienceDescription: string | null
+  communicationStyle: string | null
+  topicsEmphasis: string | null
+  accessType: 'open' | 'email' | 'password' | 'domain'
+}
+
+export interface SynthesizedCollaboratorProfile {
+  name: string
+  email: string | null
+  description: string | null
+  communicationNotes: string | null
+  expertiseAreas: string[]
+  feedbackStyle: 'direct' | 'gentle' | 'detailed' | 'high-level' | null
+}
+
 // Progress event types for SSE streaming
 export type ProfileProgressEvent =
   | { type: 'status'; message: string }
@@ -1040,6 +1059,30 @@ class ApiClient {
     }>(`/api/collaborator-profiles/${profileId}/use`, {
       method: 'POST',
     })
+  }
+
+  // ============================================================================
+  // Profile Synthesis endpoints (AI-assisted profile creation)
+  // ============================================================================
+
+  async synthesizeAudienceProfile(rawInput: string, additionalContext?: string) {
+    return this.request<{ profile: SynthesizedAudienceProfile }>(
+      '/api/audience-profiles/synthesize',
+      {
+        method: 'POST',
+        body: JSON.stringify({ rawInput, additionalContext }),
+      }
+    )
+  }
+
+  async synthesizeCollaboratorProfile(rawInput: string, additionalContext?: string) {
+    return this.request<{ profile: SynthesizedCollaboratorProfile }>(
+      '/api/collaborator-profiles/synthesize',
+      {
+        method: 'POST',
+        body: JSON.stringify({ rawInput, additionalContext }),
+      }
+    )
   }
 
   // ============================================================================

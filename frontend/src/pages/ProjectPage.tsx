@@ -6,6 +6,7 @@ import { AnalyticsDashboard } from '../components/AnalyticsDashboard'
 import { ShareLinkManager } from '../components/ShareLinkManager'
 import { TestingDojo } from '../components/TestingDojo'
 import { api } from '../lib/api'
+import { Button, Card, AccentText } from '../components/ui'
 
 interface Project {
   id: string
@@ -14,11 +15,21 @@ interface Project {
   createdAt: string
 }
 
+const tabs = [
+  { id: 'documents', label: 'Documents' },
+  { id: 'agent', label: 'AI Agent' },
+  { id: 'test', label: 'Test' },
+  { id: 'share', label: 'Share' },
+  { id: 'analytics', label: 'Analytics' },
+] as const
+
+type TabId = typeof tabs[number]['id']
+
 export function ProjectPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
   const [project, setProject] = useState<Project | null>(null)
-  const [activeTab, setActiveTab] = useState('documents')
+  const [activeTab, setActiveTab] = useState<TabId>('documents')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -42,47 +53,50 @@ export function ProjectPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-500">Loading project...</div>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="flex items-center gap-2 text-muted">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+          Loading project...
+        </div>
       </div>
     )
   }
 
   if (error || !project) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900">Project Not Found</h2>
-          <p className="mt-2 text-gray-600">{error || 'This project does not exist or you do not have access to it.'}</p>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Card className="text-center max-w-md">
+          <h2 className="font-display text-2xl text-foreground">Project Not Found</h2>
+          <p className="mt-2 text-muted">{error || 'This project does not exist or you do not have access to it.'}</p>
+          <Button onClick={() => navigate('/dashboard')} className="mt-4">
             Back to Dashboard
-          </button>
-        </div>
+          </Button>
+        </Card>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-white border-b">
+      <div className="bg-background-elevated border-b border-border">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => navigate('/dashboard')}
-                  className="text-gray-600 hover:text-gray-900"
-                >
-                  ← Back
-                </button>
-              </div>
-              <h1 className="text-3xl font-bold mt-2">{project.name}</h1>
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="text-muted hover:text-foreground transition-colors flex items-center gap-1"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+                Back
+              </button>
+              <h1 className="font-display text-3xl text-foreground mt-2">
+                <AccentText>{project.name}</AccentText>
+              </h1>
               {project.description && (
-                <p className="mt-2 text-gray-600">{project.description}</p>
+                <p className="mt-2 text-muted">{project.description}</p>
               )}
             </div>
           </div>
@@ -90,69 +104,24 @@ export function ProjectPage() {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white border-b">
+      <div className="bg-background-elevated border-b border-border">
         <div className="container mx-auto px-4">
           <nav className="flex space-x-8" role="tablist">
-            <button
-              onClick={() => setActiveTab('documents')}
-              role="tab"
-              aria-selected={activeTab === 'documents'}
-              className={`px-3 py-4 border-b-2 font-medium transition-colors ${
-                activeTab === 'documents'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Documents
-            </button>
-            <button
-              onClick={() => setActiveTab('agent')}
-              role="tab"
-              aria-selected={activeTab === 'agent'}
-              className={`px-3 py-4 border-b-2 font-medium transition-colors ${
-                activeTab === 'agent'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              AI Agent
-            </button>
-            <button
-              onClick={() => setActiveTab('test')}
-              role="tab"
-              aria-selected={activeTab === 'test'}
-              className={`px-3 py-4 border-b-2 font-medium transition-colors ${
-                activeTab === 'test'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Test
-            </button>
-            <button
-              onClick={() => setActiveTab('share')}
-              role="tab"
-              aria-selected={activeTab === 'share'}
-              className={`px-3 py-4 border-b-2 font-medium transition-colors ${
-                activeTab === 'share'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Share
-            </button>
-            <button
-              onClick={() => setActiveTab('analytics')}
-              role="tab"
-              aria-selected={activeTab === 'analytics'}
-              className={`px-3 py-4 border-b-2 font-medium transition-colors ${
-                activeTab === 'analytics'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Analytics
-            </button>
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                className={`px-3 py-4 border-b-2 font-body font-medium transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-accent text-accent'
+                    : 'border-transparent text-muted hover:text-foreground hover:border-border'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </nav>
         </div>
       </div>

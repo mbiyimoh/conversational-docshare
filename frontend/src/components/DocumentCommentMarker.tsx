@@ -11,12 +11,12 @@ export function DocumentCommentMarker({
 }: DocumentCommentMarkerProps) {
   return (
     <span
-      className="bg-yellow-200 hover:bg-yellow-300 cursor-pointer relative inline"
+      className="bg-accent/20 hover:bg-accent/30 cursor-pointer relative inline transition-colors"
       onClick={onClick}
     >
       {highlightedText}
       {commentCount > 0 && (
-        <span className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+        <span className="absolute -top-2 -right-2 bg-accent text-background text-xs rounded-full w-4 h-4 flex items-center justify-center">
           {commentCount}
         </span>
       )}

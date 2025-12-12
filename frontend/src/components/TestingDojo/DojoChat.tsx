@@ -146,8 +146,8 @@ export function DojoChat({
             <div
               className={`group relative max-w-[80%] rounded-lg px-4 py-3 ${
                 message.role === 'user'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-900'
+                  ? 'bg-accent text-white'
+                  : 'bg-background-elevated text-foreground'
               }`}
             >
               {/* Use ProfileSectionContent for assistant messages to handle mixed JSON/markdown */}
@@ -159,7 +159,7 @@ export function DojoChat({
 
               {/* Comment indicator */}
               {message.comments.length > 0 && (
-                <div className="absolute -right-2 -top-2 bg-yellow-400 text-yellow-900 text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                <div className="absolute -right-2 -top-2 bg-accent text-background text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
                   {message.comments.length}
                 </div>
               )}
@@ -168,7 +168,7 @@ export function DojoChat({
               {message.role === 'assistant' && !message.id.startsWith('temp-') && (
                 <button
                   onClick={() => setCommentingMessageId(message.id)}
-                  className="absolute -bottom-2 right-2 text-xs text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity bg-white px-2 py-0.5 rounded shadow-sm"
+                  className="absolute -bottom-2 right-2 text-xs text-muted hover:text-accent opacity-0 group-hover:opacity-100 transition-opacity bg-card-bg px-2 py-0.5 rounded shadow-sm"
                 >
                   + Add Comment
                 </button>
@@ -188,7 +188,7 @@ export function DojoChat({
         {/* Streaming indicator */}
         {isStreaming && streamingContent && (
           <div className="flex justify-start">
-            <div className="max-w-[80%] rounded-lg bg-gray-100 px-4 py-3">
+            <div className="max-w-[80%] rounded-lg bg-background-elevated px-4 py-3">
               {/* Use ProfileSectionContent for streaming content too */}
               <ProfileSectionContent content={streamingContent} />
             </div>
@@ -197,11 +197,11 @@ export function DojoChat({
 
         {isStreaming && !streamingContent && (
           <div className="flex justify-start">
-            <div className="rounded-lg bg-gray-100 px-4 py-2">
+            <div className="rounded-lg bg-background-elevated px-4 py-2">
               <div className="flex space-x-2">
-                <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400" />
-                <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400" style={{ animationDelay: '150ms' }} />
-                <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400" style={{ animationDelay: '300ms' }} />
+                <div className="h-2 w-2 animate-bounce rounded-full bg-muted" />
+                <div className="h-2 w-2 animate-bounce rounded-full bg-muted" style={{ animationDelay: '150ms' }} />
+                <div className="h-2 w-2 animate-bounce rounded-full bg-muted" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           </div>

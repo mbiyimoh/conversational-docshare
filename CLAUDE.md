@@ -12,6 +12,42 @@
 
 ---
 
+## Design System (33 Strategies Brand)
+
+**When modifying ANY frontend/UI code, follow the 33 Strategies design system.**
+
+**Full Reference:** `.claude/skills/33-strategies-frontend-design.md`
+
+**Slash Command:** Use `/design:overhaul <component-or-page>` for systematic redesigns.
+
+### Quick Reference
+
+**Fonts:**
+- Display/Headlines: `Instrument Serif` (headlines, stats, key phrases)
+- Body/UI: `DM Sans` (paragraphs, buttons, forms)
+- Mono/Labels: `JetBrains Mono` (section markers, uppercase labels)
+
+**Core Colors:**
+- Background: `#0a0a0f` (dark with blue undertone)
+- Card: `rgba(255,255,255,0.03)` with `backdrop-blur-sm`
+- Text: `#f5f5f5` / `#888888` / `#555555`
+- Gold accent: `#d4a54a` (for key phrases, CTAs, stats)
+- Border: `rgba(255,255,255,0.08)`
+
+**Key Patterns:**
+- Section labels: `01 — TITLE` (gold, uppercase, tracked mono)
+- Headlines: Plain text with gold key phrase: `"Technology is plateauing. <span class="text-[#d4a54a]">Value creation is just starting.</span>"`
+- Cards: Glass effect with `backdrop-blur-sm`, subtle border, optional gold glow
+- Motion: Framer Motion fade-up on scroll, 0.5s, staggered delays
+
+**Rules:**
+- NO emojis in visualizations - use geometric SVG shapes
+- NO Inter font, purple gradients, or generic "AI slop" aesthetics
+- Luxury editorial meets technical precision
+- Always dark mode
+
+---
+
 ## Database Schema Changes (CRITICAL)
 
 **Database:** Supabase PostgreSQL | **Schema:** `prisma db push` (NOT migrations)
@@ -291,6 +327,34 @@ const calculateTextOffset = (container: HTMLElement, range: Range): number => {
 **Critical Gotchas:**
 - **Diff Library Types**: Must install `@types/diff` for TypeScript support
 - **Text Extraction**: Use shared utility from `tiptapUtils.ts`, not duplicate code
+
+---
+
+## AI-First Profile Creation
+
+**What:** Voice-friendly brain dump to structured profiles. Users describe audiences/collaborators naturally via voice or text, AI synthesizes to structured fields with iterative refinement.
+
+**Files:**
+- `backend/src/services/profileBrainDumpSynthesizer.ts` - LLM synthesis service
+- `frontend/src/components/AudienceProfileAIModal.tsx` - AI modal for audience profiles
+- `frontend/src/components/CollaboratorProfileAIModal.tsx` - AI modal for collaborator profiles
+- `frontend/src/hooks/useSpeechRecognition.ts` - Browser speech recognition hook
+
+**Pattern Distinction:**
+- **"AI-assisted manual editing"** (this feature): User brain dumps → AI synthesizes → user refines → save
+- **Dojo recommendation system** (existing): AI analyzes test comments → generates recommendations → user approves
+
+**APIs:**
+- `POST /api/audience-profiles/synthesize` - Preview synthesis (not saved)
+- `POST /api/collaborator-profiles/synthesize` - Preview synthesis (not saved)
+
+**Key Implementation Notes:**
+- Uses browser native SpeechRecognition API (graceful degradation if unsupported)
+- 60-second LLM timeout matches profileSynthesizer.ts pattern
+- gpt-4-turbo model with temperature 0.3 for consistent synthesis
+- Supports additionalContext parameter for iterative refinement
+- "Switch to manual entry" fallback available in modals
+- Modal mode resets to 'ai' on close for next use
 
 ---
 

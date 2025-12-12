@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { api } from '../lib/api'
 import { AgentProfile } from './AgentProfile'
+import { Card, Button, Textarea, Badge } from './ui'
 
 interface InterviewData {
   audience?: string
@@ -223,7 +224,10 @@ export function AgentInterview({ projectId, onComplete }: AgentInterviewProps) {
     return (
       <div className="mx-auto max-w-2xl">
         <div className="flex items-center justify-center py-12">
-          <div className="text-gray-500">Loading interview...</div>
+          <div className="flex items-center gap-2 text-muted">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+            Loading interview...
+          </div>
         </div>
       </div>
     )
@@ -231,7 +235,7 @@ export function AgentInterview({ projectId, onComplete }: AgentInterviewProps) {
 
   // Notification Toast
   const NotificationToast = notification ? (
-    <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in">
+    <div className="fixed top-4 right-4 bg-success text-background px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in">
       {notification}
     </div>
   ) : null
@@ -245,16 +249,16 @@ export function AgentInterview({ projectId, onComplete }: AgentInterviewProps) {
 
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="font-display text-2xl text-foreground">
             Your AI Agent Configuration
           </h1>
-          <p className="mt-2 text-gray-600">
+          <p className="mt-2 text-muted">
             Review your interview responses and the generated agent profile
           </p>
         </div>
 
         {/* Sub-tab navigation */}
-        <div className="border-b border-gray-200 mb-6">
+        <div className="border-b border-border mb-6">
           <nav className="flex space-x-8" role="tablist">
             <button
               onClick={() => setReviewTab('responses')}
@@ -262,8 +266,8 @@ export function AgentInterview({ projectId, onComplete }: AgentInterviewProps) {
               aria-selected={reviewTab === 'responses'}
               className={`pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 reviewTab === 'responses'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-accent text-accent'
+                  : 'border-transparent text-muted hover:text-foreground hover:border-border'
               }`}
             >
               Interview Responses
@@ -274,8 +278,8 @@ export function AgentInterview({ projectId, onComplete }: AgentInterviewProps) {
               aria-selected={reviewTab === 'profile'}
               className={`pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                 reviewTab === 'profile'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-accent text-accent'
+                  : 'border-transparent text-muted hover:text-foreground hover:border-border'
               }`}
             >
               Agent Profile
@@ -285,7 +289,7 @@ export function AgentInterview({ projectId, onComplete }: AgentInterviewProps) {
 
         {/* Error message */}
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 p-4 text-red-600">
+          <div className="mb-4 rounded-lg bg-destructive/10 border border-destructive/20 p-4 text-destructive">
             {error}
           </div>
         )}
@@ -302,20 +306,17 @@ export function AgentInterview({ projectId, onComplete }: AgentInterviewProps) {
                   const isEmpty = !answer || answer.trim() === ''
 
                   return (
-                    <div
-                      key={q.id}
-                      className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
-                    >
+                    <Card key={q.id}>
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-medium text-gray-900">{q.question}</h3>
+                            <h3 className="font-display text-foreground">{q.question}</h3>
                             {isEssential && (
-                              <span className="text-xs text-gray-500">(Required)</span>
+                              <Badge variant="secondary">Required</Badge>
                             )}
                           </div>
                           {isEmpty ? (
-                            <p className="text-gray-400 italic">Not answered</p>
+                            <p className="text-dim italic">Not answered</p>
                           ) : (
                             (() => {
                               const { displayText, isTruncated } = getDisplayText(answer, q.id)
@@ -323,11 +324,11 @@ export function AgentInterview({ projectId, onComplete }: AgentInterviewProps) {
                               const showToggle = isTruncated || isExpanded
                               return (
                                 <div>
-                                  <p className="text-gray-700 whitespace-pre-wrap">{displayText}</p>
+                                  <p className="text-muted whitespace-pre-wrap">{displayText}</p>
                                   {showToggle && (
                                     <button
                                       onClick={() => toggleAnswerExpanded(q.id)}
-                                      className="mt-2 text-sm font-medium text-blue-600 hover:text-blue-700"
+                                      className="mt-2 text-sm font-medium text-accent hover:text-accent/80 transition-colors"
                                     >
                                       {isExpanded ? 'Show less' : 'Show more'}
                                     </button>
@@ -337,24 +338,25 @@ export function AgentInterview({ projectId, onComplete }: AgentInterviewProps) {
                             })()
                           )}
                         </div>
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleEditQuestion(index)}
-                          className="shrink-0 rounded-md px-3 py-1 text-sm font-medium text-blue-600 hover:bg-blue-50"
                         >
                           Edit
-                        </button>
+                        </Button>
                       </div>
-                    </div>
+                    </Card>
                   )
                 })}
               </div>
 
               {/* Tip */}
-              <div className="mt-6 rounded-lg bg-blue-50 p-4 text-sm text-blue-900">
-                <p>
+              <Card className="mt-6 border-accent/30" glow>
+                <p className="text-sm text-muted">
                   You can always come back and update these settings later from the AI Agent tab.
                 </p>
-              </div>
+              </Card>
             </>
           ) : (
             <AgentProfile
@@ -375,18 +377,12 @@ export function AgentInterview({ projectId, onComplete }: AgentInterviewProps) {
 
         {/* Unified action buttons */}
         <div className="mt-8 flex items-center justify-between">
-          <button
-            onClick={handleEditAllResponses}
-            className="rounded-lg px-6 py-2 text-gray-600 hover:bg-gray-100"
-          >
+          <Button variant="ghost" onClick={handleEditAllResponses}>
             Edit All Responses
-          </button>
-          <button
-            onClick={() => onComplete?.('navigate-to-test')}
-            className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700"
-          >
+          </Button>
+          <Button onClick={() => onComplete?.('navigate-to-test')}>
             Continue to Testing
-          </button>
+          </Button>
         </div>
       </div>
     )
@@ -400,15 +396,15 @@ export function AgentInterview({ projectId, onComplete }: AgentInterviewProps) {
 
       {/* Progress bar */}
       <div className="mb-8">
-        <div className="mb-2 flex justify-between text-sm text-gray-600">
+        <div className="mb-2 flex justify-between text-sm text-muted">
           <span>
             Question {currentStep + 1} of {questions.length}
           </span>
           <span>{Math.round(progress)}% complete</span>
         </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-card-bg border border-border">
           <div
-            className="h-full bg-blue-600 transition-all duration-300"
+            className="h-full bg-accent transition-all duration-300"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -416,74 +412,70 @@ export function AgentInterview({ projectId, onComplete }: AgentInterviewProps) {
 
       {/* Error message */}
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 p-4 text-red-600">
+        <div className="mb-4 rounded-lg bg-destructive/10 border border-destructive/20 p-4 text-destructive">
           {error}
         </div>
       )}
 
       {/* Question card */}
-      <div className="rounded-lg bg-white p-8 shadow-lg">
-        <h2 className="mb-2 text-2xl font-bold text-gray-900">
+      <Card className="p-8">
+        <h2 className="mb-2 font-display text-2xl text-foreground">
           {currentQuestion.question}
         </h2>
-        <p className="mb-6 text-gray-600">{currentQuestion.description}</p>
+        <p className="mb-6 text-muted">{currentQuestion.description}</p>
 
-        <textarea
+        <Textarea
           value={interviewData[currentQuestion.id as keyof InterviewData] || ''}
           onChange={(e) => handleAnswerChange(e.target.value)}
           placeholder={currentQuestion.placeholder}
           rows={4}
-          className="w-full rounded-lg border border-gray-300 p-4 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
 
         {/* Navigation buttons */}
         <div className="mt-6 flex items-center justify-between">
-          <button
+          <Button
+            variant="ghost"
             onClick={handleBack}
             disabled={currentStep === 0}
-            className="rounded-lg px-6 py-2 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Back
-          </button>
+          </Button>
 
           <div className="flex gap-2">
             {currentStep >= 3 && (
-              <button
+              <Button
+                variant="secondary"
                 onClick={handleSkipToEnd}
                 disabled={saving}
-                className="rounded-lg border border-gray-300 px-6 py-2 text-gray-700 hover:bg-gray-50"
               >
                 Skip & Save
-              </button>
+              </Button>
             )}
 
             {isLastStep ? (
-              <button
+              <Button
                 onClick={handleComplete}
                 disabled={saving}
-                className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+                isLoading={saving}
               >
                 {saving ? 'Saving...' : 'Complete'}
-              </button>
+              </Button>
             ) : (
-              <button
-                onClick={handleNext}
-                className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700"
-              >
+              <Button onClick={handleNext}>
                 Next
-              </button>
+              </Button>
             )}
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Tips */}
-      <div className="mt-6 rounded-lg bg-blue-50 p-4 text-sm text-blue-900">
-        <p className="font-semibold">Tip:</p>
-        <p className="mt-1">
+      <Card className="mt-6 border-accent/30" glow>
+        <p className="font-display text-foreground">Tip:</p>
+        <p className="mt-1 text-sm text-muted">
           The first 4 questions are essential. You can skip the last question if you prefer the AI to respond naturally without proactive questions.
         </p>
-      </div>
+      </Card>
     </div>
   )
 }

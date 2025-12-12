@@ -73,14 +73,14 @@ export function ConversationRecommendations({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="w-6 h-6 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+        <div className="w-6 h-6 border-2 border-border border-t-accent rounded-full animate-spin"></div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-8 text-muted">
         {error}
       </div>
     )
@@ -88,7 +88,7 @@ export function ConversationRecommendations({
 
   if (recommendations.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-8 text-muted">
         <svg
           className="w-8 h-8 mx-auto mb-2 opacity-50"
           fill="none"
@@ -112,7 +112,7 @@ export function ConversationRecommendations({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium flex items-center gap-2">
+        <h3 className="text-lg font-medium text-foreground flex items-center gap-2">
           <svg
             className="w-5 h-5"
             fill="none"
@@ -129,7 +129,7 @@ export function ConversationRecommendations({
           Recommendations ({recommendations.length})
         </h3>
         {pendingCount > 0 && (
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-muted">
             {pendingCount} pending review
           </span>
         )}
