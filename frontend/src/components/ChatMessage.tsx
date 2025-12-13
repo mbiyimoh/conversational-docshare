@@ -1,5 +1,10 @@
+import { useMemo } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { cn } from '../lib/utils'
-import { splitMessageIntoParts } from '../lib/documentReferences'
+import { getSectionInfo } from '../lib/documentLookup'
+import { convertCitationsToMarkdownLinks } from '../lib/documentReferences'
+import { createMarkdownComponents } from '../lib/markdownConfig'
 
 interface ChatMessageProps {
   role: 'user' | 'assistant'
@@ -8,11 +13,96 @@ interface ChatMessageProps {
   onCitationClick?: (filename: string, sectionId: string) => void
 }
 
+/**
+ * Citation button component for document references
+ */
+function CitationButton({
+  filename,
+  sectionId,
+  onCitationClick,
+  isUserMessage,
+}: {
+  filename: string
+  sectionId: string
+  onCitationClick?: (filename: string, sectionId: string) => void
+  isUserMessage: boolean
+}) {
+  const sectionInfo = getSectionInfo(filename, sectionId)
+  const displayText = sectionInfo
+    ? `${sectionInfo.documentTitle}: ${sectionInfo.sectionTitle}`
+    : filename
+
+  return (
+    <button
+      onClick={() => onCitationClick?.(filename, sectionId)}
+      className={cn(
+        'inline-flex items-center gap-1 font-medium mx-1 transition-colors',
+        isUserMessage
+          ? 'text-background/90 hover:text-background underline hover:no-underline'
+          : 'text-accent hover:text-accent/80 underline hover:no-underline'
+      )}
+      title={`Open ${filename}, section: ${sectionInfo?.sectionTitle || sectionId}`}
+    >
+      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+        />
+      </svg>
+      <span className="break-words">{displayText}</span>
+    </button>
+  )
+}
+
 export function ChatMessage({ role, content, timestamp, onCitationClick }: ChatMessageProps) {
   const isUser = role === 'user'
 
-  // Parse content for document references (only for assistant messages)
-  const messageParts = !isUser ? splitMessageIntoParts(content) : [{ type: 'text' as const, content }]
+  // Convert citations to markdown links for processing
+  const processedContent = useMemo(() => convertCitationsToMarkdownLinks(content), [content])
+
+  // Custom components for ReactMarkdown using shared config
+  const markdownComponents = useMemo(
+    () =>
+      createMarkdownComponents({
+        isUser,
+        renderLink: ({ href, children }) => {
+          // Check if this is a citation link
+          if (href?.startsWith('cite://')) {
+            const [, pathPart] = href.split('cite://')
+            const [encodedFilename, encodedSectionId] = pathPart.split('/')
+            const filename = decodeURIComponent(encodedFilename)
+            const sectionId = decodeURIComponent(encodedSectionId)
+
+            return (
+              <CitationButton
+                filename={filename}
+                sectionId={sectionId}
+                onCitationClick={onCitationClick}
+                isUserMessage={isUser}
+              />
+            )
+          }
+
+          // Regular link - use default rendering
+          return (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                'underline hover:no-underline transition-colors',
+                isUser ? 'text-background/90 hover:text-background' : 'text-accent hover:text-accent/80'
+              )}
+            >
+              {children}
+            </a>
+          )
+        },
+      }),
+    [onCitationClick, isUser]
+  )
 
   return (
     <div className={cn('flex w-full', isUser ? 'justify-end' : 'justify-start')}>
@@ -24,27 +114,10 @@ export function ChatMessage({ role, content, timestamp, onCitationClick }: ChatM
             : 'bg-card-bg border border-border text-foreground'
         )}
       >
-        <div className="whitespace-pre-wrap break-words">
-          {messageParts.map((part, idx) => {
-            if (part.type === 'text') {
-              return <span key={idx}>{part.content}</span>
-            } else if (part.type === 'reference' && part.reference) {
-              return (
-                <button
-                  key={idx}
-                  onClick={() => onCitationClick?.(part.reference!.filename, part.reference!.sectionId)}
-                  className="inline-flex items-center gap-1 text-accent hover:text-accent/80 underline hover:no-underline font-medium mx-1 transition-colors"
-                  title={`Open ${part.reference.filename}, section ${part.reference.sectionId}`}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  {part.content}
-                </button>
-              )
-            }
-            return null
-          })}
+        <div className="break-words">
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+            {processedContent}
+          </ReactMarkdown>
         </div>
         {timestamp && (
           <div

@@ -14,7 +14,13 @@ jest.mock('../../utils/prisma', () => ({
   },
 }))
 
-import { synthesizeProfile, regenerateProfile } from '../profileSynthesizer'
+import {
+  synthesizeProfile,
+  regenerateProfile,
+  calculateOverallConfidence,
+  extractLightAreas,
+  ConfidenceLevel,
+} from '../profileSynthesizer'
 import { getOpenAI } from '../../utils/openai'
 import { prisma } from '../../utils/prisma'
 
@@ -180,6 +186,131 @@ describe('profileSynthesizer', () => {
         })
       )
       expect(profile.sections).toBeDefined()
+    })
+  })
+
+  // ============================================================================
+  // V2 BRAINDUMP SYNTHESIS TESTS
+  // ============================================================================
+
+  describe('calculateOverallConfidence', () => {
+    it('should return HIGH when 8+ fields are EXPLICIT with 0-1 ASSUMED', () => {
+      const fields: Record<string, { confidence: ConfidenceLevel }> = {
+        field1: { confidence: 'EXPLICIT' },
+        field2: { confidence: 'EXPLICIT' },
+        field3: { confidence: 'EXPLICIT' },
+        field4: { confidence: 'EXPLICIT' },
+        field5: { confidence: 'EXPLICIT' },
+        field6: { confidence: 'EXPLICIT' },
+        field7: { confidence: 'EXPLICIT' },
+        field8: { confidence: 'EXPLICIT' },
+        field9: { confidence: 'INFERRED' },
+        field10: { confidence: 'INFERRED' },
+        field11: { confidence: 'INFERRED' },
+        field12: { confidence: 'ASSUMED' },
+      }
+
+      expect(calculateOverallConfidence(fields)).toBe('HIGH')
+    })
+
+    it('should return LOW when 5+ fields are ASSUMED', () => {
+      const fields: Record<string, { confidence: ConfidenceLevel }> = {
+        field1: { confidence: 'EXPLICIT' },
+        field2: { confidence: 'EXPLICIT' },
+        field3: { confidence: 'EXPLICIT' },
+        field4: { confidence: 'ASSUMED' },
+        field5: { confidence: 'ASSUMED' },
+        field6: { confidence: 'ASSUMED' },
+        field7: { confidence: 'ASSUMED' },
+        field8: { confidence: 'ASSUMED' },
+        field9: { confidence: 'INFERRED' },
+        field10: { confidence: 'INFERRED' },
+        field11: { confidence: 'INFERRED' },
+        field12: { confidence: 'INFERRED' },
+      }
+
+      expect(calculateOverallConfidence(fields)).toBe('LOW')
+    })
+
+    it('should return LOW when fewer than 4 fields are EXPLICIT', () => {
+      const fields: Record<string, { confidence: ConfidenceLevel }> = {
+        field1: { confidence: 'EXPLICIT' },
+        field2: { confidence: 'EXPLICIT' },
+        field3: { confidence: 'EXPLICIT' },
+        field4: { confidence: 'INFERRED' },
+        field5: { confidence: 'INFERRED' },
+        field6: { confidence: 'INFERRED' },
+        field7: { confidence: 'INFERRED' },
+        field8: { confidence: 'INFERRED' },
+        field9: { confidence: 'INFERRED' },
+        field10: { confidence: 'INFERRED' },
+        field11: { confidence: 'INFERRED' },
+        field12: { confidence: 'INFERRED' },
+      }
+
+      expect(calculateOverallConfidence(fields)).toBe('LOW')
+    })
+
+    it('should return MEDIUM for mixed confidence levels', () => {
+      const fields: Record<string, { confidence: ConfidenceLevel }> = {
+        field1: { confidence: 'EXPLICIT' },
+        field2: { confidence: 'EXPLICIT' },
+        field3: { confidence: 'EXPLICIT' },
+        field4: { confidence: 'EXPLICIT' },
+        field5: { confidence: 'EXPLICIT' },
+        field6: { confidence: 'INFERRED' },
+        field7: { confidence: 'INFERRED' },
+        field8: { confidence: 'INFERRED' },
+        field9: { confidence: 'INFERRED' },
+        field10: { confidence: 'ASSUMED' },
+        field11: { confidence: 'ASSUMED' },
+        field12: { confidence: 'ASSUMED' },
+      }
+
+      expect(calculateOverallConfidence(fields)).toBe('MEDIUM')
+    })
+  })
+
+  describe('extractLightAreas', () => {
+    it('should return only non-EXPLICIT field IDs', () => {
+      const fields: Record<string, { confidence: ConfidenceLevel }> = {
+        agentIdentity: { confidence: 'EXPLICIT' },
+        domainExpertise: { confidence: 'INFERRED' },
+        targetAudience: { confidence: 'ASSUMED' },
+      }
+
+      const lightAreas = extractLightAreas(fields)
+
+      expect(lightAreas).toContain('domainExpertise')
+      expect(lightAreas).toContain('targetAudience')
+      expect(lightAreas).not.toContain('agentIdentity')
+    })
+
+    it('should return empty array when all fields are EXPLICIT', () => {
+      const fields: Record<string, { confidence: ConfidenceLevel }> = {
+        agentIdentity: { confidence: 'EXPLICIT' },
+        domainExpertise: { confidence: 'EXPLICIT' },
+        targetAudience: { confidence: 'EXPLICIT' },
+      }
+
+      const lightAreas = extractLightAreas(fields)
+
+      expect(lightAreas).toEqual([])
+    })
+
+    it('should return all field IDs when none are EXPLICIT', () => {
+      const fields: Record<string, { confidence: ConfidenceLevel }> = {
+        field1: { confidence: 'INFERRED' },
+        field2: { confidence: 'ASSUMED' },
+        field3: { confidence: 'INFERRED' },
+      }
+
+      const lightAreas = extractLightAreas(fields)
+
+      expect(lightAreas).toHaveLength(3)
+      expect(lightAreas).toContain('field1')
+      expect(lightAreas).toContain('field2')
+      expect(lightAreas).toContain('field3')
     })
   })
 })

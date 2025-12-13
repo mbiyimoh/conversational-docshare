@@ -33,6 +33,45 @@ export interface AgentProfile {
   source: 'interview' | 'manual' | 'feedback'
 }
 
+// V2 Profile types (for braindump synthesis)
+export interface AgentProfileFieldV2 {
+  id: string
+  title: string
+  content: string
+  confidence: 'EXPLICIT' | 'INFERRED' | 'ASSUMED'
+  isEdited: boolean
+  editedAt?: string
+}
+
+export interface AgentProfileV2 {
+  fields: {
+    agentIdentity: AgentProfileFieldV2
+    domainExpertise: AgentProfileFieldV2
+    targetAudience: AgentProfileFieldV2
+    toneAndVoice: AgentProfileFieldV2
+    languagePatterns: AgentProfileFieldV2
+    adaptationRules: AgentProfileFieldV2
+    keyTopics: AgentProfileFieldV2
+    avoidanceAreas: AgentProfileFieldV2
+    examplePreferences: AgentProfileFieldV2
+    proactiveGuidance: AgentProfileFieldV2
+    framingStrategies: AgentProfileFieldV2
+    successCriteria: AgentProfileFieldV2
+  }
+  generatedAt: string
+  source: 'braindump' | 'interview' | 'manual'
+  version: 2
+}
+
+export interface BrainDumpSynthesisResponse {
+  success: boolean
+  profile: AgentProfileV2
+  lightAreas: string[]
+  overallConfidence: 'HIGH' | 'MEDIUM' | 'LOW'
+  rawInput: string
+  synthesisMode: 'voice' | 'text'
+}
+
 // Synthesized profile types
 export interface SynthesizedAudienceProfile {
   name: string
@@ -1081,6 +1120,42 @@ class ApiClient {
       {
         method: 'POST',
         body: JSON.stringify({ rawInput, additionalContext }),
+      }
+    )
+  }
+
+  // ============================================================================
+  // Agent Profile Braindump Synthesis (V2)
+  // ============================================================================
+
+  async synthesizeAgentProfile(
+    projectId: string,
+    rawInput: string,
+    additionalContext?: string
+  ) {
+    return this.request<BrainDumpSynthesisResponse>(
+      `/api/projects/${projectId}/profile/synthesize`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ rawInput, additionalContext }),
+      }
+    )
+  }
+
+  async saveAgentProfileV2(
+    projectId: string,
+    data: {
+      profile: AgentProfileV2
+      rawInput: string
+      lightAreas: string[]
+      synthesisMode: 'voice' | 'text'
+    }
+  ) {
+    return this.request<{ success: boolean; profile: AgentProfileV2 }>(
+      `/api/projects/${projectId}/profile/save`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
       }
     )
   }

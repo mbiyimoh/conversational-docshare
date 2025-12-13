@@ -31,6 +31,130 @@ export interface AgentProfile {
   source: 'interview' | 'manual' | 'feedback'
 }
 
+// ============================================================================
+// V2 PROFILE TYPES (12-field braindump synthesis)
+// ============================================================================
+
+// Shared constants for braindump synthesis
+export const MIN_INPUT_LENGTH = 50
+
+// Confidence levels - qualitative, not numeric
+export type ConfidenceLevel = 'EXPLICIT' | 'INFERRED' | 'ASSUMED'
+
+// Individual profile field with confidence tracking (V2)
+export interface ProfileFieldV2 {
+  id: string
+  title: string
+  content: string
+  confidence: ConfidenceLevel
+  isEdited: boolean
+  editedAt?: string
+  editSource?: 'manual' | 'recommendation'
+}
+
+// 12-field profile structure organized by category
+export interface AgentProfileV2 {
+  fields: {
+    // Identity & Context
+    agentIdentity: ProfileFieldV2
+    domainExpertise: ProfileFieldV2
+    targetAudience: ProfileFieldV2
+    // Communication & Style
+    toneAndVoice: ProfileFieldV2
+    languagePatterns: ProfileFieldV2
+    adaptationRules: ProfileFieldV2
+    // Content & Priorities
+    keyTopics: ProfileFieldV2
+    avoidanceAreas: ProfileFieldV2
+    examplePreferences: ProfileFieldV2
+    // Engagement & Behavior
+    proactiveGuidance: ProfileFieldV2
+    framingStrategies: ProfileFieldV2
+    successCriteria: ProfileFieldV2
+  }
+  generatedAt: string
+  source: 'braindump' | 'interview' | 'manual'
+  version: 2
+}
+
+// Synthesis result returned to frontend
+export interface BrainDumpSynthesisResult {
+  profile: AgentProfileV2
+  lightAreas: string[]  // Field IDs where confidence !== 'EXPLICIT'
+  overallConfidence: 'HIGH' | 'MEDIUM' | 'LOW'
+  rawInput: string
+}
+
+// Field metadata for prompt construction and display
+export const PROFILE_FIELD_METADATA: Record<string, { title: string; description: string; category: string }> = {
+  agentIdentity: {
+    title: 'Agent Identity',
+    description: 'Who the agent represents - organization, team, role, mission',
+    category: 'Identity & Context'
+  },
+  domainExpertise: {
+    title: 'Domain Expertise',
+    description: 'Areas of knowledge, expertise depth, credentials to claim',
+    category: 'Identity & Context'
+  },
+  targetAudience: {
+    title: 'Target Audience',
+    description: 'Who the agent serves, their characteristics, what they care about',
+    category: 'Identity & Context'
+  },
+  toneAndVoice: {
+    title: 'Tone & Voice',
+    description: 'Personality, formality level, character traits',
+    category: 'Communication & Style'
+  },
+  languagePatterns: {
+    title: 'Language Patterns',
+    description: 'Specific phrases, terminology, level of detail, formatting preferences',
+    category: 'Communication & Style'
+  },
+  adaptationRules: {
+    title: 'Adaptation Rules',
+    description: 'How to adjust for different contexts, question types, or audience signals',
+    category: 'Communication & Style'
+  },
+  keyTopics: {
+    title: 'Key Topics',
+    description: 'Primary topics to emphasize, tiered by importance',
+    category: 'Content & Priorities'
+  },
+  avoidanceAreas: {
+    title: 'Avoidance Areas',
+    description: 'Topics to avoid, handle carefully, or redirect',
+    category: 'Content & Priorities'
+  },
+  examplePreferences: {
+    title: 'Example Preferences',
+    description: 'Use of examples, analogies, data citations, document references',
+    category: 'Content & Priorities'
+  },
+  proactiveGuidance: {
+    title: 'Proactive Guidance',
+    description: 'Questions to ask, conversation steering, follow-up prompts',
+    category: 'Engagement & Behavior'
+  },
+  framingStrategies: {
+    title: 'Framing Strategies',
+    description: 'How to position key messages, reframes for common objections',
+    category: 'Engagement & Behavior'
+  },
+  successCriteria: {
+    title: 'Success Criteria',
+    description: 'What constitutes a good interaction, goals for each conversation',
+    category: 'Engagement & Behavior'
+  }
+}
+
+export const PROFILE_FIELD_IDS = Object.keys(PROFILE_FIELD_METADATA) as Array<keyof AgentProfileV2['fields']>
+
+// ============================================================================
+// V1 PROFILE CONSTANTS (existing 5-section interview synthesis)
+// ============================================================================
+
 // Constants
 const MAX_SECTION_LENGTH = 4000 // Increased to accommodate preserved structure
 const LLM_TIMEOUT_MS = 60000 // 60 seconds for complex structured synthesis
@@ -499,4 +623,235 @@ export async function regenerateProfile(
   })
 
   return profile
+}
+
+// ============================================================================
+// V2 BRAINDUMP SYNTHESIS FUNCTIONS
+// ============================================================================
+
+/**
+ * System prompt for extracting 12-field profile from braindump
+ * Uses qualitative confidence signals, not numeric scores
+ */
+const BRAINDUMP_SYSTEM_PROMPT = `You are an expert at analyzing natural language descriptions and extracting structured AI agent profiles.
+
+Your task: Extract a 12-field agent profile from the user's brain dump with confidence tracking.
+
+## Output Format (JSON)
+{
+  "fields": {
+    "agentIdentity": { "content": "...", "confidence": "EXPLICIT|INFERRED|ASSUMED" },
+    "domainExpertise": { "content": "...", "confidence": "EXPLICIT|INFERRED|ASSUMED" },
+    "targetAudience": { "content": "...", "confidence": "EXPLICIT|INFERRED|ASSUMED" },
+    "toneAndVoice": { "content": "...", "confidence": "EXPLICIT|INFERRED|ASSUMED" },
+    "languagePatterns": { "content": "...", "confidence": "EXPLICIT|INFERRED|ASSUMED" },
+    "adaptationRules": { "content": "...", "confidence": "EXPLICIT|INFERRED|ASSUMED" },
+    "keyTopics": { "content": "...", "confidence": "EXPLICIT|INFERRED|ASSUMED" },
+    "avoidanceAreas": { "content": "...", "confidence": "EXPLICIT|INFERRED|ASSUMED" },
+    "examplePreferences": { "content": "...", "confidence": "EXPLICIT|INFERRED|ASSUMED" },
+    "proactiveGuidance": { "content": "...", "confidence": "EXPLICIT|INFERRED|ASSUMED" },
+    "framingStrategies": { "content": "...", "confidence": "EXPLICIT|INFERRED|ASSUMED" },
+    "successCriteria": { "content": "...", "confidence": "EXPLICIT|INFERRED|ASSUMED" }
+  }
+}
+
+## Field Descriptions
+- agentIdentity: Who the agent represents (organization, team, role, mission)
+- domainExpertise: Areas of knowledge, expertise depth, credentials to claim
+- targetAudience: Who it serves, their characteristics, what they care about
+- toneAndVoice: Personality, formality level, character traits
+- languagePatterns: Specific phrases, terminology, level of detail, formatting
+- adaptationRules: How to adjust for different contexts or question types
+- keyTopics: Primary topics to emphasize, tiered by importance if structured
+- avoidanceAreas: Topics to avoid, handle carefully, or redirect
+- examplePreferences: Use of examples, analogies, data citations
+- proactiveGuidance: Questions to ask, conversation steering
+- framingStrategies: How to position key messages, reframes
+- successCriteria: What constitutes a good interaction
+
+## Confidence Levels
+- EXPLICIT: User directly stated this information
+- INFERRED: Reasonable inference from context (user implied but didn't state directly)
+- ASSUMED: Default/guess based on common patterns (user didn't provide relevant info)
+
+## Guidelines
+- Extract specific details mentioned by the user
+- Preserve user terminology and examples exactly
+- For structured input (tiers, lists), maintain the structure
+- Make reasonable inferences and mark them as INFERRED
+- Use sensible defaults and mark them as ASSUMED
+- Never leave a field empty - always provide meaningful content
+- Content should be actionable instructions for an AI agent`
+
+/**
+ * Build user prompt with raw input and optional additional context
+ */
+function buildBrainDumpPrompt(rawInput: string, additionalContext?: string): string {
+  let prompt = `Please synthesize an AI agent profile from this brain dump:\n\n${rawInput}`
+
+  if (additionalContext) {
+    prompt += `\n\n## Additional Context (user refinements):\n${additionalContext}`
+  }
+
+  return prompt
+}
+
+/**
+ * Calculate overall confidence from individual field confidences
+ * Exported for testing
+ */
+export function calculateOverallConfidence(
+  fields: Record<string, { confidence: ConfidenceLevel }>
+): 'HIGH' | 'MEDIUM' | 'LOW' {
+  const confidences = Object.values(fields).map(f => f.confidence)
+  const explicitCount = confidences.filter(c => c === 'EXPLICIT').length
+  const assumedCount = confidences.filter(c => c === 'ASSUMED').length
+
+  // HIGH: 8+ explicit, 0-1 assumed
+  // MEDIUM: 4-7 explicit, or 2-4 assumed
+  // LOW: <4 explicit, or 5+ assumed
+  if (explicitCount >= 8 && assumedCount <= 1) return 'HIGH'
+  if (assumedCount >= 5 || explicitCount < 4) return 'LOW'
+  return 'MEDIUM'
+}
+
+/**
+ * Extract light areas (fields with non-EXPLICIT confidence)
+ * Exported for testing
+ */
+export function extractLightAreas(
+  fields: Record<string, { confidence: ConfidenceLevel }>
+): string[] {
+  return Object.entries(fields)
+    .filter(([_, field]) => field.confidence !== 'EXPLICIT')
+    .map(([fieldId]) => fieldId)
+}
+
+/**
+ * Validate and transform LLM response into typed structure
+ */
+function validateAndTransformResponse(
+  parsed: unknown,
+  rawInput: string
+): BrainDumpSynthesisResult {
+  // Type guard for parsed response
+  if (!parsed || typeof parsed !== 'object' || !('fields' in parsed)) {
+    throw new LLMError('Invalid response structure: missing fields object')
+  }
+
+  const response = parsed as { fields: Record<string, { content: string; confidence: string }> }
+  const now = new Date().toISOString()
+
+  // Validate all required fields exist
+  const missingFields = PROFILE_FIELD_IDS.filter(id => !response.fields[id])
+  if (missingFields.length > 0) {
+    throw new LLMError(`Missing required fields: ${missingFields.join(', ')}`)
+  }
+
+  // Transform to typed structure
+  const fields: AgentProfileV2['fields'] = {} as AgentProfileV2['fields']
+
+  for (const fieldId of PROFILE_FIELD_IDS) {
+    const rawField = response.fields[fieldId]
+    const metadata = PROFILE_FIELD_METADATA[fieldId]
+
+    // Validate confidence level
+    const confidence = ['EXPLICIT', 'INFERRED', 'ASSUMED'].includes(rawField.confidence)
+      ? rawField.confidence as ConfidenceLevel
+      : 'ASSUMED' // Default to ASSUMED if invalid
+
+    fields[fieldId] = {
+      id: fieldId,
+      title: metadata.title,
+      content: rawField.content || `[No content extracted for ${metadata.title}]`,
+      confidence,
+      isEdited: false
+    }
+  }
+
+  // Use the transformed fields (with validated ConfidenceLevel) for helper functions
+  const lightAreas = extractLightAreas(fields)
+  const overallConfidence = calculateOverallConfidence(fields)
+
+  return {
+    profile: {
+      fields,
+      generatedAt: now,
+      source: 'braindump',
+      version: 2
+    },
+    lightAreas,
+    overallConfidence,
+    rawInput
+  }
+}
+
+/**
+ * Synthesize a 12-field agent profile from natural language braindump
+ *
+ * @param rawInput - Natural language description from user (voice/text)
+ * @param additionalContext - Optional refinement context for regeneration
+ * @returns Structured profile with confidence signals
+ */
+export async function synthesizeFromBrainDump(
+  rawInput: string,
+  additionalContext?: string
+): Promise<BrainDumpSynthesisResult> {
+  const openai = getOpenAI()
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS)
+
+  const userPrompt = buildBrainDumpPrompt(rawInput, additionalContext)
+
+  try {
+    const response = await openai.chat.completions.create(
+      {
+        model: 'gpt-4-turbo',
+        messages: [
+          { role: 'system', content: BRAINDUMP_SYSTEM_PROMPT },
+          { role: 'user', content: userPrompt }
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.3,
+        max_tokens: 4096
+      },
+      { signal: controller.signal }
+    )
+
+    clearTimeout(timeoutId)
+
+    const content = response.choices[0]?.message?.content
+    if (!content) {
+      throw new LLMError('Failed to synthesize profile: Empty response from AI')
+    }
+
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(content)
+    } catch {
+      throw new LLMError('Failed to parse AI response as JSON')
+    }
+
+    return validateAndTransformResponse(parsed, rawInput)
+
+  } catch (error) {
+    clearTimeout(timeoutId)
+
+    if (error instanceof LLMError) throw error
+
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        throw new LLMError('Profile synthesis timed out after 60 seconds. Please try again.')
+      }
+
+      // OpenAI rate limiting
+      if ('status' in error && (error as { status: number }).status === 429) {
+        throw new LLMError('Rate limited by AI service. Please try again in a moment.')
+      }
+    }
+
+    throw new LLMError(
+      `Profile synthesis failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+    )
+  }
 }

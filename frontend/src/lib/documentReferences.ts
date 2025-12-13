@@ -134,5 +134,22 @@ export function extractReferencedDocuments(content: string): string[] {
  * @returns True if references are found
  */
 export function hasDocumentReferences(content: string): boolean {
+  DOC_REFERENCE_REGEX.lastIndex = 0
   return DOC_REFERENCE_REGEX.test(content)
+}
+
+/**
+ * Convert [DOC:filename:section-id] citations to markdown links
+ * for processing by ReactMarkdown with custom link components
+ *
+ * @param content - The message content
+ * @returns Content with citations converted to cite:// links
+ */
+export function convertCitationsToMarkdownLinks(content: string): string {
+  DOC_REFERENCE_REGEX.lastIndex = 0
+  return content.replace(DOC_REFERENCE_REGEX, (_match, filename, sectionId) => {
+    const encodedFilename = encodeURIComponent(filename)
+    const encodedSectionId = encodeURIComponent(sectionId)
+    return `[CITE](cite://${encodedFilename}/${encodedSectionId})`
+  })
 }

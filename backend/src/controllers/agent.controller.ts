@@ -8,6 +8,9 @@ import {
   SECTION_ORDER,
   SECTION_NAMES,
   SectionId,
+  synthesizeFromBrainDump,
+  BrainDumpSynthesisResult,
+  MIN_INPUT_LENGTH,
 } from '../services/profileSynthesizer'
 import { NotFoundError, AuthorizationError, ValidationError } from '../utils/errors'
 import type { ContextLayer } from '@prisma/client'
@@ -580,5 +583,143 @@ export async function updateAgentProfile(req: Request, res: Response) {
   res.json({
     section: section,
     message: 'Section updated successfully',
+  })
+}
+
+// ============================================================================
+// V2 BRAINDUMP SYNTHESIS HANDLERS
+// ============================================================================
+
+const VALID_SYNTHESIS_MODES = ['voice', 'text']
+
+/**
+ * POST /api/projects/:projectId/profile/synthesize
+ *
+ * Synthesize a 12-field agent profile from natural language braindump.
+ * Does NOT save to database - returns preview for user review.
+ */
+export async function synthesizeAgentProfileHandler(req: Request, res: Response) {
+  if (!req.user) {
+    throw new AuthorizationError()
+  }
+
+  const { projectId } = req.params
+  const { rawInput, additionalContext, synthesisMode } = req.body
+
+  // Validate request body
+  if (!rawInput || typeof rawInput !== 'string') {
+    throw new ValidationError('rawInput is required and must be a string')
+  }
+
+  if (rawInput.trim().length < MIN_INPUT_LENGTH) {
+    throw new ValidationError(`rawInput must be at least ${MIN_INPUT_LENGTH} characters`)
+  }
+
+  if (additionalContext !== undefined && typeof additionalContext !== 'string') {
+    throw new ValidationError('additionalContext must be a string if provided')
+  }
+
+  if (synthesisMode && !VALID_SYNTHESIS_MODES.includes(synthesisMode)) {
+    throw new ValidationError(`synthesisMode must be one of: ${VALID_SYNTHESIS_MODES.join(', ')}`)
+  }
+
+  // Verify project exists and user has access
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, ownerId: req.user.userId }
+  })
+
+  if (!project) {
+    throw new NotFoundError('Project')
+  }
+
+  // Synthesize profile (does not save)
+  const result: BrainDumpSynthesisResult = await synthesizeFromBrainDump(
+    rawInput.trim(),
+    additionalContext?.trim()
+  )
+
+  res.json({
+    success: true,
+    ...result,
+    synthesisMode: synthesisMode || 'text'
+  })
+}
+
+/**
+ * POST /api/projects/:projectId/profile/save
+ *
+ * Save a synthesized profile to the database.
+ * Called after user reviews and approves the preview.
+ */
+export async function saveAgentProfileHandler(req: Request, res: Response) {
+  if (!req.user) {
+    throw new AuthorizationError()
+  }
+
+  const { projectId } = req.params
+  const { profile, rawInput, lightAreas, synthesisMode } = req.body
+
+  // Validate required fields
+  if (!profile || typeof profile !== 'object') {
+    throw new ValidationError('profile is required')
+  }
+
+  if (!rawInput || typeof rawInput !== 'string') {
+    throw new ValidationError('rawInput is required')
+  }
+
+  // Verify project exists and user has access
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, ownerId: req.user.userId }
+  })
+
+  if (!project) {
+    throw new NotFoundError('Project')
+  }
+
+  // Get current config to increment version
+  const existingConfig = await prisma.agentConfig.findUnique({
+    where: { projectId }
+  })
+
+  const nextVersion = (existingConfig?.profileVersion || 0) + 1
+
+  // Upsert agent config with new profile
+  const agentConfig = await prisma.agentConfig.upsert({
+    where: { projectId },
+    create: {
+      projectId,
+      interviewData: {}, // Empty for braindump-created profiles
+      status: 'complete',
+      completionLevel: 100,
+      profile,
+      profileGeneratedAt: new Date(),
+      profileSource: 'braindump',
+      profileVersion: 1,
+      rawBrainDump: rawInput,
+      synthesisMode: synthesisMode || 'text',
+      lightAreas: lightAreas || []
+    },
+    update: {
+      profile,
+      profileGeneratedAt: new Date(),
+      profileSource: 'braindump',
+      profileVersion: nextVersion,
+      rawBrainDump: rawInput,
+      synthesisMode: synthesisMode || 'text',
+      lightAreas: lightAreas || [],
+      status: 'complete',
+      completionLevel: 100
+    }
+  })
+
+  res.json({
+    success: true,
+    agentConfig: {
+      id: agentConfig.id,
+      profileVersion: agentConfig.profileVersion,
+      profileSource: agentConfig.profileSource,
+      profileGeneratedAt: agentConfig.profileGeneratedAt
+    }
   })
 }

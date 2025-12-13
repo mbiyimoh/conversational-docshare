@@ -18,6 +18,7 @@ export default {
         background: 'hsl(var(--color-bg))',
         'background-elevated': 'hsl(var(--color-bg-elevated))',
         'card-bg': 'hsl(var(--color-bg-card))',
+        'modal-bg': 'hsl(var(--color-bg-modal))',
         foreground: 'hsl(var(--color-text))',
         muted: 'hsl(var(--color-text-muted))',
         dim: 'hsl(var(--color-text-dim))',

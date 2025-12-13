@@ -1,11 +1,77 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { ChatInput } from '../ChatInput'
-import { ProfileSectionContent } from '../ProfileSectionContent'
 import { CommentOverlay } from './CommentOverlay'
 import { api } from '../../lib/api'
+import { convertCitationsToMarkdownLinks } from '../../lib/documentReferences'
+import { getSectionInfo } from '../../lib/documentLookup'
+import { createMarkdownComponents } from '../../lib/markdownConfig'
 import type { TestMessage, TestComment } from '../../types/testing'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
+
+/**
+ * Citation display for document references in Testing Dojo (non-clickable)
+ */
+function DojoCitationDisplay({ filename, sectionId }: { filename: string; sectionId: string }) {
+  const sectionInfo = getSectionInfo(filename, sectionId)
+  const displayText = sectionInfo
+    ? `${sectionInfo.documentTitle}: ${sectionInfo.sectionTitle}`
+    : filename
+
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-accent font-medium mx-1"
+      title={`${filename}, section: ${sectionInfo?.sectionTitle || sectionId}`}
+    >
+      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+        />
+      </svg>
+      <span className="break-words">{displayText}</span>
+    </span>
+  )
+}
+
+/**
+ * Markdown content renderer for Dojo messages using shared config
+ */
+function DojoMessageContent({ content, isUser }: { content: string; isUser: boolean }) {
+  const processedContent = useMemo(() => convertCitationsToMarkdownLinks(content), [content])
+
+  const markdownComponents = useMemo(
+    () =>
+      createMarkdownComponents({
+        isUser,
+        renderLink: ({ href }) => {
+          // Citations in Testing Dojo are display-only (not clickable)
+          if (href?.startsWith('cite://')) {
+            const [, pathPart] = href.split('cite://')
+            const [encodedFilename, encodedSectionId] = pathPart.split('/')
+            const filename = decodeURIComponent(encodedFilename)
+            const sectionId = decodeURIComponent(encodedSectionId)
+            return <DojoCitationDisplay filename={filename} sectionId={sectionId} />
+          }
+          // Regular links use default rendering from shared config
+          return undefined
+        },
+      }),
+    [isUser]
+  )
+
+  return (
+    <div className="break-words">
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+        {processedContent}
+      </ReactMarkdown>
+    </div>
+  )
+}
 
 interface DojoChatProps {
   projectId: string
@@ -150,12 +216,8 @@ export function DojoChat({
                   : 'bg-background-elevated text-foreground'
               }`}
             >
-              {/* Use ProfileSectionContent for assistant messages to handle mixed JSON/markdown */}
-              {message.role === 'assistant' ? (
-                <ProfileSectionContent content={message.content} />
-              ) : (
-                <div className="whitespace-pre-wrap">{message.content}</div>
-              )}
+              {/* Render message content with markdown support */}
+              <DojoMessageContent content={message.content} isUser={message.role === 'user'} />
 
               {/* Comment indicator */}
               {message.comments.length > 0 && (
@@ -189,8 +251,8 @@ export function DojoChat({
         {isStreaming && streamingContent && (
           <div className="flex justify-start">
             <div className="max-w-[80%] rounded-lg bg-background-elevated px-4 py-3">
-              {/* Use ProfileSectionContent for streaming content too */}
-              <ProfileSectionContent content={streamingContent} />
+              {/* Render streaming content with markdown support */}
+              <DojoMessageContent content={streamingContent} isUser={false} />
             </div>
           </div>
         )}

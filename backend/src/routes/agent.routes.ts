@@ -9,6 +9,8 @@ import {
   generateAgentProfileStream,
   getAgentProfile,
   updateAgentProfile,
+  synthesizeAgentProfileHandler,
+  saveAgentProfileHandler,
 } from '../controllers/agent.controller'
 import { authenticate } from '../middleware/auth'
 import { asyncHandler } from '../middleware/errorHandler'
@@ -81,5 +83,31 @@ router.get('/projects/:projectId/agent/profile', authenticate, asyncHandler(getA
  * @access  Private
  */
 router.patch('/projects/:projectId/agent/profile', authenticate, asyncHandler(updateAgentProfile))
+
+// ============================================================================
+// V2 BRAINDUMP SYNTHESIS ROUTES
+// ============================================================================
+
+/**
+ * @route   POST /api/projects/:projectId/profile/synthesize
+ * @desc    Synthesize 12-field agent profile from natural language braindump (preview only, no save)
+ * @access  Private
+ */
+router.post(
+  '/projects/:projectId/profile/synthesize',
+  authenticate,
+  asyncHandler(synthesizeAgentProfileHandler)
+)
+
+/**
+ * @route   POST /api/projects/:projectId/profile/save
+ * @desc    Save a synthesized braindump profile to database
+ * @access  Private
+ */
+router.post(
+  '/projects/:projectId/profile/save',
+  authenticate,
+  asyncHandler(saveAgentProfileHandler)
+)
 
 export default router

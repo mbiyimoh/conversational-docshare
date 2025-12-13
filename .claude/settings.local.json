@@ -33,7 +33,14 @@
       "WebFetch(domain:jsonpatch.com)",
       "WebFetch(domain:www.shapeof.ai)",
       "SlashCommand(/research:*)",
-      "SlashCommand(/git:commit)"
+      "SlashCommand(/git:commit)",
+      "WebFetch(domain:habitus.blog)",
+      "WebFetch(domain:www.sensible.so)",
+      "WebFetch(domain:arxiv.org)",
+      "WebFetch(domain:www.pedroalonso.net)",
+      "WebFetch(domain:www.parallelhq.com)",
+      "WebFetch(domain:www.nngroup.com)",
+      "WebFetch(domain:design.mindsphere.io)"
     ],
     "deny": [],
     "ask": []

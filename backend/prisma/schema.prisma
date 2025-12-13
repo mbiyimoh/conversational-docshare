@@ -245,8 +245,13 @@ model AgentConfig {
   // Synthesized profile
   profile            Json?      // Structured profile sections
   profileGeneratedAt DateTime?  // When profile was last synthesized
-  profileSource      String?    // "interview" | "manual" | "feedback" - tracks origin
+  profileSource      String?    // "interview" | "braindump" | "manual" | "feedback" - tracks origin
   profileVersion     Int        @default(1)
+
+  // Braindump storage (for AI-first profile creation)
+  rawBrainDump   String?  @db.Text  // Original user input for regeneration
+  synthesisMode  String?            // "voice" | "text" | "interview"
+  lightAreas     String[]           // Field IDs with confidence != EXPLICIT
 
   // Timestamps
   createdAt DateTime @default(now())

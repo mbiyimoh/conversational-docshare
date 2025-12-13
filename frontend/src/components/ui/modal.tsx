@@ -41,13 +41,13 @@ const Modal = forwardRef<HTMLDivElement, ModalProps>(
       <AnimatePresence>
         {isOpen && (
           <>
-            {/* Backdrop */}
+            {/* Backdrop - darker scrim for better modal readability */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0 z-40 bg-black/75 backdrop-blur-md"
               onClick={onClose}
               aria-hidden="true"
             />
@@ -62,7 +62,8 @@ const Modal = forwardRef<HTMLDivElement, ModalProps>(
                 transition={{ duration: 0.2, ease: [0.25, 0.4, 0.25, 1] }}
                 className={cn('w-full', sizeClasses[size])}
               >
-                <Card className={cn('relative shadow-2xl', className)}>
+                {/* Modal card with increased opacity for readability */}
+                <Card className={cn('relative shadow-2xl bg-modal-bg backdrop-blur-xl', className)}>
                   {showCloseButton && (
                     <button
                       onClick={onClose}

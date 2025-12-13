@@ -1,3 +1,8 @@
+---
+name: 33-strategies-frontend-design
+description: Create distinctive, premium interfaces for 33 Strategies products with refined dark theme, gold accents, and luxury editorial aesthetic. Use when building any 33 Strategies web component, page, application, or presentation deck. Provides brand guidelines, typography (Instrument Serif, DM Sans, JetBrains Mono), color system (gold hexcode d4a54a accent), component patterns, motion, and layout specifications.
+---
+
 # 33 Strategies — Frontend Design Skill
 
 Create distinctive, premium interfaces for 33 Strategies products. Use this skill when building any 33 Strategies web component, page, application, or presentation deck. Generates refined, dark-themed interfaces with gold accents that reflect sophisticated AI consulting.

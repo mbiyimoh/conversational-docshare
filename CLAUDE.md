@@ -358,6 +358,47 @@ const calculateTextOffset = (container: HTMLElement, range: Range): number => {
 
 ---
 
+## Braindump Agent Profile Synthesis (V2)
+
+**What:** AI-first agent profile creation via natural language braindump. Users describe their AI agent (voice/text), and the system extracts a structured 12-field profile with per-field confidence signals and light area highlighting.
+
+**Key files:**
+- `backend/src/services/profileSynthesizer.ts` - Contains `synthesizeFromBrainDump()` function and V2 types
+- `backend/src/controllers/agent.controller.ts` - `synthesizeAgentProfileHandler`, `saveAgentProfileHandler`
+- `backend/src/routes/agent.routes.ts` - `/profile/synthesize`, `/profile/save` routes
+
+**12-Field Profile Structure (4 categories):**
+- **Identity & Context:** agentIdentity, domainExpertise, targetAudience
+- **Communication & Style:** toneAndVoice, languagePatterns, adaptationRules
+- **Content & Priorities:** keyTopics, avoidanceAreas, examplePreferences
+- **Engagement & Behavior:** proactiveGuidance, framingStrategies, successCriteria
+
+**Database Fields (AgentConfig):**
+```prisma
+rawBrainDump   String?  @db.Text  // Original user input for regeneration
+synthesisMode  String?            // "voice" | "text" | "interview"
+lightAreas     String[]           // Field IDs with confidence != EXPLICIT
+```
+
+**Confidence Levels:**
+- `EXPLICIT` - User directly stated this information
+- `INFERRED` - Reasonable inference from context
+- `ASSUMED` - Default/guess (user didn't provide relevant info)
+
+**APIs:**
+- `POST /api/projects/:projectId/profile/synthesize` - Preview synthesis (no save)
+- `POST /api/projects/:projectId/profile/save` - Persist profile to database
+
+**Key Implementation Notes:**
+- Minimum 50 characters required for synthesis
+- GPT-4-turbo with JSON response mode, temperature 0.3
+- 60-second timeout with AbortController
+- `lightAreas` identifies fields needing refinement (confidence != EXPLICIT)
+- `overallConfidence` calculated as HIGH/MEDIUM/LOW based on field confidences
+- Supports `additionalContext` parameter for iterative refinement
+
+---
+
 ## Critical Rules
 
 **Context Layers:** Never manual edit → re-run interview → regenerate layers

@@ -186,3 +186,31 @@ export function isCacheInitialized(slug: string): boolean {
     Date.now() - documentCache.loadedAt < CACHE_TTL
   )
 }
+
+/**
+ * Get section title by filename and section ID
+ * Used for displaying human-readable section names in citations
+ *
+ * @param filename - The document filename
+ * @param sectionId - The section ID to look up
+ * @returns Object with document title and section title, or null if not found
+ */
+export function getSectionInfo(
+  filename: string,
+  sectionId: string
+): { documentTitle: string; sectionTitle: string } | null {
+  const doc = lookupDocumentByFilename(filename)
+  if (!doc) {
+    return null
+  }
+
+  const section = doc.outline.find((s) => s.id === sectionId)
+  if (!section) {
+    return null
+  }
+
+  return {
+    documentTitle: doc.title || doc.filename,
+    sectionTitle: section.title,
+  }
+}
