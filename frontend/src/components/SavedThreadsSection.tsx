@@ -1,24 +1,15 @@
 import { useNavigate } from 'react-router-dom'
+import { MessageSquareText } from 'lucide-react'
 import { formatDate } from '../lib/utils'
 import { Card, Badge, SectionLabel } from './ui'
 
-// Geometric SVG for empty state (chat bubble icon)
+// Empty state icon using Lucide
 function EmptyChatIcon() {
   return (
-    <svg
-      width="80"
-      height="80"
-      viewBox="0 0 80 80"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="mx-auto text-accent"
-    >
-      <rect x="10" y="12" width="50" height="36" rx="4" stroke="currentColor" strokeWidth="2" fill="none" />
-      <path d="M20 56L10 68V48" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <circle cx="25" cy="30" r="3" fill="currentColor" opacity="0.5" />
-      <circle cx="40" cy="30" r="3" fill="currentColor" opacity="0.5" />
-      <circle cx="55" cy="30" r="3" fill="currentColor" opacity="0.5" />
-    </svg>
+    <MessageSquareText
+      className="mx-auto text-accent w-20 h-20"
+      strokeWidth={1.5}
+    />
   )
 }
 
@@ -42,7 +33,7 @@ export function SavedThreadsSection({ threads }: SavedThreadsSectionProps) {
 
   return (
     <section className="mb-8" data-testid="saved-threads-section">
-      <SectionLabel number={1} title="SAVED CONVERSATIONS" />
+      <SectionLabel number={3} title="SAVED CONVERSATIONS" />
 
       {threads.length === 0 ? (
         <Card className="p-12 text-center">

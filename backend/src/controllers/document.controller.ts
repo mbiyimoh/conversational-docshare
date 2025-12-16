@@ -249,3 +249,55 @@ export async function downloadDocument(req: Request, res: Response) {
   // Stream file
   res.sendFile(path.resolve(document.filePath))
 }
+
+/**
+ * Retry processing a failed document
+ */
+export async function retryDocument(req: Request, res: Response) {
+  if (!req.user) {
+    throw new AuthorizationError()
+  }
+
+  const { documentId } = req.params
+
+  const document = await prisma.document.findUnique({
+    where: { id: documentId },
+    include: {
+      project: {
+        select: {
+          ownerId: true,
+        },
+      },
+    },
+  })
+
+  if (!document) {
+    throw new NotFoundError('Document')
+  }
+
+  if (document.project.ownerId !== req.user.userId) {
+    throw new AuthorizationError('You do not own this document')
+  }
+
+  if (document.status !== 'failed') {
+    return res.status(400).json({
+      error: { message: 'Only failed documents can be retried' }
+    })
+  }
+
+  // Reset document to pending status so the queue picks it up
+  await prisma.document.update({
+    where: { id: documentId },
+    data: {
+      status: 'pending',
+      processingError: null,
+    },
+  })
+
+  // Also delete any existing chunks (in case of partial failure)
+  await prisma.documentChunk.deleteMany({
+    where: { documentId },
+  })
+
+  res.json({ message: 'Document queued for reprocessing' })
+}

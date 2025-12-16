@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { FolderOpen } from 'lucide-react'
 import { api } from '../lib/api'
 import { formatDate } from '../lib/utils'
 import { SavedThreadsSection, type SavedThread } from '../components/SavedThreadsSection'
 import { SavedProfilesSection } from '../components/SavedProfilesSection'
+import { StoriesOnboarding, useOnboardingState } from '../components/onboarding'
 import {
   Card,
   Button,
@@ -38,31 +40,9 @@ interface DashboardData {
   }
 }
 
-// Geometric SVG for empty state (folder icon)
+// Empty state icon using Lucide
 function EmptyFolderIcon() {
-  return (
-    <svg
-      width="80"
-      height="80"
-      viewBox="0 0 80 80"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="mx-auto text-accent"
-    >
-      {/* Back folder layer */}
-      <rect x="8" y="24" width="64" height="44" rx="4" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.3" />
-      {/* Front folder layer */}
-      <path
-        d="M8 28C8 25.7909 9.79086 24 12 24H30L36 16H68C70.2091 16 72 17.7909 72 20V60C72 62.2091 70.2091 64 68 64H12C9.79086 64 8 62.2091 8 60V28Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        fill="none"
-      />
-      {/* Plus sign in center */}
-      <line x1="40" y1="34" x2="40" y2="54" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <line x1="30" y1="44" x2="50" y2="44" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  )
+  return <FolderOpen className="mx-auto text-accent w-20 h-20" strokeWidth={1.5} />
 }
 
 export function DashboardPage() {
@@ -70,6 +50,7 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const { isComplete: isOnboardingComplete, markComplete: markOnboardingComplete, reset: resetOnboarding } = useOnboardingState()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -125,6 +106,11 @@ export function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Onboarding overlay - shown when not complete */}
+      {!isOnboardingComplete && (
+        <StoriesOnboarding onComplete={markOnboardingComplete} />
+      )}
+
       {/* Header */}
       <div className="border-b border-border bg-background-elevated">
         <div className="container mx-auto px-4 py-4">
@@ -133,6 +119,9 @@ export function DashboardPage() {
               <AccentText>Dashboard</AccentText>
             </h1>
             <div className="flex gap-2">
+              <Button variant="ghost" onClick={resetOnboarding}>
+                Take Tour
+              </Button>
               <Button onClick={() => setShowCreateModal(true)}>
                 New Project
               </Button>
@@ -146,15 +135,9 @@ export function DashboardPage() {
 
       {/* Dashboard content */}
       <div className="container mx-auto px-4 py-8 space-y-12">
-        {/* Saved Threads Section - always shown */}
-        <SavedThreadsSection threads={dashboardData?.savedConversations ?? []} />
-
-        {/* Saved Profiles Section - audience & collaborator profiles */}
-        <SavedProfilesSection />
-
-        {/* My Projects Section - always shown */}
+        {/* My Projects Section - first */}
         <section>
-          <SectionLabel number={3} title="MY PROJECTS" />
+          <SectionLabel number={1} title="MY PROJECTS" />
 
           {!dashboardData || dashboardData.projects.length === 0 ? (
             <Card className="p-12 text-center">
@@ -204,6 +187,12 @@ export function DashboardPage() {
             </div>
           )}
         </section>
+
+        {/* Saved Profiles Section - audience & collaborator profiles */}
+        <SavedProfilesSection />
+
+        {/* Saved Threads Section - third */}
+        <SavedThreadsSection threads={dashboardData?.savedConversations ?? []} />
       </div>
 
       {/* Create project modal */}

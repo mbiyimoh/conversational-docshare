@@ -1,12 +1,10 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { DocumentUpload } from '../components/DocumentUpload'
-import { AgentInterview } from '../components/AgentInterview'
+import { AgentPage } from '../components/AgentPage'
 import { AnalyticsDashboard } from '../components/AnalyticsDashboard'
 import { ShareLinkManager } from '../components/ShareLinkManager'
 import { TestingDojo } from '../components/TestingDojo'
-import { ProfileCreationChoice } from '../components/ProfileCreationChoice'
-import { AgentProfileBrainDumpModal } from '../components/AgentProfileBrainDumpModal'
 import { api } from '../lib/api'
 import { Button, Card, AccentText } from '../components/ui'
 
@@ -30,40 +28,23 @@ type TabId = typeof tabs[number]['id']
 export function ProjectPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [project, setProject] = useState<Project | null>(null)
-  const [activeTab, setActiveTab] = useState<TabId>('documents')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [profileCreationMode, setProfileCreationMode] = useState<'loading' | 'choice' | 'braindump' | 'interview'>('loading')
+
+  // URL-based tab state
+  const activeTab = (searchParams.get('tab') || 'documents') as TabId
+
+  const setActiveTab = (tab: TabId) => {
+    setSearchParams({ tab })
+  }
 
   useEffect(() => {
     if (projectId) {
       loadProject()
     }
   }, [projectId])
-
-  // Check for existing agent profile when agent tab is active
-  useEffect(() => {
-    async function checkExistingProfile() {
-      if (activeTab !== 'agent' || !projectId) return
-
-      try {
-        const response = await api.getAgentConfig(projectId)
-        const config = response.agentConfig as { status?: string } | null
-
-        if (config?.status === 'complete') {
-          setProfileCreationMode('interview') // Show existing profile via AgentInterview
-        } else {
-          setProfileCreationMode('choice')
-        }
-      } catch {
-        // No existing config - show choice screen
-        setProfileCreationMode('choice')
-      }
-    }
-
-    checkExistingProfile()
-  }, [activeTab, projectId])
 
   const loadProject = async () => {
     try {
@@ -160,42 +141,10 @@ export function ProjectPage() {
 
         <div role="tabpanel" hidden={activeTab !== 'agent'}>
           {activeTab === 'agent' && (
-            <>
-              {profileCreationMode === 'loading' && (
-                <div className="flex items-center justify-center py-12">
-                  <div className="flex items-center gap-2 text-muted">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-                    Loading...
-                  </div>
-                </div>
-              )}
-              {profileCreationMode === 'choice' && (
-                <ProfileCreationChoice
-                  onSelectBrainDump={() => setProfileCreationMode('braindump')}
-                  onSelectInterview={() => setProfileCreationMode('interview')}
-                />
-              )}
-              {profileCreationMode === 'braindump' && (
-                <AgentProfileBrainDumpModal
-                  projectId={projectId!}
-                  onClose={() => setProfileCreationMode('choice')}
-                  onSaved={() => {
-                    setProfileCreationMode('choice')
-                  }}
-                  onSwitchToInterview={() => setProfileCreationMode('interview')}
-                />
-              )}
-              {profileCreationMode === 'interview' && (
-                <AgentInterview
-                  projectId={projectId!}
-                  onComplete={(action) => {
-                    if (action === 'navigate-to-share') {
-                      setActiveTab('share')
-                    }
-                  }}
-                />
-              )}
-            </>
+            <AgentPage
+              projectId={projectId!}
+              onNavigateToTab={setActiveTab}
+            />
           )}
         </div>
 

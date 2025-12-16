@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Users, Handshake } from 'lucide-react'
 import { api } from '../lib/api'
 import { AudienceProfileAIModal } from './AudienceProfileAIModal'
 import { CollaboratorProfileAIModal } from './CollaboratorProfileAIModal'
@@ -16,42 +17,13 @@ import {
   ModalFooter
 } from './ui'
 
-// Geometric SVG for empty audience state (people icon)
+// Empty state icons using Lucide
 function EmptyAudienceIcon() {
-  return (
-    <svg
-      width="80"
-      height="80"
-      viewBox="0 0 80 80"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="mx-auto text-accent"
-    >
-      <circle cx="40" cy="28" r="12" stroke="currentColor" strokeWidth="2" fill="none" />
-      <path d="M20 64C20 52.954 28.954 44 40 44C51.046 44 60 52.954 60 64" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
-      <circle cx="20" cy="32" r="8" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.5" />
-      <circle cx="60" cy="32" r="8" stroke="currentColor" strokeWidth="2" fill="none" opacity="0.5" />
-    </svg>
-  )
+  return <Users className="mx-auto text-accent w-20 h-20" strokeWidth={1.5} />
 }
 
-// Geometric SVG for empty collaborator state (handshake icon)
 function EmptyCollaboratorIcon() {
-  return (
-    <svg
-      width="80"
-      height="80"
-      viewBox="0 0 80 80"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="mx-auto text-accent"
-    >
-      <path d="M15 40L30 30L40 38L50 30L65 40" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M30 30V50" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M50 30V50" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="40" cy="38" r="6" stroke="currentColor" strokeWidth="2" fill="none" />
-    </svg>
-  )
+  return <Handshake className="mx-auto text-accent w-20 h-20" strokeWidth={1.5} />
 }
 
 // Types matching API responses

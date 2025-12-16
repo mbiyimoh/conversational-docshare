@@ -40,7 +40,16 @@
       "WebFetch(domain:www.pedroalonso.net)",
       "WebFetch(domain:www.parallelhq.com)",
       "WebFetch(domain:www.nngroup.com)",
-      "WebFetch(domain:design.mindsphere.io)"
+      "WebFetch(domain:design.mindsphere.io)",
+      "WebFetch(domain:www.smashingmagazine.com)",
+      "WebFetch(domain:lucide.dev)",
+      "WebFetch(domain:cloudscape.design)",
+      "WebFetch(domain:www.sap.com)",
+      "WebFetch(domain:www.uxpin.com)",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:www.robinwieruch.de)",
+      "WebFetch(domain:blog.logrocket.com)",
+      "WebFetch(domain:refine.dev)"
     ],
     "deny": [],
     "ask": []

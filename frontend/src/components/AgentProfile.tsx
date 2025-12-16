@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { api, AgentProfile as AgentProfileType, ProfileProgressEvent, VersionHistoryResponse } from '../lib/api'
 import { ProfileSectionContent } from './ProfileSectionContent'
+import { SourceMaterialModal } from './SourceMaterialModal'
 import { Card, Button, Textarea } from './ui'
 
 // Section-to-question mapping for source attribution
@@ -41,8 +42,10 @@ function getOriginalResponses(
 interface AgentProfileProps {
   projectId: string
   interviewData?: Record<string, string>
-  onContinueToTesting: () => void
-  onEditInterview: () => void
+  onContinueToTesting?: () => void
+  onEditInterview?: () => void
+  onStartOver?: () => void
+  onNavigateToTest?: () => void
 }
 
 export function AgentProfile({
@@ -50,6 +53,8 @@ export function AgentProfile({
   interviewData,
   onContinueToTesting,
   onEditInterview,
+  onStartOver,
+  onNavigateToTest,
 }: AgentProfileProps) {
   const [profile, setProfile] = useState<AgentProfileType | null>(null)
   const [loading, setLoading] = useState(true)
@@ -69,6 +74,12 @@ export function AgentProfile({
   const [versionHistory, setVersionHistory] = useState<VersionHistoryResponse | null>(null)
   const [showVersionDropdown, setShowVersionDropdown] = useState(false)
   const [rollingBack, setRollingBack] = useState(false)
+
+  // Source material and refinement state
+  const [showSourceMaterial, setShowSourceMaterial] = useState(false)
+  const [showRefinement, setShowRefinement] = useState(false)
+  const [refinementContext, setRefinementContext] = useState('')
+  const [refining, setRefining] = useState(false)
 
   useEffect(() => {
     loadProfile()
@@ -194,6 +205,42 @@ export function AgentProfile({
     setEditContent('')
   }
 
+  const handleRefineProfile = async () => {
+    if (!refinementContext.trim()) return
+
+    try {
+      setRefining(true)
+      setError('')
+
+      const configResponse = await api.getAgentConfig(projectId)
+      const config = configResponse.agentConfig as { rawBrainDump?: string }
+
+      const response = await api.synthesizeAgentProfile(
+        projectId,
+        config.rawBrainDump || '',
+        refinementContext
+      )
+
+      await api.saveAgentProfileV2(projectId, {
+        profile: response.profile,
+        rawInput: config.rawBrainDump || '',
+        lightAreas: response.lightAreas,
+        synthesisMode: response.synthesisMode
+      })
+
+      await loadProfile()
+      await loadVersionHistory()
+      setShowRefinement(false)
+      setRefinementContext('')
+      showNotification('Profile updated successfully')
+    } catch (err) {
+      // Show error but preserve user input
+      setError(err instanceof Error ? err.message : 'Failed to refine profile. Please try again.')
+    } finally {
+      setRefining(false)
+    }
+  }
+
   const showNotification = (message: string) => {
     setNotification(message)
     setTimeout(() => setNotification(null), 3000)
@@ -306,14 +353,28 @@ export function AgentProfile({
             </p>
           </div>
 
-          {/* Version History Dropdown */}
-          {versionHistory && versionHistory.versions.length > 0 && (
-            <div className="relative">
-              <button
-                onClick={() => setShowVersionDropdown(!showVersionDropdown)}
-                disabled={rollingBack}
-                className="flex items-center gap-2 px-3 py-2 text-sm border border-border rounded-lg hover:bg-card-bg disabled:opacity-50 text-foreground transition-colors"
-              >
+          {/* Header Actions */}
+          <div className="flex items-center gap-2">
+            {/* Source Material Button */}
+            <button
+              onClick={() => setShowSourceMaterial(true)}
+              className="p-2 text-dim hover:text-muted transition-colors"
+              title="View source material"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </button>
+
+            {/* Version History Dropdown */}
+            {versionHistory && versionHistory.versions.length > 0 && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowVersionDropdown(!showVersionDropdown)}
+                  disabled={rollingBack}
+                  className="flex items-center gap-2 px-3 py-2 text-sm border border-border rounded-lg hover:bg-card-bg disabled:opacity-50 text-foreground transition-colors"
+                >
                 {rollingBack ? (
                   <>
                     <div className="animate-spin h-4 w-4 border-2 border-accent border-t-transparent rounded-full" />
@@ -377,6 +438,7 @@ export function AgentProfile({
               )}
             </div>
           )}
+          </div>
         </div>
       </div>
 
@@ -488,15 +550,66 @@ export function AgentProfile({
       </Card>
 
       {/* Action Buttons */}
-      <div className="mt-8 flex items-center justify-between">
-        <Button variant="ghost" onClick={onEditInterview}>
-          Edit Interview
-        </Button>
-
-        <Button onClick={onContinueToTesting}>
-          Continue to Testing
-        </Button>
+      <div className="mt-8 space-y-4">
+        {/* Refinement Section */}
+        {showRefinement ? (
+          <Card className="p-4">
+            <h3 className="font-display text-foreground mb-2">Refine Your Profile</h3>
+            <p className="text-sm text-muted mb-3">
+              Add context to update your agent's behavior. This will regenerate the profile.
+            </p>
+            <Textarea
+              value={refinementContext}
+              onChange={(e) => setRefinementContext(e.target.value)}
+              placeholder="e.g., Be more formal with executives. Emphasize sustainability initiatives..."
+              rows={3}
+            />
+            <div className="mt-3 flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setShowRefinement(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleRefineProfile}
+                disabled={!refinementContext.trim() || refining}
+                isLoading={refining}
+              >
+                Regenerate Profile
+              </Button>
+            </div>
+          </Card>
+        ) : (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button onClick={() => setShowRefinement(true)}>
+                Refine Profile
+              </Button>
+              {onEditInterview && (
+                <Button variant="ghost" onClick={onEditInterview}>
+                  Edit Interview
+                </Button>
+              )}
+              {onStartOver && (
+                <button
+                  onClick={onStartOver}
+                  className="text-sm text-dim hover:text-muted transition-colors"
+                >
+                  Start Over
+                </button>
+              )}
+            </div>
+            <Button onClick={onNavigateToTest || onContinueToTesting}>
+              Continue to Testing
+            </Button>
+          </div>
+        )}
       </div>
+
+      {/* Source Material Modal */}
+      <SourceMaterialModal
+        projectId={projectId}
+        isOpen={showSourceMaterial}
+        onClose={() => setShowSourceMaterial(false)}
+      />
     </div>
   )
 }

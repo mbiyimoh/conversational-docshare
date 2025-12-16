@@ -5,6 +5,7 @@ import {
   getDocument,
   deleteDocument,
   downloadDocument,
+  retryDocument,
 } from '../controllers/document.controller'
 import { authenticate } from '../middleware/auth'
 import { uploadSingle, handleMulterError } from '../middleware/upload'
@@ -52,5 +53,12 @@ router.delete('/documents/:documentId', authenticate, asyncHandler(deleteDocumen
  * @access  Private
  */
 router.get('/documents/:documentId/download', authenticate, asyncHandler(downloadDocument))
+
+/**
+ * @route   POST /api/documents/:documentId/retry
+ * @desc    Retry processing a failed document
+ * @access  Private
+ */
+router.post('/documents/:documentId/retry', authenticate, asyncHandler(retryDocument))
 
 export default router

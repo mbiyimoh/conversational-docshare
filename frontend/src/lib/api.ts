@@ -144,6 +144,11 @@ class ApiClient {
       throw new Error(error.error?.message || 'An error occurred')
     }
 
+    // Handle 204 No Content responses (e.g., DELETE operations)
+    if (response.status === 204) {
+      return undefined as T
+    }
+
     return response.json()
   }
 
@@ -226,6 +231,12 @@ class ApiClient {
   async deleteDocument(documentId: string) {
     return this.request<void>(`/api/documents/${documentId}`, {
       method: 'DELETE',
+    })
+  }
+
+  async retryDocument(documentId: string) {
+    return this.request<{ message: string }>(`/api/documents/${documentId}/retry`, {
+      method: 'POST',
     })
   }
 

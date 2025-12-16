@@ -5,7 +5,7 @@ import { formatFileSize } from '../lib/utils'
 import { DocumentEditor } from './DocumentEditor'
 import { DocumentVersionHistory } from './DocumentVersionHistory'
 import { Card, Button, Badge } from './ui'
-import { FileText, Upload, Trash2, Clock, Pencil } from 'lucide-react'
+import { FileText, Upload, Trash2, Clock, Pencil, RotateCcw } from 'lucide-react'
 
 interface Document {
   id: string
@@ -133,6 +133,18 @@ export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadPr
       setDocuments(prev => prev.filter(d => d.id !== documentId))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Delete failed')
+    }
+  }
+
+  const handleRetry = async (documentId: string) => {
+    try {
+      await api.retryDocument(documentId)
+      // Update the document status to pending locally
+      setDocuments(prev => prev.map(d =>
+        d.id === documentId ? { ...d, status: 'pending' as const, processingError: undefined } : d
+      ))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Retry failed')
     }
   }
 
@@ -330,6 +342,17 @@ export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadPr
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
                   {getStatusBadge(doc.status)}
+                  {doc.status === 'failed' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRetry(doc.id)}
+                      title="Retry processing"
+                    >
+                      <RotateCcw className="w-4 h-4 mr-1" />
+                      Retry
+                    </Button>
+                  )}
                   {doc.isEditable && doc.status === 'completed' && (
                     <>
                       <Button

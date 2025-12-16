@@ -399,6 +399,74 @@ lightAreas     String[]           // Field IDs with confidence != EXPLICIT
 
 ---
 
+## Agent Tab Architecture
+
+**What:** Smart AgentPage wrapper that handles profile existence check and navigation flow. Fixes the redirect-after-creation bug and removes the nested profile view from AgentInterview.
+
+**Key files:**
+- `frontend/src/components/AgentPage.tsx` - Smart wrapper that orchestrates profile creation/viewing
+- `frontend/src/components/SourceMaterialModal.tsx` - View raw brain dump or interview responses
+- `frontend/src/components/AgentInterviewModal.tsx` - Interview flow as modal (not embedded)
+- `frontend/src/components/AgentProfile.tsx` - Standalone profile view with refinement
+
+**Profile Update Flow:**
+- **Primary (recommended):** "Refine Profile" button - textarea for additional context, regenerates profile
+- **Secondary:** "Start Over" link - returns to creation choice
+
+**Tab Navigation:**
+- Uses `useSearchParams` for URL-based tab state
+- Pattern: `/projects/:id?tab=agent`
+- Default: 'documents' tab
+- Browser back/forward works correctly
+
+**Critical Gotchas:**
+- **Source Material**: Fetched from `rawBrainDump` or `interviewData` fields in AgentConfig
+- **Profile Check**: Use `api.getAgentConfig()` to check `status === 'complete'`
+- **Refinement Errors**: Preserve user input on error (don't clear textarea)
+- **Interview Modal**: Calls `onComplete()` instead of showing profile sub-tab
+- **URL Navigation**: Tab changes create browser history entries for back/forward support
+
+---
+
+## Stories Onboarding
+
+**What:** Instagram Stories-style onboarding for new users after signup. 4 slides communicating the product mental model with tap-to-navigate pattern.
+
+**Key files:**
+- `frontend/src/components/onboarding/StoriesOnboarding.tsx` - Main fullscreen overlay component
+- `frontend/src/components/onboarding/OnboardingSlide.tsx` - Individual slide with animations
+- `frontend/src/components/onboarding/ProgressBars.tsx` - Segmented progress indicator
+- `frontend/src/components/onboarding/onboardingIcons.tsx` - Custom SVG icons (DocumentChat, Brain, ShareLink, Sparkle)
+- `frontend/src/components/onboarding/useOnboardingState.ts` - localStorage persistence hook
+- `frontend/src/components/onboarding/onboardingContent.ts` - Slide data (titles, subtitles, icons)
+- `frontend/src/pages/DashboardPage.tsx` - Integration point
+
+**localStorage key:** `onboarding_complete`
+
+**Re-trigger:** Call `reset()` from `useOnboardingState()` hook (used by "Take Tour" button in dashboard header)
+
+**Interaction Patterns:**
+- Tap/click right side → advance slide
+- Tap/click left side → go back
+- Arrow keys (←/→/↑/↓) → navigate
+- Escape → skip onboarding
+- "Skip" button → always visible
+- "Get Started" → final slide CTA
+
+**Accessibility:**
+- ARIA dialog with modal role
+- Focus trap cycles Tab between buttons
+- `prefers-reduced-motion` disables animations
+- 44px minimum touch targets
+- Screen reader live region announces navigation
+
+**Critical Gotchas:**
+- **Safe localStorage:** Uses `safeLocalStorage()` helper that gracefully handles private browsing mode
+- **Body scroll lock:** Locks body scroll while overlay is open, restores on unmount
+- **Focus restoration:** Saves and restores previously focused element on close
+
+---
+
 ## Critical Rules
 
 **Context Layers:** Never manual edit → re-run interview → regenerate layers
