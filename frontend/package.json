@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && node scripts/postbuild-share-html.mjs",
     "preview": "vite preview",
     "start": "serve dist -l tcp://0.0.0.0:${PORT:-3000} -s",
     "lint": "eslint src --ext ts,tsx",
