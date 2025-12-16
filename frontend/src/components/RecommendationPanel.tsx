@@ -4,8 +4,16 @@ import type {
   ProfileRecommendation,
   AnalysisSummary,
   AgentProfile,
+  ProfileSectionKey,
 } from '../types/recommendation'
 import { SECTION_DISPLAY_NAMES } from '../types/recommendation'
+
+/**
+ * Get display name for a section/field key with fallback
+ */
+function getSectionDisplayName(key: string): string {
+  return SECTION_DISPLAY_NAMES[key as ProfileSectionKey] || key
+}
 import { Card, Button, Badge } from './ui'
 import { RefreshCw, X, ChevronRight, ChevronDown } from 'lucide-react'
 
@@ -238,7 +246,7 @@ export function RecommendationPanel({
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <span className="font-display text-foreground">
-                      {SECTION_DISPLAY_NAMES[rec.targetSection]}
+                      {getSectionDisplayName(rec.targetSection)}
                     </span>
                     <Badge variant={TYPE_LABELS[rec.type].variant}>
                       {TYPE_LABELS[rec.type].label}

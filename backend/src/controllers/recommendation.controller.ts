@@ -8,7 +8,7 @@ import {
   dismissRecommendation,
 } from '../services/recommendationEngine'
 import { NotFoundError, AuthorizationError, RateLimitError, ValidationError } from '../utils/errors'
-import type { GenerateRecommendationsResponse, ApplyAllResponse, RollbackResponse, VersionHistoryResponse } from '../types/recommendation'
+import type { GenerateRecommendationsResponse, RollbackResponse, VersionHistoryResponse } from '../types/recommendation'
 
 // Rate limiting: track requests per project
 const requestCounts = new Map<string, { count: number; resetAt: number }>()
@@ -104,17 +104,32 @@ export async function applyAllRecommendations(req: Request, res: Response) {
 
   const result = await applyRecommendations(projectId, setId)
 
-  const response: ApplyAllResponse = {
-    success: true,
-    appliedCount: result.profile.sections ? Object.keys(result.profile.sections).filter(
-      key => result.profile.sections[key as keyof typeof result.profile.sections].isEdited
-    ).length : 0,
+  // Count applied recommendations (works for both V1 and V2 profiles)
+  const countEditedItems = (): number => {
+    const profile = result.profile
+    if ('sections' in profile && profile.sections) {
+      // V1 profile
+      return Object.values(profile.sections).filter(
+        section => section.isEdited
+      ).length
+    } else if ('fields' in profile && profile.fields) {
+      // V2 profile
+      return Object.values(profile.fields).filter(
+        field => field.isEdited
+      ).length
+    }
+    return 0
+  }
+
+  const response = {
+    success: true as const,
+    appliedCount: countEditedItems(),
     profile: result.profile,
     version: {
       number: result.version.version,
       createdAt: result.version.createdAt,
     },
-    rollbackAvailable: true,
+    rollbackAvailable: true as const,
   }
 
   res.json(response)

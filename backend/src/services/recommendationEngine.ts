@@ -2,9 +2,11 @@ import { v4 as uuidv4 } from 'uuid'
 import { getOpenAI } from '../utils/openai'
 import { prisma } from '../utils/prisma'
 import { NotFoundError, ConflictError } from '../utils/errors'
-import type { AgentProfile } from './profileSynthesizer'
+import type { AgentProfile, AgentProfileV2 } from './profileSynthesizer'
 import type {
   ProfileSectionKey,
+  ProfileSectionKeyV1,
+  ProfileSectionKeyV2,
   ProfileRecommendation,
   RecommendationSet,
   AnalysisSummary,
@@ -13,44 +15,76 @@ import type {
   ParsedLLMRecommendation,
   ParsedLLMResponse,
 } from '../types/recommendation'
+import {
+  V1_SECTION_DISPLAY_NAMES,
+  V2_FIELD_DISPLAY_NAMES,
+} from '../types/recommendation'
 
 // Constants
 const MAX_COMMENTS = 50  // Limit comments to prevent prompt overflow
 const LLM_TIMEOUT_MS = 30000  // 30 second timeout
-const VALID_SECTION_IDS: ProfileSectionKey[] = [
-  'identityRole',
-  'communicationStyle',
-  'contentPriorities',
-  'engagementApproach',
-  'keyFramings',
-]
+
+/**
+ * Helper to detect V2 braindump profile
+ */
+function isV2Profile(profile: unknown): profile is AgentProfileV2 {
+  return (
+    typeof profile === 'object' &&
+    profile !== null &&
+    'version' in profile &&
+    (profile as { version: unknown }).version === 2 &&
+    'fields' in profile
+  )
+}
+
+/**
+ * Get valid section IDs based on profile version
+ */
+function getValidSectionIds(profile: unknown): string[] {
+  if (isV2Profile(profile)) {
+    return Object.keys(V2_FIELD_DISPLAY_NAMES)
+  }
+  return Object.keys(V1_SECTION_DISPLAY_NAMES)
+}
 
 /**
  * Profile-direct analysis prompt that targets profile sections instead of interview answers
+ * Supports both V1 (interview-based) and V2 (braindump-based) profiles
  */
 function buildProfileAnalysisPrompt(
-  profile: AgentProfile,
+  profile: AgentProfile | AgentProfileV2,
   formattedComments: string,
   totalComments: number
 ): string {
+  const isV2 = isV2Profile(profile)
+
+  // Build section list for LLM
+  const sectionsList = isV2
+    ? Object.entries(V2_FIELD_DISPLAY_NAMES)
+        .map(([key, name]) => `- ${key}: "${name}"`)
+        .join('\n')
+    : Object.entries(V1_SECTION_DISPLAY_NAMES)
+        .map(([key, name]) => `- ${key}: "${name}"`)
+        .join('\n')
+
+  // Build current profile content for LLM
+  const profileContent = isV2
+    ? Object.entries((profile as AgentProfileV2).fields)
+        .map(([key, field]) => `### ${V2_FIELD_DISPLAY_NAMES[key as ProfileSectionKeyV2]}\n${field.content}`)
+        .join('\n\n')
+    : Object.entries((profile as AgentProfile).sections)
+        .map(([key, section]) => `### ${V1_SECTION_DISPLAY_NAMES[key as ProfileSectionKeyV1]}\n${section.content}`)
+        .join('\n\n')
+
   return `You analyze AI agent testing feedback and generate profile recommendations.
 
-## Current Profile Sections
+## Current Profile ${isV2 ? 'Fields' : 'Sections'}
 
-### Identity & Role
-${profile.sections.identityRole.content}
+${profileContent}
 
-### Communication Style
-${profile.sections.communicationStyle.content}
+## Valid Target ${isV2 ? 'Fields' : 'Sections'} (use these exact keys in targetSection)
 
-### Content Priorities
-${profile.sections.contentPriorities.content}
-
-### Engagement Approach
-${profile.sections.engagementApproach.content}
-
-### Key Framings
-${profile.sections.keyFramings.content}
+${sectionsList}
 
 ## Testing Feedback Comments (${totalComments} total)
 
@@ -58,17 +92,17 @@ ${formattedComments}
 
 ## Your Task
 
-Analyze ALL the feedback comments holistically. Generate recommendations for profile sections.
+Analyze ALL the feedback comments holistically. Generate recommendations for profile ${isV2 ? 'fields' : 'sections'}.
 
 CRITICAL RULES:
-1. Generate AT MOST ONE recommendation per section
-2. If multiple comments affect the same section, SYNTHESIZE them into ONE recommendation
+1. Generate AT MOST ONE recommendation per ${isV2 ? 'field' : 'section'}
+2. If multiple comments affect the same ${isV2 ? 'field' : 'section'}, SYNTHESIZE them into ONE recommendation
 3. Use ONLY these operation types:
-   - ADD: Append new content to existing section (preserves all existing content)
+   - ADD: Append new content to existing ${isV2 ? 'field' : 'section'} (preserves all existing content)
    - REMOVE: Remove specific phrase ONLY if directly contradicted by feedback
    - MODIFY: Change specific phrase (use sparingly, prefer ADD)
 4. NEVER suggest deleting content that is unrelated to the feedback
-5. NEVER generate full section replacements
+5. NEVER generate full ${isV2 ? 'field' : 'section'} replacements
 6. Always preserve existing rich content
 7. Include 2-3 summary bullets for each recommendation
 
@@ -83,7 +117,7 @@ Return JSON:
   "recommendations": [
     {
       "type": "add",
-      "targetSection": "communicationStyle",
+      "targetSection": "<one of the valid keys listed above>",
       "addedContent": "NEW content to append (must be substantial, at least 1-2 sentences)",
       "summaryBullets": ["Bullet 1", "Bullet 2"],
       "rationale": "Why this change is needed based on specific comment feedback...",
@@ -94,12 +128,24 @@ Return JSON:
 
 CRITICAL FIELD REQUIREMENTS:
 - For "add" type: "addedContent" is REQUIRED and must contain NEW text to append
-- For "remove" type: "removedContent" is REQUIRED and must be EXACT text that exists in the current section
+- For "remove" type: "removedContent" is REQUIRED and must be EXACT text that exists in the current ${isV2 ? 'field' : 'section'}
 - For "modify" type: "modifiedFrom" (EXACT existing text) and "modifiedTo" (replacement text) are BOTH REQUIRED
 
 IMPORTANT: Each recommendation MUST result in an actual change to the profile. Do not suggest changes where the before and after would be identical. Reference the SPECIFIC feedback comments that informed each recommendation.
 
 If no changes needed, return empty recommendations array with noChangeReason.`
+}
+
+/**
+ * Get content from a section/field regardless of profile version
+ */
+function getSectionContent(profile: AgentProfile | AgentProfileV2, sectionKey: string): string {
+  if (isV2Profile(profile)) {
+    const field = profile.fields[sectionKey as ProfileSectionKeyV2]
+    return field?.content || ''
+  }
+  const section = (profile as AgentProfile).sections[sectionKey as ProfileSectionKeyV1]
+  return section?.content || ''
 }
 
 /**
@@ -255,10 +301,11 @@ export async function generateRecommendations(
     const setId = uuidv4()
 
     // 8. Process recommendations - ensure max 1 per section
+    const validSectionIds = getValidSectionIds(profile)
     const seenSections = new Set<ProfileSectionKey>()
     const validRecs = (parsed.recommendations || []).filter((rec) => {
-      // Validate targetSection
-      if (!VALID_SECTION_IDS.includes(rec.targetSection)) {
+      // Validate targetSection against profile version's valid keys
+      if (!validSectionIds.includes(rec.targetSection)) {
         console.warn(`Skipping recommendation with invalid targetSection: ${rec.targetSection}`)
         return false
       }
@@ -273,11 +320,11 @@ export async function generateRecommendations(
 
     // 9. Filter out recommendations that produce no actual change
     const effectiveRecs = validRecs.filter((rec) => {
-      const section = profile.sections[rec.targetSection]
-      const previewAfter = computePreviewAfter(section.content, rec)
+      const sectionContent = getSectionContent(profile, rec.targetSection)
+      const previewAfter = computePreviewAfter(sectionContent, rec)
 
       // Skip if before and after are identical (normalize whitespace for comparison)
-      const normalizedBefore = section.content.trim().replace(/\s+/g, ' ')
+      const normalizedBefore = sectionContent.trim().replace(/\s+/g, ' ')
       const normalizedAfter = previewAfter.trim().replace(/\s+/g, ' ')
 
       if (normalizedBefore === normalizedAfter) {
@@ -290,9 +337,8 @@ export async function generateRecommendations(
     // 10. Create ProfileRecommendation records in database
     const recommendations: ProfileRecommendation[] = await Promise.all(
       effectiveRecs.map(async (rec) => {
-        const section = profile.sections[rec.targetSection]
-        const previewBefore = section.content
-        const previewAfter = computePreviewAfter(section.content, rec)
+        const previewBefore = getSectionContent(profile, rec.targetSection)
+        const previewAfter = computePreviewAfter(previewBefore, rec)
 
         // Validate summaryBullets - ensure 2-3 bullets
         const summaryBullets = Array.isArray(rec.summaryBullets)
@@ -363,11 +409,12 @@ export async function generateRecommendations(
 
 /**
  * Apply all pending recommendations from a set
+ * Supports both V1 (interview) and V2 (braindump) profiles
  */
 export async function applyRecommendations(
   projectId: string,
   setId: string
-): Promise<{ profile: AgentProfile; version: ProfileVersion }> {
+): Promise<{ profile: AgentProfile | AgentProfileV2; version: ProfileVersion }> {
   // 1. Get current profile and pending recommendations
   const agentConfig = await prisma.agentConfig.findUnique({
     where: { projectId },
@@ -390,7 +437,8 @@ export async function applyRecommendations(
     throw new ConflictError('This recommendation set has already been applied')
   }
 
-  const profile = JSON.parse(JSON.stringify(agentConfig.profile)) as AgentProfile
+  const profile = JSON.parse(JSON.stringify(agentConfig.profile)) as AgentProfile | AgentProfileV2
+  const isV2 = isV2Profile(profile)
 
   // 2. Create version snapshot BEFORE changes
   const newVersion = (agentConfig.profileVersion || 1) + 1
@@ -404,33 +452,62 @@ export async function applyRecommendations(
     },
   })
 
-  // 3. Apply each recommendation
+  // 3. Apply each recommendation (version-aware)
   for (const rec of recommendations) {
-    const sectionKey = rec.targetSection as ProfileSectionKey
-    const section = profile.sections[sectionKey]
+    const sectionKey = rec.targetSection
 
-    switch (rec.type) {
-      case 'add':
-        section.content = section.content.trim() + '\n\n' + (rec.addedContent || '')
-        break
-      case 'remove':
-        section.content = section.content.replace(rec.removedContent || '', '').trim()
-        break
-      case 'modify':
-        section.content = section.content.replace(
-          rec.modifiedFrom || '',
-          rec.modifiedTo || ''
-        )
-        break
+    if (isV2) {
+      // V2 profile: update fields
+      const v2Profile = profile as AgentProfileV2
+      const field = v2Profile.fields[sectionKey as ProfileSectionKeyV2]
+      if (field) {
+        switch (rec.type) {
+          case 'add':
+            field.content = field.content.trim() + '\n\n' + (rec.addedContent || '')
+            break
+          case 'remove':
+            field.content = field.content.replace(rec.removedContent || '', '').trim()
+            break
+          case 'modify':
+            field.content = field.content.replace(
+              rec.modifiedFrom || '',
+              rec.modifiedTo || ''
+            )
+            break
+        }
+        field.isEdited = true
+        field.editedAt = new Date().toISOString()
+      }
+    } else {
+      // V1 profile: update sections
+      const v1Profile = profile as AgentProfile
+      const section = v1Profile.sections[sectionKey as ProfileSectionKeyV1]
+      if (section) {
+        switch (rec.type) {
+          case 'add':
+            section.content = section.content.trim() + '\n\n' + (rec.addedContent || '')
+            break
+          case 'remove':
+            section.content = section.content.replace(rec.removedContent || '', '').trim()
+            break
+          case 'modify':
+            section.content = section.content.replace(
+              rec.modifiedFrom || '',
+              rec.modifiedTo || ''
+            )
+            break
+        }
+        section.isEdited = true
+        section.editedAt = new Date().toISOString()
+        section.editSource = 'recommendation'
+      }
     }
-
-    section.isEdited = true
-    section.editedAt = new Date().toISOString()
-    section.editSource = 'recommendation'
   }
 
   // Update profile source
-  profile.source = 'feedback'
+  if (!isV2) {
+    (profile as AgentProfile).source = 'feedback'
+  }
 
   // 4. Update profile and mark recommendations as applied
   await prisma.$transaction([
@@ -464,11 +541,12 @@ export async function applyRecommendations(
 
 /**
  * Rollback profile to a previous version
+ * Returns V1 or V2 profile depending on what was stored
  */
 export async function rollbackToVersion(
   projectId: string,
   targetVersion: number
-): Promise<AgentProfile> {
+): Promise<AgentProfile | AgentProfileV2> {
   // 1. Get target version
   const version = await prisma.profileVersion.findUnique({
     where: {
@@ -490,7 +568,7 @@ export async function rollbackToVersion(
     },
   })
 
-  return version.profile as unknown as AgentProfile
+  return version.profile as unknown as AgentProfile | AgentProfileV2
 }
 
 /**

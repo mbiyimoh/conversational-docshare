@@ -475,7 +475,9 @@ describe('recommendationEngine', () => {
 
       const result = await applyRecommendations('project-1', 'set-123')
 
-      expect(result.profile.sections.communicationStyle.content).toContain(
+      // Cast to V1 profile since we're testing with V1 mock data
+      const v1Profile = result.profile as import('../../services/profileSynthesizer').AgentProfile
+      expect(v1Profile.sections.communicationStyle.content).toContain(
         'Professional and formal tone\n\nBe more approachable.'
       )
     })
@@ -496,9 +498,11 @@ describe('recommendationEngine', () => {
 
       const result = await applyRecommendations('project-1', 'set-123')
 
-      expect(result.profile.sections.communicationStyle.isEdited).toBe(true)
-      expect(result.profile.sections.communicationStyle.editSource).toBe('recommendation')
-      expect(result.profile.sections.communicationStyle.editedAt).toBeDefined()
+      // Cast to V1 profile since we're testing with V1 mock data
+      const v1Profile = result.profile as import('../../services/profileSynthesizer').AgentProfile
+      expect(v1Profile.sections.communicationStyle.isEdited).toBe(true)
+      expect(v1Profile.sections.communicationStyle.editSource).toBe('recommendation')
+      expect(v1Profile.sections.communicationStyle.editedAt).toBeDefined()
     })
 
     it('should update all recommendations to applied status', async () => {

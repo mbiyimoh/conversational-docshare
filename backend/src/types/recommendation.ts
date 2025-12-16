@@ -6,12 +6,12 @@
  * additive operations (ADD/REMOVE/MODIFY) instead of wholesale replacements.
  */
 
-import type { AgentProfile } from '../services/profileSynthesizer'
+import type { AgentProfile, AgentProfileV2 } from '../services/profileSynthesizer'
 
 /**
- * Valid profile section keys that can be targeted by recommendations
+ * V1 profile section keys (interview-based profiles)
  */
-export type ProfileSectionKey =
+export type ProfileSectionKeyV1 =
   | 'identityRole'
   | 'communicationStyle'
   | 'contentPriorities'
@@ -19,14 +19,62 @@ export type ProfileSectionKey =
   | 'keyFramings'
 
 /**
- * Human-readable names for profile sections
+ * V2 profile field keys (braindump-based profiles)
  */
-export const SECTION_DISPLAY_NAMES: Record<ProfileSectionKey, string> = {
+export type ProfileSectionKeyV2 =
+  | 'agentIdentity'
+  | 'domainExpertise'
+  | 'targetAudience'
+  | 'toneAndVoice'
+  | 'languagePatterns'
+  | 'adaptationRules'
+  | 'keyTopics'
+  | 'avoidanceAreas'
+  | 'examplePreferences'
+  | 'proactiveGuidance'
+  | 'framingStrategies'
+  | 'successCriteria'
+
+/**
+ * Valid profile section keys that can be targeted by recommendations (V1 or V2)
+ */
+export type ProfileSectionKey = ProfileSectionKeyV1 | ProfileSectionKeyV2
+
+/**
+ * V1 section display names (interview-based profiles)
+ */
+export const V1_SECTION_DISPLAY_NAMES: Record<ProfileSectionKeyV1, string> = {
   identityRole: 'Identity & Role',
   communicationStyle: 'Communication Style',
   contentPriorities: 'Content Priorities',
   engagementApproach: 'Engagement Approach',
   keyFramings: 'Key Framings',
+}
+
+/**
+ * V2 field display names (braindump-based profiles)
+ */
+export const V2_FIELD_DISPLAY_NAMES: Record<ProfileSectionKeyV2, string> = {
+  agentIdentity: 'Agent Identity',
+  domainExpertise: 'Domain Expertise',
+  targetAudience: 'Target Audience',
+  toneAndVoice: 'Tone & Voice',
+  languagePatterns: 'Language Patterns',
+  adaptationRules: 'Adaptation Rules',
+  keyTopics: 'Key Topics',
+  avoidanceAreas: 'Avoidance Areas',
+  examplePreferences: 'Example Preferences',
+  proactiveGuidance: 'Proactive Guidance',
+  framingStrategies: 'Framing Strategies',
+  successCriteria: 'Success Criteria',
+}
+
+/**
+ * Combined display names for backward compatibility
+ */
+export const SECTION_DISPLAY_NAMES: Record<ProfileSectionKey, string> = {
+  ...V1_SECTION_DISPLAY_NAMES,
+  ...V2_FIELD_DISPLAY_NAMES,
 }
 
 /**
@@ -104,6 +152,7 @@ export interface RecommendationSet {
 
 /**
  * Represents a saved version of the profile for rollback functionality
+ * Supports both V1 (interview) and V2 (braindump) profiles
  */
 export interface ProfileVersion {
   /** Unique identifier for this version */
@@ -112,8 +161,8 @@ export interface ProfileVersion {
   projectId: string
   /** Sequential version number (1, 2, 3, ...) */
   version: number
-  /** Complete profile snapshot at this point */
-  profile: AgentProfile
+  /** Complete profile snapshot at this point (V1 or V2) */
+  profile: AgentProfile | AgentProfileV2
   /** What created this version */
   source: 'interview' | 'manual' | 'recommendation'
   /** Which recommendation set created this version (if applicable) */
@@ -183,8 +232,8 @@ export interface RollbackRequest {
 export interface RollbackResponse {
   /** Whether the rollback succeeded */
   success: true
-  /** The restored profile */
-  profile: AgentProfile
+  /** The restored profile (V1 or V2) */
+  profile: AgentProfile | AgentProfileV2
   /** The version number that was restored */
   restoredVersion: number
 }
