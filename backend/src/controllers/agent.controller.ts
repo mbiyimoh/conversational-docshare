@@ -529,17 +529,32 @@ export async function updateAgentProfile(req: Request, res: Response) {
     throw new ValidationError('Section content cannot exceed 2000 characters')
   }
 
-  // Validate sectionId is valid
-  const validSections = [
+  // V1 and V2 valid field/section IDs
+  const validV1Sections = [
     'identityRole',
     'communicationStyle',
     'contentPriorities',
     'engagementApproach',
     'keyFramings',
   ]
-  if (!validSections.includes(sectionId)) {
+  const validV2Fields = [
+    'agentIdentity',
+    'domainExpertise',
+    'targetAudience',
+    'toneAndVoice',
+    'languagePatterns',
+    'adaptationRules',
+    'keyTopics',
+    'avoidanceAreas',
+    'examplePreferences',
+    'proactiveGuidance',
+    'framingStrategies',
+    'successCriteria',
+  ]
+  const allValidIds = [...validV1Sections, ...validV2Fields]
+  if (!allValidIds.includes(sectionId)) {
     throw new ValidationError(
-      `Invalid section: ${sectionId}. Must be one of: ${validSections.join(', ')}`
+      `Invalid section/field: ${sectionId}. Must be a valid profile section or field ID.`
     )
   }
 
@@ -564,26 +579,50 @@ export async function updateAgentProfile(req: Request, res: Response) {
     throw new NotFoundError('Agent profile')
   }
 
-  // Update the specific section
-  const profile = agentConfig.profile as unknown as AgentProfile
-  const section = profile.sections[sectionId as keyof typeof profile.sections]
+  // Detect profile version and update the appropriate structure
+  const profile = agentConfig.profile as unknown as Record<string, unknown>
+  const isV2 = 'version' in profile && profile.version === 2 && 'fields' in profile
 
-  section.content = content
-  section.isEdited = true
-  section.editedAt = new Date().toISOString()
-
-  // Update profile source to 'manual' if any section is manually edited
-  profile.source = 'manual'
+  if (isV2) {
+    // V2 profile: update fields object
+    const fields = profile.fields as Record<string, { content: string; confidence?: string }>
+    if (!fields[sectionId]) {
+      throw new NotFoundError(`Field ${sectionId}`)
+    }
+    fields[sectionId].content = content
+    profile.source = 'manual'
+  } else {
+    // V1 profile: update sections object
+    const v1Profile = profile as unknown as AgentProfile
+    const section = v1Profile.sections[sectionId as keyof typeof v1Profile.sections]
+    if (!section) {
+      throw new NotFoundError(`Section ${sectionId}`)
+    }
+    section.content = content
+    section.isEdited = true
+    section.editedAt = new Date().toISOString()
+    v1Profile.source = 'manual'
+  }
 
   await prisma.agentConfig.update({
     where: { projectId },
     data: { profile: JSON.parse(JSON.stringify(profile)) },
   })
 
-  res.json({
-    section: section,
-    message: 'Section updated successfully',
-  })
+  // Return the updated section/field
+  if (isV2) {
+    const fields = profile.fields as Record<string, unknown>
+    res.json({
+      section: fields[sectionId],
+      message: 'Field updated successfully',
+    })
+  } else {
+    const v1Profile = profile as unknown as AgentProfile
+    res.json({
+      section: v1Profile.sections[sectionId as keyof typeof v1Profile.sections],
+      message: 'Section updated successfully',
+    })
+  }
 }
 
 // ============================================================================
