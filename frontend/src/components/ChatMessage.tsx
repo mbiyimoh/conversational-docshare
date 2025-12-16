@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { cn } from '../lib/utils'
 import { getSectionInfo } from '../lib/documentLookup'
-import { convertCitationsToMarkdownLinks } from '../lib/documentReferences'
+import { convertCitationsToMarkdownLinks, citationUrlTransform } from '../lib/documentReferences'
 import { createMarkdownComponents } from '../lib/markdownConfig'
 
 interface ChatMessageProps {
@@ -115,7 +115,7 @@ export function ChatMessage({ role, content, timestamp, onCitationClick }: ChatM
         )}
       >
         <div className="break-words">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents} urlTransform={citationUrlTransform}>
             {processedContent}
           </ReactMarkdown>
         </div>

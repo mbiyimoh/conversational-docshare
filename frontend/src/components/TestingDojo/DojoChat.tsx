@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm'
 import { ChatInput } from '../ChatInput'
 import { CommentOverlay } from './CommentOverlay'
 import { api } from '../../lib/api'
-import { convertCitationsToMarkdownLinks } from '../../lib/documentReferences'
+import { convertCitationsToMarkdownLinks, citationUrlTransform } from '../../lib/documentReferences'
 import { getSectionInfo } from '../../lib/documentLookup'
 import { createMarkdownComponents } from '../../lib/markdownConfig'
 import type { TestMessage, TestComment } from '../../types/testing'
@@ -66,7 +66,7 @@ function DojoMessageContent({ content, isUser }: { content: string; isUser: bool
 
   return (
     <div className="break-words">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents} urlTransform={citationUrlTransform}>
         {processedContent}
       </ReactMarkdown>
     </div>

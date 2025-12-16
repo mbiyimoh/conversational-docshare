@@ -153,3 +153,26 @@ export function convertCitationsToMarkdownLinks(content: string): string {
     return `[CITE](cite://${encodedFilename}/${encodedSectionId})`
   })
 }
+
+/**
+ * Custom URL transform for ReactMarkdown that allows cite:// protocol.
+ * React-markdown v10 sanitizes URLs by default and blocks custom protocols.
+ * This transform preserves cite:// URLs while applying default sanitization to others.
+ *
+ * @param url - The URL to transform
+ * @returns The transformed URL (or empty string to block)
+ */
+export function citationUrlTransform(url: string): string {
+  // Allow cite:// protocol for our citation links
+  if (url.startsWith('cite://')) {
+    return url
+  }
+  // For other URLs, apply default behavior (allow http, https, mailto, tel)
+  const protocols = ['http', 'https', 'mailto', 'tel']
+  const protocol = url.split(':')[0]?.toLowerCase()
+  if (protocols.includes(protocol)) {
+    return url
+  }
+  // Block other protocols (javascript:, data:, etc.) for security
+  return ''
+}
