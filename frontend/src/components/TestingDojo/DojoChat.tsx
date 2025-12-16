@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm'
 import { ChatInput } from '../ChatInput'
 import { CommentOverlay } from './CommentOverlay'
 import { api } from '../../lib/api'
-import { convertCitationsToMarkdownLinks, citationUrlTransform } from '../../lib/documentReferences'
+import { splitMessageIntoParts, type MessagePart } from '../../lib/documentReferences'
 import { getSectionInfo } from '../../lib/documentLookup'
 import { createMarkdownComponents } from '../../lib/markdownConfig'
 import type { TestMessage, TestComment } from '../../types/testing'
@@ -39,36 +39,70 @@ function DojoCitationDisplay({ filename, sectionId }: { filename: string; sectio
 }
 
 /**
- * Markdown content renderer for Dojo messages using shared config
+ * Renders a text part through ReactMarkdown
+ */
+function TextPart({ content, markdownComponents }: {
+  content: string
+  markdownComponents: ReturnType<typeof createMarkdownComponents>
+}) {
+  return (
+    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+      {content}
+    </ReactMarkdown>
+  )
+}
+
+/**
+ * Markdown content renderer for Dojo messages - renders citations directly without markdown links
  */
 function DojoMessageContent({ content, isUser }: { content: string; isUser: boolean }) {
-  const processedContent = useMemo(() => convertCitationsToMarkdownLinks(content), [content])
+  // Split message into text and citation parts
+  const parts = useMemo(() => splitMessageIntoParts(content), [content])
 
+  // Create markdown components for text parts
   const markdownComponents = useMemo(
     () =>
       createMarkdownComponents({
         isUser,
-        renderLink: ({ href }) => {
-          // Citations in Testing Dojo are display-only (not clickable)
-          if (href?.startsWith('cite://')) {
-            const [, pathPart] = href.split('cite://')
-            const [encodedFilename, encodedSectionId] = pathPart.split('/')
-            const filename = decodeURIComponent(encodedFilename)
-            const sectionId = decodeURIComponent(encodedSectionId)
-            return <DojoCitationDisplay filename={filename} sectionId={sectionId} />
-          }
-          // Regular links use default rendering from shared config
-          return undefined
-        },
+        // Regular links use default rendering (citations are handled separately)
+        renderLink: undefined,
       }),
     [isUser]
   )
 
+  // If no citations, render entire content through ReactMarkdown
+  if (parts.length === 1 && parts[0].type === 'text') {
+    return (
+      <div className="break-words">
+        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+          {content}
+        </ReactMarkdown>
+      </div>
+    )
+  }
+
+  // Render interleaved text and citation parts
   return (
     <div className="break-words">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents} urlTransform={citationUrlTransform}>
-        {processedContent}
-      </ReactMarkdown>
+      {parts.map((part: MessagePart, index: number) => {
+        if (part.type === 'reference' && part.reference) {
+          return (
+            <DojoCitationDisplay
+              key={`citation-${index}`}
+              filename={part.reference.filename}
+              sectionId={part.reference.sectionId}
+            />
+          )
+        }
+        // Text part - render through ReactMarkdown
+        return (
+          <TextPart
+            key={`text-${index}`}
+            content={part.content}
+            markdownComponents={markdownComponents}
+          />
+        )
+      })}
     </div>
   )
 }
