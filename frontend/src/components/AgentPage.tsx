@@ -31,12 +31,11 @@ export function AgentPage({ projectId, onNavigateToTab }: AgentPageProps) {
       const config = response.agentConfig as { status?: string } | null
       setHasProfile(config?.status === 'complete')
       setShowCreationChoice(config?.status !== 'complete')
-    } catch (err) {
+    } catch {
       // Assume no profile exists - let user create one
       // This handles 404s and network errors gracefully
       setHasProfile(false)
       setShowCreationChoice(true)
-      console.warn('Failed to check profile existence:', err)
     } finally {
       setLoading(false)
     }
@@ -66,23 +65,12 @@ export function AgentPage({ projectId, onNavigateToTab }: AgentPageProps) {
     )
   }
 
-  return (
+  // Determine what to show - use clear boolean logic
+  const shouldShowProfile = hasProfile === true && !showCreationChoice
+
+  // Modals can appear over either state
+  const modals = (
     <>
-      {/* Success Toast */}
-      {notification && (
-        <div className="fixed top-4 right-4 bg-success text-background px-4 py-2 rounded-lg shadow-lg z-50">
-          {notification}
-        </div>
-      )}
-
-      {/* Creation Choice - shown when no profile exists */}
-      {showCreationChoice && !hasProfile && (
-        <ProfileCreationChoice
-          onSelectBrainDump={() => setShowBrainDumpModal(true)}
-          onSelectInterview={() => setShowInterviewModal(true)}
-        />
-      )}
-
       {/* Brain Dump Modal */}
       {showBrainDumpModal && (
         <AgentProfileBrainDumpModal
@@ -104,15 +92,41 @@ export function AgentPage({ projectId, onNavigateToTab }: AgentPageProps) {
           onComplete={handleProfileCreated}
         />
       )}
+    </>
+  )
 
-      {/* Profile View - shown when profile exists */}
-      {hasProfile && !showCreationChoice && (
+  // Show profile view when profile exists and user hasn't started over
+  if (shouldShowProfile) {
+    return (
+      <>
+        {notification && (
+          <div className="fixed top-4 right-4 bg-success text-background px-4 py-2 rounded-lg shadow-lg z-50">
+            {notification}
+          </div>
+        )}
         <AgentProfile
           projectId={projectId}
           onNavigateToTest={() => onNavigateToTab('test')}
           onStartOver={handleStartOver}
         />
+        {modals}
+      </>
+    )
+  }
+
+  // Default: show profile creation choice (for new projects or starting over)
+  return (
+    <>
+      {notification && (
+        <div className="fixed top-4 right-4 bg-success text-background px-4 py-2 rounded-lg shadow-lg z-50">
+          {notification}
+        </div>
       )}
+      <ProfileCreationChoice
+        onSelectBrainDump={() => setShowBrainDumpModal(true)}
+        onSelectInterview={() => setShowInterviewModal(true)}
+      />
+      {modals}
     </>
   )
 }

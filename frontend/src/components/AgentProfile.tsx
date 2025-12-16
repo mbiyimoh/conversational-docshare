@@ -1,16 +1,40 @@
 import { useState, useEffect } from 'react'
-import { api, AgentProfile as AgentProfileType, ProfileProgressEvent, VersionHistoryResponse } from '../lib/api'
+import { api, AgentProfile as AgentProfileType, AgentProfileV2, ProfileProgressEvent, VersionHistoryResponse } from '../lib/api'
 import { ProfileSectionContent } from './ProfileSectionContent'
 import { SourceMaterialModal } from './SourceMaterialModal'
 import { Card, Button, Textarea } from './ui'
 
-// Section-to-question mapping for source attribution
+// Union type for both V1 and V2 profiles
+type AnyProfile = AgentProfileType | AgentProfileV2
+
+// Helper to detect V2 profile
+function isV2Profile(profile: AnyProfile): profile is AgentProfileV2 {
+  return 'fields' in profile && 'version' in profile
+}
+
+// Section-to-question mapping for source attribution (V1 profiles)
 const sectionSourceMap: Record<string, string[]> = {
   identityRole: ['audience', 'purpose'],
   communicationStyle: ['tone'],
   contentPriorities: ['emphasis'],
   engagementApproach: ['questions'],
   keyFramings: ['audience', 'tone', 'emphasis'],
+}
+
+// V2 field display info
+const v2FieldInfo: Record<string, { title: string; category: string }> = {
+  agentIdentity: { title: 'Agent Identity', category: 'Identity & Context' },
+  domainExpertise: { title: 'Domain Expertise', category: 'Identity & Context' },
+  targetAudience: { title: 'Target Audience', category: 'Identity & Context' },
+  toneAndVoice: { title: 'Tone & Voice', category: 'Communication & Style' },
+  languagePatterns: { title: 'Language Patterns', category: 'Communication & Style' },
+  adaptationRules: { title: 'Adaptation Rules', category: 'Communication & Style' },
+  keyTopics: { title: 'Key Topics', category: 'Content & Priorities' },
+  avoidanceAreas: { title: 'Avoidance Areas', category: 'Content & Priorities' },
+  examplePreferences: { title: 'Example Preferences', category: 'Content & Priorities' },
+  proactiveGuidance: { title: 'Proactive Guidance', category: 'Engagement & Behavior' },
+  framingStrategies: { title: 'Framing Strategies', category: 'Engagement & Behavior' },
+  successCriteria: { title: 'Success Criteria', category: 'Engagement & Behavior' },
 }
 
 const questionLabels: Record<string, string> = {
@@ -56,7 +80,7 @@ export function AgentProfile({
   onStartOver,
   onNavigateToTest,
 }: AgentProfileProps) {
-  const [profile, setProfile] = useState<AgentProfileType | null>(null)
+  const [profile, setProfile] = useState<AnyProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
@@ -180,15 +204,23 @@ export function AgentProfile({
 
       // Update local state
       if (profile) {
-        const updatedProfile = { ...profile }
-        const section =
-          updatedProfile.sections[
-            editingSection as keyof typeof updatedProfile.sections
-          ]
-        section.content = editContent
-        section.isEdited = true
-        section.editedAt = new Date().toISOString()
-        setProfile(updatedProfile)
+        if (isV2Profile(profile)) {
+          // V2 profile: update fields
+          const updatedProfile = { ...profile }
+          const field = updatedProfile.fields[editingSection as keyof typeof updatedProfile.fields]
+          if (field) {
+            field.content = editContent
+            setProfile(updatedProfile)
+          }
+        } else {
+          // V1 profile: update sections
+          const updatedProfile = { ...profile }
+          const section = updatedProfile.sections[editingSection as keyof typeof updatedProfile.sections]
+          section.content = editContent
+          section.isEdited = true
+          section.editedAt = new Date().toISOString()
+          setProfile(updatedProfile)
+        }
       }
 
       setEditingSection(null)
@@ -447,8 +479,8 @@ export function AgentProfile({
         <div className="mb-4 rounded-lg bg-destructive/10 border border-destructive/20 p-4 text-destructive">{error}</div>
       )}
 
-      {/* Profile Sections */}
-      {profile && (
+      {/* Profile Sections - V1 (interview-based) */}
+      {profile && !isV2Profile(profile) && (
         <div className="space-y-6">
           {sectionOrder.map((sectionKey) => {
             const section = profile.sections[sectionKey]
@@ -521,6 +553,74 @@ export function AgentProfile({
                       />
                     </div>
                   </details>
+                )}
+              </Card>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Profile Fields - V2 (braindump-based) */}
+      {profile && isV2Profile(profile) && (
+        <div className="space-y-6">
+          {Object.entries(profile.fields).map(([fieldKey, field]) => {
+            const fieldInfo = v2FieldInfo[fieldKey] || { title: fieldKey, category: 'Other' }
+            const isEditing = editingSection === fieldKey
+
+            return (
+              <Card key={fieldKey} className="p-6">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="font-display text-foreground">
+                      {fieldInfo.title}
+                    </h3>
+                    <p className="text-xs text-dim mt-1">
+                      {fieldInfo.category}
+                      {field.confidence !== 'EXPLICIT' && (
+                        <span className="ml-2 text-accent">
+                          • {field.confidence === 'INFERRED' ? 'Inferred from context' : 'Needs more detail'}
+                        </span>
+                      )}
+                    </p>
+                    {field.isEdited && (
+                      <span className="text-xs text-dim">
+                        • Manually edited
+                      </span>
+                    )}
+                  </div>
+                  {!isEditing && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditSection(fieldKey, field.content)}
+                    >
+                      Edit
+                    </Button>
+                  )}
+                </div>
+
+                {isEditing ? (
+                  <div>
+                    <Textarea
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      rows={4}
+                    />
+                    <div className="mt-3 flex justify-end gap-2">
+                      <Button variant="ghost" onClick={handleCancelEdit}>
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleSaveSection}
+                        disabled={saving}
+                        isLoading={saving}
+                      >
+                        {saving ? 'Saving...' : 'Save'}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <ProfileSectionContent content={field.content} />
                 )}
               </Card>
             )
