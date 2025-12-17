@@ -280,9 +280,10 @@ export async function retryDocument(req: Request, res: Response) {
   }
 
   if (document.status !== 'failed') {
-    return res.status(400).json({
+    res.status(400).json({
       error: { message: 'Only failed documents can be retried' }
     })
+    return
   }
 
   // Reset document to pending status so the queue picks it up
