@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { cn } from '../lib/utils'
 import { getSectionInfo } from '../lib/documentLookup'
-import { splitMessageIntoParts, type MessagePart } from '../lib/documentReferences'
+import { convertCitationsToMarkdownLinks, citationUrlTransform } from '../lib/documentReferences'
 import { createMarkdownComponents } from '../lib/markdownConfig'
 
 interface ChatMessageProps {
@@ -56,43 +56,36 @@ function CitationButton({
   )
 }
 
-/**
- * Renders a text part through ReactMarkdown
- */
-function TextPart({ content, markdownComponents }: {
-  content: string
-  markdownComponents: ReturnType<typeof createMarkdownComponents>
-}) {
-  return (
-    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-      {content}
-    </ReactMarkdown>
-  )
-}
+export function ChatMessage({ role, content, timestamp, onCitationClick }: ChatMessageProps) {
+  const isUser = role === 'user'
 
-/**
- * Renders message content with interleaved markdown text and citation buttons.
- * This bypasses react-markdown's URL sanitization by rendering citations directly.
- */
-function MessageContent({
-  content,
-  isUser,
-  onCitationClick,
-}: {
-  content: string
-  isUser: boolean
-  onCitationClick?: (filename: string, sectionId: string) => void
-}) {
-  // Split message into text and citation parts
-  const parts = useMemo(() => splitMessageIntoParts(content), [content])
+  // Convert citations to markdown links for processing
+  const processedContent = useMemo(() => convertCitationsToMarkdownLinks(content), [content])
 
-  // Create markdown components for text parts (no citation handling needed here)
+  // Custom components for ReactMarkdown using shared config
   const markdownComponents = useMemo(
     () =>
       createMarkdownComponents({
         isUser,
         renderLink: ({ href, children }) => {
-          // Regular link rendering (citations are handled separately)
+          // Check if this is a citation link
+          if (href?.startsWith('cite://')) {
+            const [, pathPart] = href.split('cite://')
+            const [encodedFilename, encodedSectionId] = pathPart.split('/')
+            const filename = decodeURIComponent(encodedFilename)
+            const sectionId = decodeURIComponent(encodedSectionId)
+
+            return (
+              <CitationButton
+                filename={filename}
+                sectionId={sectionId}
+                onCitationClick={onCitationClick}
+                isUserMessage={isUser}
+              />
+            )
+          }
+
+          // Regular link - use default rendering
           return (
             <a
               href={href}
@@ -108,48 +101,8 @@ function MessageContent({
           )
         },
       }),
-    [isUser]
+    [onCitationClick, isUser]
   )
-
-  // If no citations, render entire content through ReactMarkdown
-  if (parts.length === 1 && parts[0].type === 'text') {
-    return (
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-        {content}
-      </ReactMarkdown>
-    )
-  }
-
-  // Render interleaved text and citation parts
-  return (
-    <>
-      {parts.map((part: MessagePart, index: number) => {
-        if (part.type === 'reference' && part.reference) {
-          return (
-            <CitationButton
-              key={`citation-${index}`}
-              filename={part.reference.filename}
-              sectionId={part.reference.sectionId}
-              onCitationClick={onCitationClick}
-              isUserMessage={isUser}
-            />
-          )
-        }
-        // Text part - render through ReactMarkdown
-        return (
-          <TextPart
-            key={`text-${index}`}
-            content={part.content}
-            markdownComponents={markdownComponents}
-          />
-        )
-      })}
-    </>
-  )
-}
-
-export function ChatMessage({ role, content, timestamp, onCitationClick }: ChatMessageProps) {
-  const isUser = role === 'user'
 
   return (
     <div className={cn('flex w-full', isUser ? 'justify-end' : 'justify-start')}>
@@ -162,11 +115,9 @@ export function ChatMessage({ role, content, timestamp, onCitationClick }: ChatM
         )}
       >
         <div className="break-words">
-          <MessageContent
-            content={content}
-            isUser={isUser}
-            onCitationClick={onCitationClick}
-          />
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents} urlTransform={citationUrlTransform}>
+            {processedContent}
+          </ReactMarkdown>
         </div>
         {timestamp && (
           <div
