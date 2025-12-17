@@ -90,6 +90,11 @@ function injectShareMetaTags(html, projectId) {
   return modifiedHtml;
 }
 
+// Health check endpoint for Railway
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // Serve static assets (JS, CSS, images) with caching
 app.use(express.static(buildPath, {
   maxAge: '1y',
