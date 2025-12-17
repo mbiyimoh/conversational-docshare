@@ -31,6 +31,16 @@ export interface ParsedMessage {
 const DOC_REFERENCE_REGEX = /\[DOC:([a-zA-Z0-9\s._-]+):([a-zA-Z0-9_-]+)\]/g
 
 /**
+ * Regular expression to match legacy markdown citation links:
+ * [CITE](cite://encoded-filename/encoded-section-id)
+ *
+ * This handles any messages that might have been saved with the old format
+ * Group 1: URL-encoded filename
+ * Group 2: URL-encoded section-id
+ */
+const LEGACY_CITE_REGEX = /\[CITE\]\(cite:\/\/([^/]+)\/([^)]+)\)/g
+
+/**
  * Parses a message for document references
  *
  * @param content - The message content to parse
@@ -40,10 +50,11 @@ export function parseDocumentReferences(content: string): ParsedMessage {
   const references: DocumentReference[] = []
   let match: RegExpExecArray | null
 
-  // Reset regex index
+  // Reset regex indices
   DOC_REFERENCE_REGEX.lastIndex = 0
+  LEGACY_CITE_REGEX.lastIndex = 0
 
-  // Extract all references
+  // Extract all [DOC:filename:section-id] references
   while ((match = DOC_REFERENCE_REGEX.exec(content)) !== null) {
     references.push({
       filename: match[1],
@@ -53,6 +64,20 @@ export function parseDocumentReferences(content: string): ParsedMessage {
       endIndex: match.index + match[0].length,
     })
   }
+
+  // Also extract legacy [CITE](cite://...) references
+  while ((match = LEGACY_CITE_REGEX.exec(content)) !== null) {
+    references.push({
+      filename: decodeURIComponent(match[1]),
+      sectionId: decodeURIComponent(match[2]),
+      fullMatch: match[0],
+      startIndex: match.index,
+      endIndex: match.index + match[0].length,
+    })
+  }
+
+  // Sort by position in content
+  references.sort((a, b) => a.startIndex - b.startIndex)
 
   return {
     originalContent: content,
