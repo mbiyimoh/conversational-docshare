@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm'
 import { ChatInput } from '../ChatInput'
 import { CommentOverlay } from './CommentOverlay'
 import { api } from '../../lib/api'
-import { convertCitationsToMarkdownLinks, citationUrlTransform } from '../../lib/documentReferences'
+import { convertCitationsToMarkdownLinks, citationUrlTransform, parseCitationUrl } from '../../lib/documentReferences'
 import { getSectionInfo } from '../../lib/documentLookup'
 import { createMarkdownComponents } from '../../lib/markdownConfig'
 import type { TestMessage, TestComment } from '../../types/testing'
@@ -50,12 +50,9 @@ function DojoMessageContent({ content, isUser }: { content: string; isUser: bool
         isUser,
         renderLink: ({ href }) => {
           // Citations in Testing Dojo are display-only (not clickable)
-          if (href?.startsWith('cite://')) {
-            const [, pathPart] = href.split('cite://')
-            const [encodedFilename, encodedSectionId] = pathPart.split('/')
-            const filename = decodeURIComponent(encodedFilename)
-            const sectionId = decodeURIComponent(encodedSectionId)
-            return <DojoCitationDisplay filename={filename} sectionId={sectionId} />
+          const citation = parseCitationUrl(href || '')
+          if (citation) {
+            return <DojoCitationDisplay filename={citation.filename} sectionId={citation.sectionId} />
           }
           // Regular links use default rendering from shared config
           return undefined

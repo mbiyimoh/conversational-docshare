@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { cn } from '../lib/utils'
 import { getSectionInfo } from '../lib/documentLookup'
-import { convertCitationsToMarkdownLinks, citationUrlTransform } from '../lib/documentReferences'
+import { convertCitationsToMarkdownLinks, citationUrlTransform, parseCitationUrl } from '../lib/documentReferences'
 import { createMarkdownComponents } from '../lib/markdownConfig'
 
 interface ChatMessageProps {
@@ -69,16 +69,12 @@ export function ChatMessage({ role, content, timestamp, onCitationClick }: ChatM
         isUser,
         renderLink: ({ href, children }) => {
           // Check if this is a citation link
-          if (href?.startsWith('cite://')) {
-            const [, pathPart] = href.split('cite://')
-            const [encodedFilename, encodedSectionId] = pathPart.split('/')
-            const filename = decodeURIComponent(encodedFilename)
-            const sectionId = decodeURIComponent(encodedSectionId)
-
+          const citation = parseCitationUrl(href || '')
+          if (citation) {
             return (
               <CitationButton
-                filename={filename}
-                sectionId={sectionId}
+                filename={citation.filename}
+                sectionId={citation.sectionId}
                 onCitationClick={onCitationClick}
                 isUserMessage={isUser}
               />
