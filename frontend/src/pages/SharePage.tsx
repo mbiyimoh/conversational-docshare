@@ -8,6 +8,11 @@ import { DocumentContentViewer } from '../components/DocumentContentViewer'
 import { EndSessionModal } from '../components/EndSessionModal'
 import { DocumentCommentsDrawer } from '../components/DocumentCommentsDrawer'
 import { CollaboratorCommentPanel } from '../components/CollaboratorCommentPanel'
+import {
+  ViewerPreferencesProvider,
+  ViewerPreferencesOnboarding,
+  useViewerPreferencesContext
+} from '../components/viewer-prefs'
 import { api } from '../lib/api'
 import { Card, Button, Input, AccentText, GlowPulse } from '../components/ui'
 import {
@@ -434,8 +439,132 @@ export function SharePage() {
   // Main viewer experience (after access granted)
   if (accessGranted && conversationId && project) {
     return (
-      <div className="h-screen bg-background overflow-hidden">
-        <Resplit.Root direction="horizontal" className="h-full">
+      <ViewerPreferencesProvider>
+        <SharePageContent
+          project={project}
+          conversationId={conversationId}
+          conversationStartedAt={conversationStartedAt}
+          messages={messages}
+          setMessages={setMessages}
+          showEndModal={showEndModal}
+          setShowEndModal={setShowEndModal}
+          chatPanelFr={chatPanelFr}
+          handleChatPanelResize={handleChatPanelResize}
+          handleCitationClick={handleCitationClick}
+          panelMode={panelMode}
+          handleBackToCapsule={handleBackToCapsule}
+          documents={documents}
+          handleDocumentClick={handleDocumentClick}
+          handleSectionClick={handleSectionClick}
+          selectedDocumentId={selectedDocumentId}
+          slug={slug!}
+          highlightSectionId={highlightSectionId}
+          highlightKey={highlightKey}
+          isCollaborator={isCollaborator}
+          handleAddComment={handleAddComment}
+          comments={comments}
+          commentsDrawerOpen={commentsDrawerOpen}
+          setCommentsDrawerOpen={setCommentsDrawerOpen}
+          handleCommentClick={handleCommentClick}
+          pendingComment={pendingComment}
+          email={email}
+          viewerName={viewerName}
+          handleSubmitComment={handleSubmitComment}
+          setPendingComment={setPendingComment}
+        />
+      </ViewerPreferencesProvider>
+    )
+  }
+
+  // Fallback
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="text-muted">Something went wrong. Please try again.</div>
+    </div>
+  )
+}
+
+// Inner component that uses ViewerPreferencesContext
+interface SharePageContentProps {
+  project: Project
+  conversationId: string
+  conversationStartedAt: Date | null
+  messages: Array<{ role: string; content: string }>
+  setMessages: React.Dispatch<React.SetStateAction<Array<{ role: string; content: string }>>>
+  showEndModal: boolean
+  setShowEndModal: React.Dispatch<React.SetStateAction<boolean>>
+  chatPanelFr: number
+  handleChatPanelResize: (size: `${number}fr`) => void
+  handleCitationClick: (filenameOrId: string, sectionId: string) => void
+  panelMode: 'capsule' | 'document'
+  handleBackToCapsule: () => void
+  documents: DocumentInfo[]
+  handleDocumentClick: (documentId: string) => void
+  handleSectionClick: (documentId: string, sectionId: string) => void
+  selectedDocumentId: string | null
+  slug: string
+  highlightSectionId: string | null
+  highlightKey: number
+  isCollaborator: boolean
+  handleAddComment: (selection: { chunkId: string; startOffset: number; endOffset: number; text: string }) => void
+  comments: DocumentComment[]
+  commentsDrawerOpen: boolean
+  setCommentsDrawerOpen: React.Dispatch<React.SetStateAction<boolean>>
+  handleCommentClick: (comment: DocumentComment) => void
+  pendingComment: { chunkId: string; startOffset: number; endOffset: number; text: string; position: { x: number; y: number } } | null
+  email: string
+  viewerName: string
+  handleSubmitComment: (content: string) => Promise<void>
+  setPendingComment: React.Dispatch<React.SetStateAction<{ chunkId: string; startOffset: number; endOffset: number; text: string; position: { x: number; y: number } } | null>>
+}
+
+function SharePageContent({
+  project,
+  conversationId,
+  conversationStartedAt,
+  messages,
+  setMessages,
+  showEndModal,
+  setShowEndModal,
+  chatPanelFr,
+  handleChatPanelResize,
+  handleCitationClick,
+  panelMode,
+  handleBackToCapsule,
+  documents,
+  handleDocumentClick,
+  handleSectionClick,
+  selectedDocumentId,
+  slug,
+  highlightSectionId,
+  highlightKey,
+  isCollaborator,
+  handleAddComment,
+  comments,
+  commentsDrawerOpen,
+  setCommentsDrawerOpen,
+  handleCommentClick,
+  pendingComment,
+  email,
+  viewerName,
+  handleSubmitComment,
+  setPendingComment
+}: SharePageContentProps) {
+  const { preferences } = useViewerPreferencesContext()
+  const [showOnboarding, setShowOnboarding] = useState(!preferences.onboardingComplete)
+
+  // Show onboarding if not complete
+  if (showOnboarding && !preferences.onboardingComplete) {
+    return (
+      <ViewerPreferencesOnboarding
+        onComplete={() => setShowOnboarding(false)}
+      />
+    )
+  }
+
+  return (
+    <div className="h-screen bg-background overflow-hidden">
+      <Resplit.Root direction="horizontal" className="h-full">
           {/* Main chat panel */}
           <Resplit.Pane
             order={0}
@@ -467,7 +596,7 @@ export function SharePage() {
                       Comments {comments.length > 0 && `(${comments.length})`}
                     </Button>
                   )}
-                  {accessGranted && conversationId && (
+                  {conversationId && (
                     <Button
                       variant="secondary"
                       size="sm"
@@ -583,13 +712,5 @@ export function SharePage() {
           />
         )}
       </div>
-    )
-  }
-
-  // Fallback
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <div className="text-muted">Something went wrong. Please try again.</div>
-    </div>
   )
 }

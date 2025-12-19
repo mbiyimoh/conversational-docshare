@@ -22,3 +22,18 @@ export function formatFileSize(bytes: number): string {
 
   return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
 }
+
+/**
+ * Safely access localStorage with private browsing fallback.
+ * Returns null if localStorage is unavailable (e.g., Safari private mode).
+ */
+export function safeLocalStorage(): Storage | null {
+  try {
+    const testKey = '__storage_test__'
+    localStorage.setItem(testKey, testKey)
+    localStorage.removeItem(testKey)
+    return localStorage
+  } catch {
+    return null
+  }
+}

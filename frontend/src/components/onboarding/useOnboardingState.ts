@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react'
+import { safeLocalStorage } from '../../lib/utils'
 
 const STORAGE_KEY = 'onboarding_complete'
 
@@ -6,18 +7,6 @@ interface OnboardingState {
   isComplete: boolean
   markComplete: () => void
   reset: () => void // For "Take Tour" re-trigger
-}
-
-// Helper to safely access localStorage (handles private browsing mode)
-function safeLocalStorage(): Storage | null {
-  try {
-    const testKey = '__storage_test__'
-    localStorage.setItem(testKey, testKey)
-    localStorage.removeItem(testKey)
-    return localStorage
-  } catch {
-    return null
-  }
 }
 
 export function useOnboardingState(): OnboardingState {

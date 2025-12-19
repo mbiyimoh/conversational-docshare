@@ -5,12 +5,18 @@ import { cn } from '../lib/utils'
 import { getSectionInfo } from '../lib/documentLookup'
 import { convertCitationsToMarkdownLinks, citationUrlTransform, parseCitationUrl } from '../lib/documentReferences'
 import { createMarkdownComponents } from '../lib/markdownConfig'
+import { ChatExpandButton } from './chat/ChatExpandButton'
 
 interface ChatMessageProps {
   role: 'user' | 'assistant'
   content: string
   timestamp?: Date
+  messageId?: string
+  isStreaming?: boolean
+  isExpanded?: boolean
+  isExpandLoading?: boolean
   onCitationClick?: (filename: string, sectionId: string) => void
+  onExpand?: (messageId: string) => void
 }
 
 /**
@@ -56,8 +62,22 @@ function CitationButton({
   )
 }
 
-export function ChatMessage({ role, content, timestamp, onCitationClick }: ChatMessageProps) {
+export function ChatMessage({
+  role,
+  content,
+  timestamp,
+  messageId,
+  isStreaming = false,
+  isExpanded = false,
+  isExpandLoading = false,
+  onCitationClick,
+  onExpand
+}: ChatMessageProps) {
   const isUser = role === 'user'
+  const isAssistant = role === 'assistant'
+
+  // Show expand button for completed assistant messages that haven't been expanded
+  const showExpandButton = isAssistant && !isStreaming && !isExpanded && messageId && onExpand
 
   // Convert citations to markdown links for processing
   const processedContent = useMemo(() => convertCitationsToMarkdownLinks(content), [content])
@@ -100,6 +120,12 @@ export function ChatMessage({ role, content, timestamp, onCitationClick }: ChatM
     [onCitationClick, isUser]
   )
 
+  const handleExpand = () => {
+    if (messageId && onExpand) {
+      onExpand(messageId)
+    }
+  }
+
   return (
     <div className={cn('flex w-full', isUser ? 'justify-end' : 'justify-start')}>
       <div
@@ -124,6 +150,14 @@ export function ChatMessage({ role, content, timestamp, onCitationClick }: ChatM
           >
             {timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </div>
+        )}
+        {/* Expand button for assistant messages */}
+        {showExpandButton && (
+          <ChatExpandButton
+            onClick={handleExpand}
+            disabled={isExpanded}
+            isLoading={isExpandLoading}
+          />
         )}
       </div>
     </div>

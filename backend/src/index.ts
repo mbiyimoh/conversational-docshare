@@ -28,9 +28,22 @@ import { terminatePool } from './services/worker/workerPool'
 const app = express()
 const PORT = process.env.PORT || 4000
 
-// Middleware
+// CORS configuration - supports multiple origins via comma-separated CORS_ORIGIN
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
+  .split(',')
+  .map(origin => origin.trim())
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true)
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error(`CORS not allowed for origin: ${origin}`))
+    }
+  },
   credentials: true,
 }))
 app.use(express.json())

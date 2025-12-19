@@ -104,3 +104,72 @@
     box-shadow: none;
   }
 }
+
+/* Theme variants - applied via data-theme attribute or CSS variables */
+[data-theme="nord"] {
+  --color-bg: 220 16% 22%;
+  --color-bg-elevated: 222 16% 28%;
+  --color-bg-card: 220 16% 26% / 0.5;
+  --color-text: 218 27% 94%;
+  --color-text-muted: 219 28% 72%;
+  --color-text-dim: 219 20% 55%;
+  --color-accent: 193 43% 67%;
+  --color-accent-glow: 193 43% 67% / 0.3;
+  --color-border: 220 16% 36% / 0.5;
+}
+
+[data-theme="warm-reading"] {
+  --color-bg: 30 20% 13%;
+  --color-bg-elevated: 30 18% 18%;
+  --color-bg-card: 30 15% 20% / 0.5;
+  --color-text: 35 30% 85%;
+  --color-text-muted: 35 20% 60%;
+  --color-text-dim: 35 15% 45%;
+  --color-accent: 41 57% 54%;
+  --color-accent-glow: 41 57% 54% / 0.3;
+  --color-border: 30 15% 25% / 0.5;
+}
+
+[data-theme="high-contrast"] {
+  --color-bg: 0 0% 0%;
+  --color-bg-elevated: 0 0% 8%;
+  --color-bg-card: 0 0% 5% / 0.8;
+  --color-text: 0 0% 100%;
+  --color-text-muted: 0 0% 70%;
+  --color-text-dim: 0 0% 50%;
+  --color-accent: 48 96% 53%;
+  --color-accent-glow: 48 96% 53% / 0.4;
+  --color-border: 0 0% 100% / 0.2;
+}
+
+[data-theme="soft-charcoal"] {
+  --color-bg: 0 0% 10%;
+  --color-bg-elevated: 0 0% 14%;
+  --color-bg-card: 0 0% 12% / 0.5;
+  --color-text: 0 0% 88%;
+  --color-text-muted: 0 0% 55%;
+  --color-text-dim: 0 0% 40%;
+  --color-accent: 258 90% 66%;
+  --color-accent-glow: 258 90% 66% / 0.3;
+  --color-border: 0 0% 100% / 0.1;
+}
+
+/* Jump indicator breathing animation */
+@keyframes breathe-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 hsl(var(--color-accent) / 0);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px hsl(var(--color-accent) / 0.3);
+  }
+}
+
+.animate-breathe-glow {
+  animation: breathe-glow 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-breathe-glow {
+    animation: none;
+  }
+}

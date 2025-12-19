@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { ChatMessage } from './ChatMessage'
 import { ChatInput } from './ChatInput'
+import { JumpToBottomIndicator } from './chat/JumpToBottomIndicator'
 
 interface Message {
   id: string
@@ -24,10 +25,82 @@ export function ChatInterface({ conversationId, onCitationClick, onMessagesChang
   const [loadError, setLoadError] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Scroll to bottom when messages change
+  // Smart scroll state
+  const [isAtBottom, setIsAtBottom] = useState(true)
+  const [showJumpIndicator, setShowJumpIndicator] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const scrollSentinelRef = useRef<HTMLDivElement>(null)
+  const userJustSentMessage = useRef(false)
+
+  // Progressive disclosure state - track which messages have been expanded
+  const [expandedMessageIds, setExpandedMessageIds] = useState<Set<string>>(new Set())
+  const [expandingMessageId, setExpandingMessageId] = useState<string | null>(null)
+
+  // Intersection Observer for bottom detection
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, streamingContent])
+    const sentinel = scrollSentinelRef.current
+    const container = scrollContainerRef.current
+    if (!sentinel || !container) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const atBottom = entry.isIntersecting
+        setIsAtBottom(atBottom)
+
+        if (atBottom) {
+          setShowJumpIndicator(false)
+          setUnreadCount(0)
+        }
+      },
+      {
+        root: container,
+        threshold: 0.1,
+        rootMargin: '100px' // Trigger slightly before reaching absolute bottom
+      }
+    )
+
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [])
+
+  // Show indicator when streaming and user not at bottom
+  useEffect(() => {
+    if (isStreaming && !isAtBottom && !userJustSentMessage.current) {
+      setShowJumpIndicator(true)
+    }
+  }, [isStreaming, isAtBottom])
+
+  // Track unread messages when not at bottom
+  useEffect(() => {
+    if (!isAtBottom && streamingContent) {
+      // Count "chunks" that would represent new content
+      setUnreadCount(prev => Math.min(prev + 1, 99))
+    }
+  }, [streamingContent, isAtBottom])
+
+  // Smart auto-scroll: only when appropriate
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    // Auto-scroll if:
+    // 1. User was already at bottom, OR
+    // 2. User just sent a message (explicit intent)
+    if (isAtBottom || userJustSentMessage.current) {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth'
+      })
+
+      // Reset the "just sent" flag after scroll
+      if (userJustSentMessage.current) {
+        setTimeout(() => {
+          userJustSentMessage.current = false
+        }, 500)
+      }
+    }
+  }, [messages, streamingContent, isAtBottom])
 
   // Load conversation history on mount
   useEffect(() => {
@@ -65,6 +138,11 @@ export function ChatInterface({ conversationId, onCitationClick, onMessagesChang
   }
 
   const handleSendMessage = async (content: string) => {
+    // Set flag for auto-scroll
+    userJustSentMessage.current = true
+    setShowJumpIndicator(false)
+    setUnreadCount(0)
+
     // Add user message immediately
     const userMessage: Message = {
       id: `user-${Date.now()}`,
@@ -156,8 +234,42 @@ export function ChatInterface({ conversationId, onCitationClick, onMessagesChang
     }
   }
 
+  // Handle expand request - sends a follow-up message asking for elaboration
+  const handleExpand = useCallback(async (messageId: string) => {
+    // Find the message to expand
+    const messageToExpand = messages.find(m => m.id === messageId)
+    if (!messageToExpand || messageToExpand.role !== 'assistant') return
+
+    // Mark as expanding
+    setExpandingMessageId(messageId)
+
+    // Send an expansion request
+    const expandPrompt = `Please expand on your previous response with more detail and examples. Your previous response was: "${messageToExpand.content.substring(0, 200)}${messageToExpand.content.length > 200 ? '...' : ''}"`
+
+    try {
+      await handleSendMessage(expandPrompt)
+      // Mark as expanded after successful response
+      setExpandedMessageIds(prev => new Set([...prev, messageId]))
+    } finally {
+      setExpandingMessageId(null)
+    }
+  }, [messages])
+
+  // Jump to bottom handler
+  const handleJumpToBottom = useCallback(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: 'smooth'
+    })
+    setShowJumpIndicator(false)
+    setUnreadCount(0)
+  }, [])
+
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col relative">
       {/* Error banner */}
       {loadError && (
         <div className="bg-destructive/10 border-l-4 border-destructive p-4">
@@ -176,15 +288,22 @@ export function ChatInterface({ conversationId, onCitationClick, onMessagesChang
         </div>
       )}
 
-      {/* Messages container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
+      {/* Messages container - add ref for scroll control */}
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0"
+      >
         {messages.map((message) => (
           <ChatMessage
             key={message.id}
             role={message.role}
             content={message.content}
             timestamp={message.timestamp}
+            messageId={message.id}
+            isExpanded={expandedMessageIds.has(message.id)}
+            isExpandLoading={expandingMessageId === message.id}
             onCitationClick={onCitationClick}
+            onExpand={handleExpand}
           />
         ))}
 
@@ -193,6 +312,7 @@ export function ChatInterface({ conversationId, onCitationClick, onMessagesChang
           <ChatMessage
             role="assistant"
             content={streamingContent}
+            isStreaming={true}
             onCitationClick={onCitationClick}
           />
         )}
@@ -210,8 +330,19 @@ export function ChatInterface({ conversationId, onCitationClick, onMessagesChang
           </div>
         )}
 
+        {/* Scroll sentinel - invisible element at bottom */}
+        <div ref={scrollSentinelRef} className="h-px" />
+
+        {/* Original messagesEndRef for compatibility */}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Jump to bottom indicator */}
+      <JumpToBottomIndicator
+        visible={showJumpIndicator}
+        unreadCount={unreadCount}
+        onClick={handleJumpToBottom}
+      />
 
       {/* Input */}
       <ChatInput onSend={handleSendMessage} disabled={isStreaming} />
