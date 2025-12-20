@@ -1,19 +1,24 @@
 export type DepthLevel = 'concise' | 'balanced' | 'detailed'
 export type FontFamily = 'dm-sans' | 'inter' | 'atkinson' | 'merriweather' | 'lora' | 'source-serif'
-export type ThemeName = 'default' | 'nord' | 'warm-reading' | 'high-contrast' | 'soft-charcoal'
+export type FontSize = 'small' | 'medium' | 'large'
+export type ThemeName = 'default' | 'nord' | 'warm-reading' | 'high-contrast' | 'soft-charcoal' | 'ocean-depth'
 
 export interface ViewerPreferences {
   depth: DepthLevel
   fontFamily: FontFamily
+  fontSize: FontSize
   theme: ThemeName
   onboardingComplete: boolean
+  paperMode: boolean
 }
 
 export const DEFAULT_PREFERENCES: ViewerPreferences = {
   depth: 'balanced',
   fontFamily: 'dm-sans',
+  fontSize: 'medium',
   theme: 'default',
-  onboardingComplete: false
+  onboardingComplete: false,
+  paperMode: true
 }
 
 export const DEPTH_OPTIONS: Array<{
@@ -24,6 +29,17 @@ export const DEPTH_OPTIONS: Array<{
   { value: 'concise', label: 'Quick Summary', description: 'Key points only' },
   { value: 'balanced', label: 'Balanced', description: 'Context with key details' },
   { value: 'detailed', label: 'Full Context', description: 'Comprehensive with examples' }
+]
+
+export const FONT_SIZE_OPTIONS: Array<{
+  value: FontSize
+  label: string
+  cssValue: string
+  previewSize: string
+}> = [
+  { value: 'small', label: 'Small', cssValue: '14px', previewSize: '0.875rem' },
+  { value: 'medium', label: 'Medium', cssValue: '16px', previewSize: '1rem' },
+  { value: 'large', label: 'Large', cssValue: '18px', previewSize: '1.125rem' }
 ]
 
 export const FONT_OPTIONS: Array<{
@@ -133,6 +149,18 @@ export const THEME_OPTIONS: Array<{
       textMuted: '0 0% 55%',
       accent: '258 90% 66%',      // #8b5cf6
       border: '0 0% 100% / 0.1'
+    }
+  },
+  {
+    value: 'ocean-depth',
+    label: 'Ocean Depth',
+    colors: {
+      bg: '210 50% 8%',           // Deep ocean blue-black
+      bgElevated: '210 45% 12%',
+      text: '185 40% 92%',        // Soft cyan-white
+      textMuted: '200 25% 55%',
+      accent: '175 60% 50%',      // Teal accent
+      border: '200 40% 30% / 0.4'
     }
   }
 ]

@@ -3,6 +3,8 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { api } from '../lib/api'
 import { FileText, Download, Loader2, MessageSquarePlus } from 'lucide-react'
+import { PaperContainer } from './ui/PaperContainer'
+import { useViewerPreferencesContext } from './viewer-prefs'
 
 interface DocumentChunk {
   id: string
@@ -53,6 +55,10 @@ export function DocumentContentViewer({
   const chunkRefs = useRef<Map<string, HTMLElement>>(new Map())
   const highlightedRef = useRef<HTMLElement | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  // Get viewer preferences for paper mode
+  const { preferences } = useViewerPreferencesContext()
+  const isPaperMode = preferences.paperMode
 
   // Load document metadata and chunks
   useEffect(() => {
@@ -260,8 +266,10 @@ export function DocumentContentViewer({
           <div className="flex items-center gap-3">
             <FileText className="w-6 h-6 text-accent" />
             <div>
-              <h2 className="text-xl font-display text-foreground">{docData?.title}</h2>
-              <p className="text-sm text-dim">{docData?.filename}</p>
+              <h2 className="text-xl font-display text-foreground">{docData?.filename}</h2>
+              {docData?.title && docData.title !== docData.filename && (
+                <p className="text-sm text-dim">{docData.title}</p>
+              )}
             </div>
           </div>
           <button
@@ -281,84 +289,275 @@ export function DocumentContentViewer({
       {/* Document Content */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto min-h-0 relative"
+        className={`flex-1 overflow-y-auto min-h-0 relative ${isPaperMode ? 'p-4 bg-background-elevated' : ''}`}
         style={{ overscrollBehavior: 'contain' }}
         onMouseUp={handleTextSelection}
       >
-        <div className="max-w-none p-6">
-          {sectionedContent.map((section, idx) => (
-            <section
-              key={section.sectionId || `chunk-${idx}`}
-              id={`section-${section.sectionId}`}
-              ref={(el) => {
-                if (el && section.sectionId) {
-                  sectionRefs.current.set(section.sectionId, el)
-                }
-              }}
-              className="mb-8 scroll-mt-20"
-            >
-              {section.sectionTitle && (
-                <h2 className="text-xl font-display text-foreground mb-4 pb-2 border-b border-border">
-                  {section.sectionTitle}
-                </h2>
-              )}
-
-              <div className="text-muted leading-relaxed">
-                {section.chunks.map((chunk) => (
-                  <div
-                    key={chunk.id}
-                    data-chunk-id={chunk.id}
-                    ref={(el) => {
-                      if (el) chunkRefs.current.set(chunk.id, el)
-                    }}
-                    className="mb-4 prose prose-invert max-w-none"
-                  >
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {chunk.content}
-                    </ReactMarkdown>
-                  </div>
-                ))}
-              </div>
-            </section>
-          ))}
-
-          {/* Text Selection Popover for Collaborators */}
-          {textSelection && isCollaborator && onAddComment && (
-            <div
-              className="comment-popover absolute z-50 bg-background-elevated rounded-lg shadow-lg border border-border p-1 backdrop-blur-sm"
-              style={{
-                left: textSelection.position.x,
-                top: textSelection.position.y,
-                transform: 'translate(-50%, -100%)',
-              }}
-            >
-              <button
-                onClick={() => {
-                  onAddComment({
-                    chunkId: textSelection.chunkId,
-                    startOffset: textSelection.startOffset,
-                    endOffset: textSelection.endOffset,
-                    text: textSelection.text,
-                  })
-                  setTextSelection(null)
+        {isPaperMode ? (
+          // Paper mode: wrap content in PaperContainer with prose classes
+          <PaperContainer
+            className="prose prose-lg max-w-none
+              prose-headings:font-display prose-headings:text-[#1a1a1a]
+              prose-p:text-[#333333] prose-p:leading-relaxed
+              prose-li:text-[#333333]
+              prose-strong:text-[#1a1a1a] prose-strong:font-semibold
+              prose-a:text-[#8B7355] prose-a:underline
+              prose-blockquote:border-l-[#C4A77D] prose-blockquote:text-[#555555]
+              prose-code:bg-[#E8E4DE] prose-code:text-[#333333] prose-code:rounded prose-code:px-1.5
+              prose-pre:bg-[#E8E4DE]
+              prose-hr:border-[#D9D9D9]"
+          >
+            {sectionedContent.map((section, idx) => (
+              <section
+                key={section.sectionId || `chunk-${idx}`}
+                id={`section-${section.sectionId}`}
+                ref={(el) => {
+                  if (el && section.sectionId) {
+                    sectionRefs.current.set(section.sectionId, el)
+                  }
                 }}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-accent hover:bg-card-bg rounded transition-colors"
+                className="mb-10 scroll-mt-20"
               >
-                <MessageSquarePlus className="w-4 h-4" />
-                Add Comment
-              </button>
-            </div>
-          )}
+                {section.sectionTitle && (
+                  <h2
+                    className="text-xl font-display text-foreground mb-5 pb-2 border-b border-border"
+                    style={{ letterSpacing: '-0.01em' }}
+                  >
+                    {section.sectionTitle}
+                  </h2>
+                )}
 
-          {chunks.length === 0 && (
-            <div className="text-center text-dim py-8">
-              No content available for this document
-            </div>
-          )}
-        </div>
+                {/* Enhanced typography for document content */}
+                <div
+                  className="text-foreground/90 document-content"
+                  style={{
+                    lineHeight: 'var(--leading-document, 1.7)',
+                  }}
+                >
+                  {section.chunks.map((chunk) => {
+                    const displayContent = stripDuplicateHeading(chunk.content, section.sectionTitle)
+
+                    return (
+                      <div
+                        key={chunk.id}
+                        data-chunk-id={chunk.id}
+                        ref={(el) => {
+                          if (el) chunkRefs.current.set(chunk.id, el)
+                        }}
+                        className="mb-5 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0
+                          [&>p]:mb-[1.25em] [&>p:last-child]:mb-0
+                          [&>ul]:my-4 [&>ul]:ml-4 [&>ul]:space-y-2
+                          [&>ol]:my-4 [&>ol]:ml-4 [&>ol]:space-y-2
+                          [&_ul_ul]:ml-6 [&_ol_ol]:ml-6 [&_ul_ol]:ml-6 [&_ol_ul]:ml-6
+                          [&_ul_ul_ul]:ml-6 [&_ol_ol_ol]:ml-6
+                          [&>li]:relative [&>li]:pl-6
+                          [&>blockquote]:border-l-2 [&>blockquote]:border-accent/50 [&>blockquote]:pl-4 [&>blockquote]:my-4 [&>blockquote]:italic [&>blockquote]:text-muted
+                          [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mt-8 [&>h1]:mb-4
+                          [&>h2]:text-xl [&>h2]:font-semibold [&>h2]:mt-6 [&>h2]:mb-3
+                          [&>h3]:text-lg [&>h3]:font-medium [&>h3]:mt-5 [&>h3]:mb-2
+                          [&>h4]:text-base [&>h4]:font-medium [&>h4]:mt-4 [&>h4]:mb-2 [&>h4]:text-muted
+                          [&>pre]:p-4 [&>pre]:rounded-lg [&>pre]:bg-muted/20 [&>pre]:overflow-x-auto [&>pre]:text-sm [&>pre]:my-4
+                          [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded [&>code]:bg-muted/30 [&>code]:text-[0.9em] [&>code]:font-mono
+                          [&>table]:w-full [&>table]:text-sm [&>table]:border-collapse [&>table]:my-4
+                          [&>table_th]:px-3 [&>table_th]:py-2 [&>table_th]:text-left [&>table_th]:font-semibold [&>table_th]:border-b [&>table_th]:border-border
+                          [&>table_td]:px-3 [&>table_td]:py-2 [&>table_td]:border-b [&>table_td]:border-border/50
+                          [&_strong]:font-semibold [&_strong]:text-foreground
+                          [&_em]:italic
+                          [&_a]:text-accent [&_a]:underline [&_a]:hover:no-underline"
+                      >
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {displayContent}
+                        </ReactMarkdown>
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
+            ))}
+
+            {/* Text Selection Popover for Collaborators */}
+            {textSelection && isCollaborator && onAddComment && (
+              <div
+                className="comment-popover absolute z-50 bg-background-elevated rounded-lg shadow-lg border border-border p-1 backdrop-blur-sm"
+                style={{
+                  left: textSelection.position.x,
+                  top: textSelection.position.y,
+                  transform: 'translate(-50%, -100%)',
+                }}
+              >
+                <button
+                  onClick={() => {
+                    onAddComment({
+                      chunkId: textSelection.chunkId,
+                      startOffset: textSelection.startOffset,
+                      endOffset: textSelection.endOffset,
+                      text: textSelection.text,
+                    })
+                    setTextSelection(null)
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-accent hover:bg-card-bg rounded transition-colors"
+                >
+                  <MessageSquarePlus className="w-4 h-4" />
+                  Add Comment
+                </button>
+              </div>
+            )}
+
+            {chunks.length === 0 && (
+              <div className="text-center text-dim py-8">
+                No content available for this document
+              </div>
+            )}
+          </PaperContainer>
+        ) : (
+          // Dark mode: existing styling
+          <div
+            className="p-6 mx-auto"
+            style={{
+              maxWidth: 'var(--max-line-document, 72ch)',
+              lineHeight: 'var(--leading-document, 1.7)',
+              letterSpacing: 'var(--letter-spacing-body, 0.01em)',
+            }}
+          >
+            {sectionedContent.map((section, idx) => (
+              <section
+                key={section.sectionId || `chunk-${idx}`}
+                id={`section-${section.sectionId}`}
+                ref={(el) => {
+                  if (el && section.sectionId) {
+                    sectionRefs.current.set(section.sectionId, el)
+                  }
+                }}
+                className="mb-10 scroll-mt-20"
+              >
+                {section.sectionTitle && (
+                  <h2
+                    className="text-xl font-display text-foreground mb-5 pb-2 border-b border-border"
+                    style={{ letterSpacing: '-0.01em' }}
+                  >
+                    {section.sectionTitle}
+                  </h2>
+                )}
+
+                {/* Enhanced typography for document content */}
+                <div
+                  className="text-foreground/90 document-content"
+                  style={{
+                    lineHeight: 'var(--leading-document, 1.7)',
+                  }}
+                >
+                  {section.chunks.map((chunk) => {
+                    const displayContent = stripDuplicateHeading(chunk.content, section.sectionTitle)
+
+                    return (
+                      <div
+                        key={chunk.id}
+                        data-chunk-id={chunk.id}
+                        ref={(el) => {
+                          if (el) chunkRefs.current.set(chunk.id, el)
+                        }}
+                        className="mb-5 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0
+                          [&>p]:mb-[1.25em] [&>p:last-child]:mb-0
+                          [&>ul]:my-4 [&>ul]:ml-4 [&>ul]:space-y-2
+                          [&>ol]:my-4 [&>ol]:ml-4 [&>ol]:space-y-2
+                          [&_ul_ul]:ml-6 [&_ol_ol]:ml-6 [&_ul_ol]:ml-6 [&_ol_ul]:ml-6
+                          [&_ul_ul_ul]:ml-6 [&_ol_ol_ol]:ml-6
+                          [&>li]:relative [&>li]:pl-6
+                          [&>blockquote]:border-l-2 [&>blockquote]:border-accent/50 [&>blockquote]:pl-4 [&>blockquote]:my-4 [&>blockquote]:italic [&>blockquote]:text-muted
+                          [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mt-8 [&>h1]:mb-4
+                          [&>h2]:text-xl [&>h2]:font-semibold [&>h2]:mt-6 [&>h2]:mb-3
+                          [&>h3]:text-lg [&>h3]:font-medium [&>h3]:mt-5 [&>h3]:mb-2
+                          [&>h4]:text-base [&>h4]:font-medium [&>h4]:mt-4 [&>h4]:mb-2 [&>h4]:text-muted
+                          [&>pre]:p-4 [&>pre]:rounded-lg [&>pre]:bg-muted/20 [&>pre]:overflow-x-auto [&>pre]:text-sm [&>pre]:my-4
+                          [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded [&>code]:bg-muted/30 [&>code]:text-[0.9em] [&>code]:font-mono
+                          [&>table]:w-full [&>table]:text-sm [&>table]:border-collapse [&>table]:my-4
+                          [&>table_th]:px-3 [&>table_th]:py-2 [&>table_th]:text-left [&>table_th]:font-semibold [&>table_th]:border-b [&>table_th]:border-border
+                          [&>table_td]:px-3 [&>table_td]:py-2 [&>table_td]:border-b [&>table_td]:border-border/50
+                          [&_strong]:font-semibold [&_strong]:text-foreground
+                          [&_em]:italic
+                          [&_a]:text-accent [&_a]:underline [&_a]:hover:no-underline"
+                      >
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {displayContent}
+                        </ReactMarkdown>
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
+            ))}
+
+            {/* Text Selection Popover for Collaborators */}
+            {textSelection && isCollaborator && onAddComment && (
+              <div
+                className="comment-popover absolute z-50 bg-background-elevated rounded-lg shadow-lg border border-border p-1 backdrop-blur-sm"
+                style={{
+                  left: textSelection.position.x,
+                  top: textSelection.position.y,
+                  transform: 'translate(-50%, -100%)',
+                }}
+              >
+                <button
+                  onClick={() => {
+                    onAddComment({
+                      chunkId: textSelection.chunkId,
+                      startOffset: textSelection.startOffset,
+                      endOffset: textSelection.endOffset,
+                      text: textSelection.text,
+                    })
+                    setTextSelection(null)
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-accent hover:bg-card-bg rounded transition-colors"
+                >
+                  <MessageSquarePlus className="w-4 h-4" />
+                  Add Comment
+                </button>
+              </div>
+            )}
+
+            {chunks.length === 0 && (
+              <div className="text-center text-dim py-8">
+                No content available for this document
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
+}
+
+// Helper to strip duplicate heading from chunk content if it matches section title
+function stripDuplicateHeading(content: string, sectionTitle: string | null): string {
+  if (!sectionTitle) return content
+
+  let displayContent = content
+  const sectionTitleNormalized = sectionTitle.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+  // Try 1: Match markdown headings at start: # Heading, ## Heading, etc.
+  const markdownMatch = displayContent.match(/^(#{1,6})\s+(.+?)(\n|$)/)
+  if (markdownMatch) {
+    const headingNormalized = markdownMatch[2].trim().toLowerCase().replace(/[^a-z0-9]/g, '')
+    if (sectionTitleNormalized === headingNormalized ||
+        sectionTitleNormalized.includes(headingNormalized) ||
+        headingNormalized.includes(sectionTitleNormalized)) {
+      displayContent = displayContent.replace(/^#{1,6}\s+.+?\n*/, '').trim()
+    }
+  }
+
+  // Try 2: Match plain text heading (first line matches section title)
+  const firstLine = displayContent.split('\n')[0]?.trim()
+  if (firstLine) {
+    const firstLineNormalized = firstLine.toLowerCase().replace(/[^a-z0-9]/g, '')
+    if (firstLineNormalized && (
+        sectionTitleNormalized === firstLineNormalized ||
+        (firstLineNormalized.length > 3 && sectionTitleNormalized.includes(firstLineNormalized)) ||
+        (sectionTitleNormalized.length > 3 && firstLineNormalized.includes(sectionTitleNormalized)))) {
+      displayContent = displayContent.replace(/^.+?\n*/, '').trim()
+    }
+  }
+
+  return displayContent
 }
 
 // Helper to group consecutive chunks by section

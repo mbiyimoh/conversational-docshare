@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { FileText, ChevronDown, ChevronRight } from 'lucide-react'
 import { Card } from './ui'
+import { cn } from '../lib/utils'
+import { useViewerPreferencesContext } from './viewer-prefs'
 
 interface DocumentOutlineSection {
   id: string
@@ -33,6 +35,10 @@ export function DocumentCapsule({
   // Track which documents are expanded
   const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set())
 
+  // Get paper mode preference
+  const { preferences } = useViewerPreferencesContext()
+  const isPaperMode = preferences.paperMode
+
   const toggleExpanded = (docId: string) => {
     setExpandedDocs((prev) => {
       const next = new Set(prev)
@@ -61,11 +67,24 @@ export function DocumentCapsule({
         className="flex-1 overflow-y-auto p-4 min-h-0"
         style={{ overscrollBehavior: 'contain' }}
       >
-        <div className="space-y-2">
+        <div
+          className={cn(
+            'space-y-2',
+            isPaperMode && 'bg-[#F5F3EF] rounded-lg p-4 shadow-md'
+          )}
+        >
           {documents.map((doc) => {
             const isExpanded = expandedDocs.has(doc.id)
             return (
-              <Card key={doc.id} className="p-0 overflow-hidden">
+              <Card
+                key={doc.id}
+                className={cn(
+                  'p-0 overflow-hidden',
+                  isPaperMode
+                    ? 'bg-white border-[#E0DCD6] hover:border-[#C4A77D] text-[#333333]'
+                    : 'bg-card-bg border-border hover:border-accent/50 text-foreground'
+                )}
+              >
                 {/* Document Header (clickable to expand) */}
                 <button
                   onClick={() => toggleExpanded(doc.id)}
@@ -74,7 +93,7 @@ export function DocumentCapsule({
                   <FileText className="w-5 h-5 text-accent shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
                     <div className="font-display text-foreground">
-                      {doc.title || doc.filename}
+                      {doc.filename}
                     </div>
                     {doc.summary && (
                       <p className="text-sm text-muted mt-1 line-clamp-2">

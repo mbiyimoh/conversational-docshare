@@ -4,6 +4,7 @@ import {
   DEFAULT_PREFERENCES,
   DepthLevel,
   FontFamily,
+  FontSize,
   ThemeName
 } from './viewerPrefsConfig'
 import { safeLocalStorage } from '../../lib/utils'
@@ -14,7 +15,9 @@ export interface UseViewerPreferencesReturn {
   preferences: ViewerPreferences
   updateDepth: (depth: DepthLevel) => void
   updateFont: (font: FontFamily) => void
+  updateFontSize: (fontSize: FontSize) => void
   updateTheme: (theme: ThemeName) => void
+  updatePaperMode: (paperMode: boolean) => void
   markOnboardingComplete: () => void
   resetOnboarding: () => void
   resetAll: () => void
@@ -49,8 +52,16 @@ export function useViewerPreferences(): UseViewerPreferencesReturn {
     setPreferences(prev => ({ ...prev, fontFamily }))
   }, [])
 
+  const updateFontSize = useCallback((fontSize: FontSize) => {
+    setPreferences(prev => ({ ...prev, fontSize }))
+  }, [])
+
   const updateTheme = useCallback((theme: ThemeName) => {
     setPreferences(prev => ({ ...prev, theme }))
+  }, [])
+
+  const updatePaperMode = useCallback((paperMode: boolean) => {
+    setPreferences(prev => ({ ...prev, paperMode }))
   }, [])
 
   const markOnboardingComplete = useCallback(() => {
@@ -70,7 +81,9 @@ export function useViewerPreferences(): UseViewerPreferencesReturn {
     preferences,
     updateDepth,
     updateFont,
+    updateFontSize,
     updateTheme,
+    updatePaperMode,
     markOnboardingComplete,
     resetOnboarding,
     resetAll

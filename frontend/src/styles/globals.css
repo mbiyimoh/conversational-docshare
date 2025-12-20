@@ -33,9 +33,30 @@
     --font-display: "Instrument Serif", Georgia, serif;
     --font-body: "DM Sans", -apple-system, sans-serif;
     --font-mono: "JetBrains Mono", monospace;
+    --font-size-base: 16px;
+
+    /* Elite Typography Scale */
+    --leading-chat: 1.65;             /* Optimal for dark mode reading */
+    --leading-document: 1.7;          /* Slightly more for long-form */
+    --spacing-paragraph: 1.25em;      /* Space between paragraphs */
+    --spacing-list-item: 0.5em;       /* Space between list items */
+    --spacing-heading: 1.5em;         /* Space above headings */
+    --max-line-chat: 66ch;            /* Optimal line length for chat */
+    --max-line-document: 72ch;        /* Slightly wider for documents */
+    --letter-spacing-body: 0.01em;    /* Slight character separation */
+    --font-weight-dark: 450;          /* Slightly heavier for dark mode */
 
     /* Spacing */
     --radius: 0.75rem;
+
+    /* Paper Mode Variables - Document-specific light theme */
+    --color-paper-bg: 40 23% 95%;           /* #F5F3EF warm cream */
+    --color-paper-text: 0 0% 13%;           /* #222222 near-black */
+    --color-paper-text-muted: 0 0% 40%;     /* #666666 muted */
+    --color-paper-border: 0 0% 85%;         /* #D9D9D9 subtle border */
+    --color-paper-shadow: 0 0% 0% / 0.08;   /* Soft shadow */
+    --color-paper-accent: 41 70% 45%;       /* Darker gold for contrast */
+    --color-paper-accent-bg: 41 70% 45% / 0.15;
 
     /* Legacy shadcn compatibility */
     --background: var(--color-bg);
@@ -105,6 +126,26 @@
   }
 }
 
+/* Citation highlight for paper mode */
+.paper-mode .citation-highlight {
+  animation: citation-glow-paper 2.5s ease-out forwards;
+}
+
+@keyframes citation-glow-paper {
+  0% {
+    background-color: hsl(41 70% 45% / 0.3);
+    box-shadow: 0 0 0 4px hsl(41 70% 45% / 0.2);
+  }
+  70% {
+    background-color: hsl(41 70% 45% / 0.3);
+    box-shadow: 0 0 0 4px hsl(41 70% 45% / 0.2);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
 /* Theme variants - applied via data-theme attribute or CSS variables */
 [data-theme="nord"] {
   --color-bg: 220 16% 22%;
@@ -154,6 +195,18 @@
   --color-border: 0 0% 100% / 0.1;
 }
 
+[data-theme="ocean-depth"] {
+  --color-bg: 210 50% 8%;
+  --color-bg-elevated: 210 45% 12%;
+  --color-bg-card: 210 40% 15% / 0.5;
+  --color-text: 185 40% 92%;
+  --color-text-muted: 200 25% 55%;
+  --color-text-dim: 200 20% 40%;
+  --color-accent: 175 60% 50%;
+  --color-accent-glow: 175 60% 50% / 0.3;
+  --color-border: 200 40% 30% / 0.4;
+}
+
 /* Jump indicator breathing animation */
 @keyframes breathe-glow {
   0%, 100% {
@@ -172,4 +225,62 @@
   .animate-breathe-glow {
     animation: none;
   }
+}
+
+/* ===========================================
+   Theme-Aware Scrollbar Styling
+   =========================================== */
+
+/* WebKit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--color-bg-elevated));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--color-text-dim));
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--color-text-muted));
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: hsl(var(--color-accent));
+}
+
+/* Corner where horizontal and vertical scrollbars meet */
+::-webkit-scrollbar-corner {
+  background: hsl(var(--color-bg-elevated));
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--color-text-dim)) hsl(var(--color-bg-elevated));
+}
+
+/* Thin scrollbar variant for nested containers */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
 }
