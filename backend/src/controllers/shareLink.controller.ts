@@ -480,6 +480,7 @@ export async function getShareLinkDocument(req: Request, res: Response) {
     select: {
       id: true,
       filename: true,
+      originalName: true,
       title: true,
       mimeType: true,
       outline: true,
@@ -494,7 +495,7 @@ export async function getShareLinkDocument(req: Request, res: Response) {
   res.json({
     document: {
       id: document.id,
-      filename: document.filename,
+      filename: document.originalName || document.filename, // Prefer original name for display
       title: document.title,
       mimeType: document.mimeType,
       outline: document.outline,
@@ -547,6 +548,7 @@ export async function getShareLinkDocuments(req: Request, res: Response) {
     select: {
       id: true,
       filename: true,
+      originalName: true,
       title: true,
       mimeType: true,
       outline: true,
@@ -560,7 +562,7 @@ export async function getShareLinkDocuments(req: Request, res: Response) {
   res.json({
     documents: documents.map((doc: typeof documents[0]) => ({
       id: doc.id,
-      filename: doc.filename,
+      filename: doc.originalName || doc.filename, // Prefer original name for display
       title: doc.title,
       mimeType: doc.mimeType,
       outline: doc.outline,

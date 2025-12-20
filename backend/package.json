@@ -18,7 +18,8 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "tsx prisma/seed.ts",
     "db:cleanup": "DOTENV_CONFIG_PATH=../.env tsx --require dotenv/config scripts/cleanup.ts",
-    "db:push": "DOTENV_CONFIG_PATH=../.env tsx --require dotenv/config scripts/db-push.ts"
+    "db:push": "DOTENV_CONFIG_PATH=../.env tsx --require dotenv/config scripts/db-push.ts",
+    "db:reprocess": "DOTENV_CONFIG_PATH=../.env tsx --require dotenv/config scripts/reprocess-documents.ts"
   },
   "keywords": [
     "api",
@@ -48,6 +49,7 @@
     "pdfjs-dist": "^4.0.379",
     "pg": "^8.13.1",
     "pgvector": "^0.2.0",
+    "turndown": "^7.2.2",
     "uuid": "^13.0.0",
     "workerpool": "^10.0.1",
     "xlsx": "^0.18.5",
@@ -62,6 +64,7 @@
     "@types/node": "^22.10.1",
     "@types/pg": "^8.11.10",
     "@types/supertest": "^6.0.3",
+    "@types/turndown": "^5.0.6",
     "@typescript-eslint/eslint-plugin": "^8.16.0",
     "@typescript-eslint/parser": "^8.16.0",
     "axios": "^1.13.2",

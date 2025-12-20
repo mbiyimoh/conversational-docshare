@@ -301,4 +301,5 @@ export async function retryDocument(req: Request, res: Response) {
   })
 
   res.json({ message: 'Document queued for reprocessing' })
+  return
 }

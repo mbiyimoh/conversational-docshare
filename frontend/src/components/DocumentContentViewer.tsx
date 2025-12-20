@@ -320,16 +320,16 @@ export function DocumentContentViewer({
               >
                 {section.sectionTitle && (
                   <h2
-                    className="text-xl font-display text-foreground mb-5 pb-2 border-b border-border"
+                    className="text-xl font-display text-[#1a1a1a] mb-5 pb-2 border-b border-[#D9D9D9]"
                     style={{ letterSpacing: '-0.01em' }}
                   >
                     {section.sectionTitle}
                   </h2>
                 )}
 
-                {/* Enhanced typography for document content */}
+                {/* Enhanced typography for document content - paper mode specific colors */}
                 <div
-                  className="text-foreground/90 document-content"
+                  className="text-[#333333] document-content"
                   style={{
                     lineHeight: 'var(--leading-document, 1.7)',
                   }}
@@ -351,19 +351,19 @@ export function DocumentContentViewer({
                           [&_ul_ul]:ml-6 [&_ol_ol]:ml-6 [&_ul_ol]:ml-6 [&_ol_ul]:ml-6
                           [&_ul_ul_ul]:ml-6 [&_ol_ol_ol]:ml-6
                           [&>li]:relative [&>li]:pl-6
-                          [&>blockquote]:border-l-2 [&>blockquote]:border-accent/50 [&>blockquote]:pl-4 [&>blockquote]:my-4 [&>blockquote]:italic [&>blockquote]:text-muted
-                          [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mt-8 [&>h1]:mb-4
-                          [&>h2]:text-xl [&>h2]:font-semibold [&>h2]:mt-6 [&>h2]:mb-3
-                          [&>h3]:text-lg [&>h3]:font-medium [&>h3]:mt-5 [&>h3]:mb-2
-                          [&>h4]:text-base [&>h4]:font-medium [&>h4]:mt-4 [&>h4]:mb-2 [&>h4]:text-muted
-                          [&>pre]:p-4 [&>pre]:rounded-lg [&>pre]:bg-muted/20 [&>pre]:overflow-x-auto [&>pre]:text-sm [&>pre]:my-4
-                          [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded [&>code]:bg-muted/30 [&>code]:text-[0.9em] [&>code]:font-mono
+                          [&>blockquote]:border-l-2 [&>blockquote]:border-[#C4A77D] [&>blockquote]:pl-4 [&>blockquote]:my-4 [&>blockquote]:italic [&>blockquote]:text-[#555555]
+                          [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:mt-8 [&>h1]:mb-4 [&>h1]:text-[#1a1a1a]
+                          [&>h2]:text-xl [&>h2]:font-semibold [&>h2]:mt-6 [&>h2]:mb-3 [&>h2]:text-[#1a1a1a]
+                          [&>h3]:text-lg [&>h3]:font-medium [&>h3]:mt-5 [&>h3]:mb-2 [&>h3]:text-[#1a1a1a]
+                          [&>h4]:text-base [&>h4]:font-medium [&>h4]:mt-4 [&>h4]:mb-2 [&>h4]:text-[#555555]
+                          [&>pre]:p-4 [&>pre]:rounded-lg [&>pre]:bg-[#E8E4DE] [&>pre]:overflow-x-auto [&>pre]:text-sm [&>pre]:my-4
+                          [&>code]:px-1.5 [&>code]:py-0.5 [&>code]:rounded [&>code]:bg-[#E8E4DE] [&>code]:text-[0.9em] [&>code]:font-mono [&>code]:text-[#333333]
                           [&>table]:w-full [&>table]:text-sm [&>table]:border-collapse [&>table]:my-4
-                          [&>table_th]:px-3 [&>table_th]:py-2 [&>table_th]:text-left [&>table_th]:font-semibold [&>table_th]:border-b [&>table_th]:border-border
-                          [&>table_td]:px-3 [&>table_td]:py-2 [&>table_td]:border-b [&>table_td]:border-border/50
-                          [&_strong]:font-semibold [&_strong]:text-foreground
+                          [&>table_th]:px-3 [&>table_th]:py-2 [&>table_th]:text-left [&>table_th]:font-semibold [&>table_th]:border-b [&>table_th]:border-[#D9D9D9]
+                          [&>table_td]:px-3 [&>table_td]:py-2 [&>table_td]:border-b [&>table_td]:border-[#D9D9D9]/50
+                          [&_strong]:font-semibold [&_strong]:text-[#1a1a1a]
                           [&_em]:italic
-                          [&_a]:text-accent [&_a]:underline [&_a]:hover:no-underline"
+                          [&_a]:text-[#8B7355] [&_a]:underline [&_a]:hover:no-underline"
                       >
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                           {displayContent}
