@@ -94,6 +94,49 @@ Chat-first document sharing: creators upload docs, configure AI via interview, s
 
 ## Critical Patterns
 
+### Document Upload & Processing
+
+**Upload Flow:** Client → Multer middleware → `documentProcessor.ts` → Queue → RAG pipeline
+
+**Production Upload Fixes (CRITICAL):**
+
+1. **CORS + Content-Type** - Multer requires proper CORS and explicit `Content-Type: multipart/form-data`
+   - File: `backend/src/index.ts:19-30` - CORS config with credentials
+   - Client must NOT set `Content-Type` header (browser sets it with boundary)
+
+2. **File Size Limits** - Multer enforces 50MB limit
+   - File: `backend/src/middleware/upload.ts:6` - `limits: { fileSize: 50 * 1024 * 1024 }`
+   - Error: "File too large" triggers before upload completion
+
+3. **Temporary File Cleanup** - Multer stores in `/tmp`, must move to permanent storage
+   - File: `document.controller.ts:37-46` - Moves from `file.path` to `uploads/`
+   - Gotcha: Production Railway ephemeral filesystem requires external storage (S3/Cloudflare R2)
+
+**Document Reprocessing:**
+- Script: `backend/scripts/reprocess-documents.ts` - Reprocesses failed documents
+- Service: `backend/src/services/documentReprocessor.ts` - Handles retry logic
+- Use when: Documents stuck in `processing` status or missing embeddings
+
+**Duplicate Header Stripping (CRITICAL):**
+
+Documents often have section heading duplicated in markdown:
+```markdown
+# Board Memo
+
+Board Memo content here...
+```
+
+**Fix:** `DocumentContentViewer.tsx:556` uses regex `/^[^\n]+\n*/` to strip first line
+- OLD BUG: `/^.+?\n*/` (non-greedy) only matched 1 char, leaving "oard Memo"
+- FIX: `/^[^\n]+\n*/` (greedy non-newline) matches full first line
+
+**When to apply:**
+- Document title matches first line of content
+- Markdown headers (`# Title`) when section title matches
+- Normalize both strings (lowercase, remove non-alphanumeric) for comparison
+
+**Files:** `DocumentContentViewer.tsx:544-558`
+
 ### Context Layers
 ```typescript
 const layers = await prisma.contextLayer.findMany({ where: { projectId, isActive: true }, orderBy: { priority: 'asc' } })
@@ -137,6 +180,36 @@ if (doc.internalFilename && doc.internalFilename !== doc.filename) {
 ```
 
 **Files:** `embeddingService.ts:111-181` | `shareLink.controller.ts` | `api.ts:444-456` | `documentLookup.ts:72-82`
+
+**Citation Enrichment Pattern (CRITICAL):**
+
+All components that render citations MUST use the fallback pattern to handle cases where section lookup fails:
+
+```typescript
+// Enrich citations with document/section titles
+const enrichedCitations: Citation[] = collected.map((c) => {
+  const sectionInfo = getSectionInfo(c.filename, c.sectionId)
+  // If section lookup fails, still try to get document display name
+  // This handles cases where section ID doesn't match but document exists
+  const documentTitle = sectionInfo?.documentTitle || getDocumentDisplayName(c.filename)
+  return {
+    number: c.number,
+    filename: c.filename,
+    sectionId: c.sectionId,
+    documentTitle: documentTitle || undefined,
+    sectionTitle: sectionInfo?.sectionTitle,
+  }
+})
+```
+
+**Components using this pattern:**
+- `ChatMessage.tsx:49-61` - Share page chat
+- `ConversationDetailPanel.tsx:61-71` - Analytics conversation detail
+- `DojoChat.tsx:26-38` - Testing Dojo messages
+
+**Gotcha:** If you add citation rendering to a new component, apply this fallback pattern. Without it, citations will show internal alphanumeric filenames when section lookup fails.
+
+**Why it's needed:** AI may reference sections that were deleted/renamed, or use stale section IDs. The fallback ensures we show the document name even when section lookup fails.
 
 ### Access Types
 `public_password` | `email_required` (captures leads) | `whitelist`
@@ -225,6 +298,53 @@ const calculateTextOffset = (container: HTMLElement, range: Range): number => {
 ```
 
 **useCallback Gotcha:** Include all called functions in deps; wrap async functions in useCallback first.
+
+---
+
+## Document Viewer Preferences & Paper Mode
+
+**What it does:** Personalized reading experience for shared document viewers via CSS custom properties.
+
+**Key Files:**
+- `ViewerPreferencesProvider.tsx` - Context provider that manages preferences + localStorage
+- `ViewerPreferencesOnboarding.tsx` - First-time preference collection modal
+- `DocumentContentViewer.tsx` - Applies CSS variables to content
+- `ChatMessage.tsx` - Applies CSS variables to chat messages
+
+**CSS Variables Applied:**
+```css
+--font-body-chat: /* Font family for chat */
+--font-body-doc: /* Font family for document viewer */
+--font-size-doc: /* Base font size */
+--leading-doc: /* Line height for documents */
+--leading-chat: /* Line height for chat */
+--max-line-doc: /* Max line width for documents */
+--max-line-chat: /* Max line width for chat */
+--letter-spacing-body: /* Letter spacing */
+```
+
+**Paper Mode:** Special high-contrast theme for document viewer
+- Background: `#f8f6f0` (cream)
+- Text: `#1a1a1a` (near-black)
+- Applied via `data-paper-mode="true"` attribute
+- Only affects document content, not surrounding UI
+
+**Integration Points:**
+- Preferences stored in `localStorage` as `viewer_preferences_{slug}`
+- Onboarding shows once per share link (stored in `localStorage` as `viewer_onboarding_completed_{slug}`)
+- Provider wraps entire `ShareLinkView` component
+- CSS vars set on `documentElement` for global access
+
+**Gotchas:**
+- Paper mode requires explicit background color on document container, not just CSS var
+- Font selector must handle system fonts like `-apple-system` correctly
+- CSS vars must be set before rendering to avoid flash of unstyled content
+- Line height (leading) values are unitless multipliers (e.g., `1.65` not `1.65em`)
+
+**Extending this:**
+- Add new preferences to `ViewerPreferences` type in `ViewerPreferencesProvider.tsx`
+- Add corresponding CSS var to `applyPreferences()` function
+- Add UI control in `ViewerPreferencesOnboarding.tsx`
 
 ---
 
