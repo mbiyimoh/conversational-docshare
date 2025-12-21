@@ -7,7 +7,7 @@ import { ConversationRecommendations } from './ConversationRecommendations'
 import { Card, Badge } from './ui'
 import { X, ArrowLeft, Lightbulb, Clock, MessageSquare, User } from 'lucide-react'
 import { convertCitationsToNumbered, citationUrlTransform, parseCitationUrl } from '../lib/documentReferences'
-import { getSectionInfo } from '../lib/documentLookup'
+import { getSectionInfo, getDocumentDisplayName } from '../lib/documentLookup'
 import { createMarkdownComponents } from '../lib/markdownConfig'
 import { CitationPill } from './chat/CitationPill'
 import { CitationBlock, type Citation } from './chat/CitationBlock'
@@ -60,11 +60,13 @@ function ConversationMessageContent({ content, isUser }: { content: string; isUs
     // Enrich citations with document/section titles
     const enrichedCitations: Citation[] = collected.map((c) => {
       const sectionInfo = getSectionInfo(c.filename, c.sectionId)
+      // If section lookup fails, still try to get document display name
+      const documentTitle = sectionInfo?.documentTitle || getDocumentDisplayName(c.filename)
       return {
         number: c.number,
         filename: c.filename,
         sectionId: c.sectionId,
-        documentTitle: sectionInfo?.documentTitle,
+        documentTitle: documentTitle || undefined,
         sectionTitle: sectionInfo?.sectionTitle,
       }
     })

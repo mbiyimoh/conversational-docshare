@@ -553,7 +553,9 @@ function stripDuplicateHeading(content: string, sectionTitle: string | null): st
         sectionTitleNormalized === firstLineNormalized ||
         (firstLineNormalized.length > 3 && sectionTitleNormalized.includes(firstLineNormalized)) ||
         (sectionTitleNormalized.length > 3 && firstLineNormalized.includes(sectionTitleNormalized)))) {
-      displayContent = displayContent.replace(/^.+?\n*/, '').trim()
+      // Use [^\n]+ (greedy non-newline chars) instead of .+? (non-greedy any char)
+      // .+? matches only 1 char minimum, leaving "ECITALS" when stripping "RECITALS"
+      displayContent = displayContent.replace(/^[^\n]+\n*/, '').trim()
     }
   }
 

@@ -204,6 +204,22 @@ export function isCacheInitialized(slug: string): boolean {
 }
 
 /**
+ * Get document display name by filename (internal or original)
+ * Used for fallback when section lookup fails but we still need the document name.
+ *
+ * @param filename - The filename from the citation (could be internal or display name)
+ * @returns Display filename or null if not found
+ */
+export function getDocumentDisplayName(filename: string): string | null {
+  const doc = lookupDocumentByFilename(filename)
+  if (!doc) {
+    return null
+  }
+  // doc.filename is already the display name (originalName || internal_filename from API)
+  return doc.filename
+}
+
+/**
  * Get section title by filename and section ID
  * Used for displaying human-readable section names in citations
  *
