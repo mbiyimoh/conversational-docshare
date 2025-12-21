@@ -5,7 +5,7 @@ import { ChatInput } from '../ChatInput'
 import { CommentOverlay } from './CommentOverlay'
 import { api } from '../../lib/api'
 import { convertCitationsToNumbered, citationUrlTransform, parseCitationUrl } from '../../lib/documentReferences'
-import { getSectionInfo } from '../../lib/documentLookup'
+import { getSectionInfo, getDocumentDisplayName } from '../../lib/documentLookup'
 import { createMarkdownComponents } from '../../lib/markdownConfig'
 import { CitationPill } from '../chat/CitationPill'
 import { CitationBlock, type Citation } from '../chat/CitationBlock'
@@ -25,11 +25,14 @@ function DojoMessageContent({ content, isUser }: { content: string; isUser: bool
     // Enrich citations with document/section titles
     const enrichedCitations: Citation[] = collected.map((c) => {
       const sectionInfo = getSectionInfo(c.filename, c.sectionId)
+      // If section lookup fails, still try to get document display name
+      // This handles cases where section ID doesn't match but document exists
+      const documentTitle = sectionInfo?.documentTitle || getDocumentDisplayName(c.filename)
       return {
         number: c.number,
         filename: c.filename,
         sectionId: c.sectionId,
-        documentTitle: sectionInfo?.documentTitle,
+        documentTitle: documentTitle || undefined,
         sectionTitle: sectionInfo?.sectionTitle,
       }
     })
