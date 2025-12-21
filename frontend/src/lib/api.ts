@@ -202,6 +202,12 @@ class ApiClient {
 
   // Document endpoints
   async uploadDocument(projectId: string, file: File) {
+    // Always sync token from localStorage before upload to handle HMR/module reload edge cases
+    const storedToken = localStorage.getItem('auth_token')
+    if (storedToken && !this.token) {
+      this.token = storedToken
+    }
+
     const formData = new FormData()
     formData.append('document', file)
 
@@ -217,7 +223,13 @@ class ApiClient {
     })
 
     if (!response.ok) {
-      const error = await response.json()
+      const errorText = await response.text()
+      let error
+      try {
+        error = JSON.parse(errorText)
+      } catch {
+        throw new Error(`Upload failed: ${errorText}`)
+      }
       throw new Error(error.error?.message || 'Upload failed')
     }
 

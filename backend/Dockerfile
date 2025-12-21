@@ -37,11 +37,14 @@ COPY --from=builder /app/dist ./dist
 # Generate Prisma client in production image
 RUN npx prisma generate
 
+# Create uploads directory
+RUN mkdir -p /app/uploads
+
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Change ownership
+# Change ownership (including uploads directory)
 RUN chown -R nodejs:nodejs /app
 
 USER nodejs

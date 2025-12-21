@@ -1,6 +1,7 @@
 import multer from 'multer'
 import path from 'path'
 import crypto from 'crypto'
+import fs from 'fs'
 import { Request, Response, NextFunction } from 'express'
 import { ValidationError } from '../utils/errors'
 
@@ -18,6 +19,11 @@ const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE || '52428800', 10)
 
 // Upload directory
 const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads'
+
+// Ensure upload directory exists at startup
+if (!fs.existsSync(UPLOAD_DIR)) {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true })
+}
 
 /**
  * Multer storage configuration
