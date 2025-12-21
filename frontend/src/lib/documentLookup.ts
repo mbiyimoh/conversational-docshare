@@ -226,7 +226,9 @@ export function getSectionInfo(
   }
 
   return {
-    documentTitle: doc.title || doc.filename,
+    // Use filename (which is already originalName || internal_filename from API)
+    // NOT doc.title - that often contains the first section heading, not the document name
+    documentTitle: doc.filename,
     sectionTitle: section.title,
   }
 }
