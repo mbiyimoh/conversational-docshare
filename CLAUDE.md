@@ -37,6 +37,26 @@ Product owner (non-engineer). Claude handles ALL technical operations.
 
 ---
 
+## Dev Environment Reset (When Changes Don't Appear)
+
+**Problem:** Code changes not showing in browser despite hard refresh or incognito mode.
+
+**Command:** `/dev:fresh-start` - Kills all dev processes, clears caches, restarts servers.
+
+**What it does (SAFE):**
+- Kills Vite + backend processes (this project only)
+- Clears `.vite` module cache
+- Restarts both dev servers
+
+**What it does NOT do:**
+- Does NOT touch database
+- Does NOT delete source files or node_modules
+- Does NOT affect git
+
+**After running:** Hard refresh browser (Cmd+Shift+R) or use fresh incognito window.
+
+---
+
 ## Scroll Containment (CRITICAL)
 
 **Problem:** `scrollIntoView()` scrolls viewport, not just panel.
@@ -81,8 +101,42 @@ const byCategory = groupBy(layers, 'category')
 ```
 **Rule:** NEVER manually edit layers - re-run interview to change behavior.
 
-### Document References
-`[DOC:filename:section-id]` → Frontend opens, scrolls, highlights
+### Document References & Citations
+
+**Format:** `[DOC:filename:section-id]` → Frontend opens, scrolls, highlights
+
+**Dual-Filename System (CRITICAL):**
+
+Documents have TWO filenames:
+
+1. **Internal filename** (`filename` in DB): Storage identifier with timestamp + hash
+   - Example: `1766337527304_631ff5d36a408576.docx`
+   - Used by AI in RAG citations
+   - Stored in `documents.filename` column
+
+2. **Display filename** (`originalName` in DB): User-uploaded name
+   - Example: `Board_Memo.docx`
+   - Shown in UI for human readability
+   - Stored in `documents.originalName` column
+
+**Citation Resolution Flow:**
+
+- **Backend RAG:** `embeddingService.ts:111-181` returns BOTH filenames
+- **API Layer:** `shareLink.controller.ts` exposes `filename` (display) + `internalFilename` (storage)
+- **Frontend Lookup:** `documentLookup.ts:72-82` maps by BOTH for O(1) resolution
+
+**Gotcha:** Citations use internal filenames but UI shows display names. Frontend cache MUST map both:
+```typescript
+// Map display filename
+byFilename.set(doc.filename.toLowerCase(), doc)
+
+// CRITICAL: Also map internal filename for citation matching
+if (doc.internalFilename && doc.internalFilename !== doc.filename) {
+  byFilename.set(doc.internalFilename.toLowerCase(), doc)
+}
+```
+
+**Files:** `embeddingService.ts:111-181` | `shareLink.controller.ts` | `api.ts:444-456` | `documentLookup.ts:72-82`
 
 ### Access Types
 `public_password` | `email_required` (captures leads) | `whitelist`
