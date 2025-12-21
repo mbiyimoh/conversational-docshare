@@ -77,7 +77,13 @@ export async function sendMessage(req: Request, res: Response) {
  */
 export async function sendMessageStream(req: Request, res: Response) {
   const { conversationId } = req.params
-  const { message } = req.body
+  const { message, preferences } = req.body
+
+  // Validate depth preference (enum validation)
+  const validDepths = ['concise', 'balanced', 'detailed'] as const
+  const viewerDepth = validDepths.includes(preferences?.depth)
+    ? (preferences.depth as 'concise' | 'balanced' | 'detailed')
+    : 'balanced'
 
   if (!message) {
     res.status(400).json({
@@ -105,12 +111,12 @@ export async function sendMessageStream(req: Request, res: Response) {
   res.setHeader('Connection', 'keep-alive')
 
   try {
-    // Generate response with streaming
+    // Generate response with streaming and depth preference
     const stream = await generateChatCompletion(
       conversation.projectId,
       conversationId,
       message,
-      { stream: true }
+      { stream: true, depth: viewerDepth }
     )
 
     // Stream chunks to client

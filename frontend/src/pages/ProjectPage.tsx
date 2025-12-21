@@ -163,7 +163,7 @@ export function ProjectPage() {
         </div>
 
         <div role="tabpanel" hidden={activeTab !== 'share'}>
-          {activeTab === 'share' && <ShareLinkManager projectId={projectId!} />}
+          {activeTab === 'share' && <ShareLinkManager projectId={projectId!} projectName={project?.name} />}
         </div>
 
         <div role="tabpanel" hidden={activeTab !== 'analytics'}>

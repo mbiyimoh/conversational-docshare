@@ -6,9 +6,11 @@ import { RecipientMessageDisplay } from './RecipientMessageDisplay'
 import { ConversationRecommendations } from './ConversationRecommendations'
 import { Card, Badge } from './ui'
 import { X, ArrowLeft, Lightbulb, Clock, MessageSquare, User } from 'lucide-react'
-import { convertCitationsToMarkdownLinks, citationUrlTransform, parseCitationUrl } from '../lib/documentReferences'
+import { convertCitationsToNumbered, citationUrlTransform, parseCitationUrl } from '../lib/documentReferences'
 import { getSectionInfo } from '../lib/documentLookup'
 import { createMarkdownComponents } from '../lib/markdownConfig'
+import { CitationPill } from './chat/CitationPill'
+import { CitationBlock, type Citation } from './chat/CitationBlock'
 
 interface ConversationMessage {
   id: string
@@ -47,37 +49,28 @@ interface ConversationDetailPanelProps {
 }
 
 /**
- * Citation display for document references (non-clickable, display-only)
- */
-function CitationDisplay({ filename, sectionId }: { filename: string; sectionId: string }) {
-  const sectionInfo = getSectionInfo(filename, sectionId)
-  const displayText = sectionInfo
-    ? `${sectionInfo.documentTitle}: ${sectionInfo.sectionTitle}`
-    : filename
-
-  return (
-    <span
-      className="inline-flex items-center gap-1 text-accent font-medium mx-1"
-      title={`${filename}, section: ${sectionInfo?.sectionTitle || sectionId}`}
-    >
-      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-        />
-      </svg>
-      <span className="break-words">{displayText}</span>
-    </span>
-  )
-}
-
-/**
  * Markdown content renderer with citation support for conversation messages
+ * Uses numbered citation pills with collapsible citation block (display-only, non-clickable)
  */
 function ConversationMessageContent({ content, isUser }: { content: string; isUser: boolean }) {
-  const processedContent = useMemo(() => convertCitationsToMarkdownLinks(content), [content])
+  // Convert citations to numbered format and collect citation data
+  const { processedContent, citations } = useMemo(() => {
+    const { content: processed, citations: collected } = convertCitationsToNumbered(content)
+
+    // Enrich citations with document/section titles
+    const enrichedCitations: Citation[] = collected.map((c) => {
+      const sectionInfo = getSectionInfo(c.filename, c.sectionId)
+      return {
+        number: c.number,
+        filename: c.filename,
+        sectionId: c.sectionId,
+        documentTitle: sectionInfo?.documentTitle,
+        sectionTitle: sectionInfo?.sectionTitle,
+      }
+    })
+
+    return { processedContent: processed, citations: enrichedCitations }
+  }, [content])
 
   const markdownComponents = useMemo(
     () =>
@@ -86,8 +79,13 @@ function ConversationMessageContent({ content, isUser }: { content: string; isUs
         renderLink: ({ href }) => {
           // Citations display-only (not clickable in conversation detail view)
           const citation = parseCitationUrl(href || '')
-          if (citation) {
-            return <CitationDisplay filename={citation.filename} sectionId={citation.sectionId} />
+          if (citation && citation.number !== undefined) {
+            return (
+              <CitationPill
+                number={citation.number}
+                isUserMessage={isUser}
+              />
+            )
           }
           // Regular links use default rendering from shared config
           return undefined
@@ -101,6 +99,10 @@ function ConversationMessageContent({ content, isUser }: { content: string; isUs
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents} urlTransform={citationUrlTransform}>
         {processedContent}
       </ReactMarkdown>
+      {/* Citation block for messages with citations */}
+      {citations.length > 0 && (
+        <CitationBlock citations={citations} />
+      )}
     </div>
   )
 }

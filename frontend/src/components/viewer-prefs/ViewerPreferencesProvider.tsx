@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, ReactNode } from 'react'
 import { useViewerPreferences, UseViewerPreferencesReturn } from './useViewerPreferences'
-import { THEME_OPTIONS, FONT_OPTIONS } from './viewerPrefsConfig'
+import { THEME_OPTIONS, FONT_OPTIONS, FONT_SIZE_OPTIONS } from './viewerPrefsConfig'
 
 const ViewerPreferencesContext = createContext<UseViewerPreferencesReturn | null>(null)
 
@@ -50,6 +50,15 @@ export function ViewerPreferencesProvider({ children }: ViewerPreferencesProvide
     const root = document.documentElement
     root.style.setProperty('--font-body', font.fontStack)
   }, [preferences.fontFamily])
+
+  // Apply font size when it changes
+  useEffect(() => {
+    const fontSize = FONT_SIZE_OPTIONS.find(f => f.value === preferences.fontSize)
+    if (!fontSize) return
+
+    const root = document.documentElement
+    root.style.setProperty('--font-size-base', fontSize.cssValue)
+  }, [preferences.fontSize])
 
   return (
     <ViewerPreferencesContext.Provider value={preferencesState}>

@@ -9,7 +9,8 @@ import { api } from './api'
 
 export interface DocumentInfo {
   id: string
-  filename: string
+  filename: string // Display name (originalName || filename)
+  internalFilename?: string // Internal storage filename for citation matching
   title: string
   mimeType: string
   outline: Array<{ id: string; title: string; level: number; position: number }>
@@ -52,13 +53,14 @@ export async function initDocumentLookup(
   try {
     const { documents } = await api.getShareLinkDocuments(slug)
 
+
     // Build lookup maps
     const byFilename = new Map<string, DocumentInfo>()
     const byId = new Map<string, DocumentInfo>()
     const byTitle = new Map<string, DocumentInfo>()
 
     for (const doc of documents) {
-      // Map by filename (primary lookup for citations)
+      // Map by display filename (for UI lookups)
       byFilename.set(doc.filename.toLowerCase(), doc)
 
       // Also map without extension for flexibility
@@ -67,11 +69,25 @@ export async function initDocumentLookup(
         byFilename.set(nameWithoutExt, doc)
       }
 
+      // CRITICAL: Also map by internal filename for citation resolution
+      // Citations use internal filenames (e.g., "1766337527304_631ff5d36a408576.docx")
+      // but the display shows original names (e.g., "Board_Memo.docx")
+      if (doc.internalFilename && doc.internalFilename !== doc.filename) {
+        byFilename.set(doc.internalFilename.toLowerCase(), doc)
+        // Also map internal filename without extension
+        const internalWithoutExt = doc.internalFilename.replace(/\.[^.]+$/, '').toLowerCase()
+        if (!byFilename.has(internalWithoutExt)) {
+          byFilename.set(internalWithoutExt, doc)
+        }
+      }
+
       // Map by ID
       byId.set(doc.id, doc)
 
       // Map by title
-      byTitle.set(doc.title.toLowerCase(), doc)
+      if (doc.title) {
+        byTitle.set(doc.title.toLowerCase(), doc)
+      }
     }
 
     documentCache = {

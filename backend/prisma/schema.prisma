@@ -300,7 +300,8 @@ model ShareLink {
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   // Link details
-  slug       String @unique // Short, shareable identifier
+  slug       String  @unique // Short, shareable identifier
+  name       String? @db.VarChar(100) // Human-readable display name (max 100 chars)
   accessType String // open, email, password, domain
 
   // Recipient role (viewer can chat, collaborator can also comment)

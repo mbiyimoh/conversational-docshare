@@ -120,6 +120,7 @@ export async function searchSimilarChunks(
     sectionTitle: string | null
     sectionId: string | null
     filename: string
+    originalName: string
     documentTitle: string
   }>
 > {
@@ -128,6 +129,7 @@ export async function searchSimilarChunks(
 
   // Search for similar chunks using cosine similarity
   // Note: PostgreSQL requires quoted identifiers for camelCase column names
+  // Returns both internal filename (for citation matching) and originalName (for display)
   const results = await prisma.$queryRaw<
     Array<{
       id: string
@@ -135,6 +137,7 @@ export async function searchSimilarChunks(
       sectionTitle: string | null
       sectionId: string | null
       filename: string
+      originalName: string
       documentTitle: string
       similarity: number
     }>
@@ -145,7 +148,8 @@ export async function searchSimilarChunks(
       dc."sectionTitle",
       dc."sectionId",
       d.filename,
-      d.title as "documentTitle",
+      d."originalName",
+      COALESCE(d.title, d."originalName", d.filename) as "documentTitle",
       1 - (dc.embedding <=> ${JSON.stringify(queryEmbedding)}::vector) as similarity
     FROM document_chunks dc
     INNER JOIN documents d ON dc."documentId" = d.id
@@ -162,6 +166,7 @@ export async function searchSimilarChunks(
     sectionTitle: string | null;
     sectionId: string | null;
     filename: string;
+    originalName: string;
     documentTitle: string;
   }) => ({
     chunkId: r.id,
@@ -170,6 +175,7 @@ export async function searchSimilarChunks(
     sectionTitle: r.sectionTitle,
     sectionId: r.sectionId,
     filename: r.filename,
+    originalName: r.originalName,
     documentTitle: r.documentTitle,
   }))
 }

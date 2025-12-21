@@ -49,7 +49,22 @@
       "WebFetch(domain:medium.com)",
       "WebFetch(domain:www.robinwieruch.de)",
       "WebFetch(domain:blog.logrocket.com)",
-      "WebFetch(domain:refine.dev)"
+      "WebFetch(domain:refine.dev)",
+      "SlashCommand(/methodical-debug:*)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:dipbazz.medium.com)",
+      "WebFetch(domain:dillionmegida.com)",
+      "WebFetch(domain:docs.railway.com)",
+      "WebFetch(domain:nixpacks.com)",
+      "WebFetch(domain:thomashunter.name)",
+      "WebFetch(domain:formfunction.medium.com)",
+      "WebFetch(domain:gist.github.com)",
+      "WebFetch(domain:dev.to)",
+      "WebFetch(domain:web.dev)",
+      "WebFetch(domain:ryanccn.dev)",
+      "WebFetch(domain:railway.com)",
+      "WebFetch(domain:www.nordtheme.com)",
+      "SlashCommand(/deploy:push-and-check-railway)"
     ],
     "deny": [],
     "ask": []

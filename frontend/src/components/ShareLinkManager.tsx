@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { api } from '../lib/api'
 import type { AudienceProfile, CollaboratorProfile } from './SavedProfilesSection'
 import { Card, Button, Badge, Input } from './ui'
-import { Link, Copy, Trash2, Users, UserCheck } from 'lucide-react'
+import { Link, Copy, Trash2, Users, UserCheck, ChevronDown, ChevronUp } from 'lucide-react'
 
 interface ShareLink {
   id: string
   slug: string
+  name: string | null
   accessType: string
   currentViews: number
   createdAt: string
@@ -16,9 +17,24 @@ interface ShareLink {
 
 interface ShareLinkManagerProps {
   projectId: string
+  projectName?: string
 }
 
-export function ShareLinkManager({ projectId }: ShareLinkManagerProps) {
+/**
+ * Validate custom slug format.
+ * Must start/end with alphanumeric, hyphens only between words, 3-50 chars.
+ */
+function validateSlug(slug: string): string | null {
+  if (!slug) return null // Empty is valid (will use random)
+  if (slug.length < 3) return 'Slug must be at least 3 characters'
+  if (slug.length > 50) return 'Slug must be 50 characters or less'
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+    return 'Use lowercase letters, numbers, and hyphens only (no leading/trailing hyphens)'
+  }
+  return null
+}
+
+export function ShareLinkManager({ projectId, projectName = 'Project' }: ShareLinkManagerProps) {
   const [shareLinks, setShareLinks] = useState<ShareLink[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
@@ -28,11 +44,36 @@ export function ShareLinkManager({ projectId }: ShareLinkManagerProps) {
   const [error, setError] = useState('')
   const [notification, setNotification] = useState<string | null>(null)
 
+  // Link name and custom slug state
+  const [linkName, setLinkName] = useState('')
+  const [customSlug, setCustomSlug] = useState('')
+  const [showCustomSlug, setShowCustomSlug] = useState(false)
+  const [slugError, setSlugError] = useState('')
+
   // Profile import state
   const [audienceProfiles, setAudienceProfiles] = useState<AudienceProfile[]>([])
   const [collaboratorProfiles, setCollaboratorProfiles] = useState<CollaboratorProfile[]>([])
   const [selectedProfileId, setSelectedProfileId] = useState<string>('')
   const [profileType, setProfileType] = useState<'audience' | 'collaborator'>('audience')
+
+  // Get selected profile for default name generation
+  const selectedProfile = useMemo(() => {
+    if (!selectedProfileId) return null
+    if (profileType === 'audience') {
+      return audienceProfiles.find((p) => p.id === selectedProfileId)
+    }
+    return collaboratorProfiles.find((p) => p.id === selectedProfileId)
+  }, [selectedProfileId, profileType, audienceProfiles, collaboratorProfiles])
+
+  // Generate default name preview based on project name and selected profile
+  const defaultName = useMemo(() => {
+    const date = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    const profileDisplayName = selectedProfile?.name
+    if (profileDisplayName) {
+      return `${projectName} - ${profileDisplayName} - ${date}`
+    }
+    return `${projectName} - ${date}`
+  }, [projectName, selectedProfile])
 
   useEffect(() => {
     loadShareLinks()
@@ -102,16 +143,31 @@ export function ShareLinkManager({ projectId }: ShareLinkManagerProps) {
       return
     }
 
+    // Validate custom slug if provided
+    if (customSlug) {
+      const slugValidationError = validateSlug(customSlug)
+      if (slugValidationError) {
+        setSlugError(slugValidationError)
+        return
+      }
+    }
+
     setCreating(true)
     setError('')
 
     try {
-      const data = await api.createShareLink(projectId, {
+      const requestPayload = {
         accessType,
         password: accessType === 'password' ? password : undefined,
         recipientRole,
-      })
-      setShareLinks([...shareLinks, data.shareLink as ShareLink])
+        name: linkName || undefined,
+        customSlug: customSlug || undefined,
+        profileName: selectedProfile?.name,
+      }
+
+      const data = await api.createShareLink(projectId, requestPayload)
+
+      setShareLinks([data.shareLink as ShareLink, ...shareLinks])
 
       // Increment usage count if a profile was used
       if (selectedProfileId) {
@@ -131,9 +187,19 @@ export function ShareLinkManager({ projectId }: ShareLinkManagerProps) {
       setAccessType('password')
       setRecipientRole('viewer')
       setSelectedProfileId('')
+      setLinkName('')
+      setCustomSlug('')
+      setShowCustomSlug(false)
+      setSlugError('')
       showNotification('Share link created successfully')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create share link')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create share link'
+      // Handle slug-taken error specifically
+      if (errorMessage.toLowerCase().includes('already taken')) {
+        setSlugError('This URL is already taken. Try a different one.')
+      } else {
+        setError(errorMessage)
+      }
     } finally {
       setCreating(false)
     }
@@ -317,9 +383,74 @@ export function ShareLinkManager({ projectId }: ShareLinkManagerProps) {
             </div>
           </div>
 
+          {/* Link Name */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Link Name</label>
+            <Input
+              type="text"
+              value={linkName}
+              onChange={(e) => setLinkName(e.target.value)}
+              placeholder={defaultName}
+              maxLength={100}
+            />
+            <p className="mt-1 text-sm text-muted">
+              {linkName ? `Using: ${linkName}` : `Default: ${defaultName}`}
+            </p>
+          </div>
+
+          {/* Custom URL (collapsible) */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowCustomSlug(!showCustomSlug)}
+              className="text-sm text-accent hover:underline flex items-center gap-1"
+            >
+              {showCustomSlug ? (
+                <>
+                  <ChevronUp className="w-4 h-4" />
+                  Hide custom URL
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-4 h-4" />
+                  Customize URL
+                </>
+              )}
+            </button>
+
+            {showCustomSlug && (
+              <div className="mt-2 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted whitespace-nowrap">{window.location.origin}/share/</span>
+                  <Input
+                    type="text"
+                    value={customSlug}
+                    onChange={(e) => {
+                      const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+                      setCustomSlug(val)
+                      setSlugError(validateSlug(val) || '')
+                    }}
+                    placeholder="custom-url"
+                    maxLength={50}
+                    className="flex-1"
+                  />
+                </div>
+                {slugError && <p className="text-sm text-destructive">{slugError}</p>}
+                {customSlug && !slugError && (
+                  <p className="text-sm text-success">
+                    URL: {window.location.origin}/share/{customSlug}
+                  </p>
+                )}
+                {!customSlug && (
+                  <p className="text-sm text-muted">Leave empty for a random URL</p>
+                )}
+              </div>
+            )}
+          </div>
+
           <Button
             onClick={handleCreate}
-            disabled={creating || (accessType === 'password' && !password)}
+            disabled={creating || (accessType === 'password' && !password) || !!slugError}
             isLoading={creating}
             className="w-full"
           >
@@ -343,24 +474,28 @@ export function ShareLinkManager({ projectId }: ShareLinkManagerProps) {
             {shareLinks.map(link => (
               <div key={link.id} className="px-6 py-4">
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
+                    {/* Name as primary identifier */}
                     <div className="flex items-center gap-2">
-                      <code className="text-sm bg-background-elevated text-foreground px-2 py-1 rounded font-mono">
-                        {window.location.origin}/share/{link.slug}
-                      </code>
+                      <p className="font-medium text-foreground truncate">
+                        {link.name || link.slug}
+                      </p>
                       {!link.isActive && (
                         <Badge variant="destructive">Inactive</Badge>
                       )}
+                      <Badge variant="secondary" className="capitalize">{link.accessType}</Badge>
                     </div>
+                    {/* URL below name */}
+                    <code className="text-sm text-muted font-mono mt-1 block">
+                      {window.location.origin}/share/{link.slug}
+                    </code>
                     <div className="mt-2 flex items-center gap-4 text-sm text-muted">
-                      <span className="capitalize">{link.accessType}</span>
-                      <span className="text-dim">•</span>
                       <span>{link.currentViews} views</span>
                       <span className="text-dim">•</span>
                       <span>Created {new Date(link.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
-                  <div className="flex gap-2 ml-4">
+                  <div className="flex gap-2 ml-4 flex-shrink-0">
                     <Button
                       variant="ghost"
                       size="sm"

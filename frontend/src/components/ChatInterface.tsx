@@ -2,12 +2,15 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { ChatMessage } from './ChatMessage'
 import { ChatInput } from './ChatInput'
 import { JumpToBottomIndicator } from './chat/JumpToBottomIndicator'
+import { useViewerPreferences } from './viewer-prefs/useViewerPreferences'
 
 interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
+  /** Hidden expansion prompts are not displayed in UI */
+  isHiddenExpansion?: boolean
 }
 
 interface ChatInterfaceProps {
@@ -25,13 +28,17 @@ export function ChatInterface({ conversationId, onCitationClick, onMessagesChang
   const [loadError, setLoadError] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // Get viewer preferences for depth setting
+  const { preferences } = useViewerPreferences()
+
   // Smart scroll state
-  const [isAtBottom, setIsAtBottom] = useState(true)
+  const [isAtBottom, setIsAtBottom] = useState(false) // Start false - detect actual position
   const [showJumpIndicator, setShowJumpIndicator] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const scrollSentinelRef = useRef<HTMLDivElement>(null)
   const userJustSentMessage = useRef(false)
+  const hasInitialScrolled = useRef(false) // Track initial scroll to bottom
 
   // Progressive disclosure state - track which messages have been expanded
   const [expandedMessageIds, setExpandedMessageIds] = useState<Set<string>>(new Set())
@@ -79,28 +86,36 @@ export function ChatInterface({ conversationId, onCitationClick, onMessagesChang
     }
   }, [streamingContent, isAtBottom])
 
-  // Smart auto-scroll: only when appropriate
+  // Initial scroll to bottom on first load (after messages are loaded)
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container || hasInitialScrolled.current || messages.length === 0) return
+
+    // Scroll to bottom on initial load only
+    container.scrollTo({ top: container.scrollHeight, behavior: 'instant' })
+    hasInitialScrolled.current = true
+  }, [messages.length])
+
+  // Smart auto-scroll: ONLY when user explicitly sent a message
+  // Do NOT auto-scroll during streaming - show jump indicator instead
   useEffect(() => {
     const container = scrollContainerRef.current
     if (!container) return
 
-    // Auto-scroll if:
-    // 1. User was already at bottom, OR
-    // 2. User just sent a message (explicit intent)
-    if (isAtBottom || userJustSentMessage.current) {
+    // Only auto-scroll if user just sent a message (explicit intent)
+    // Never force scroll during passive streaming
+    if (userJustSentMessage.current) {
       container.scrollTo({
         top: container.scrollHeight,
         behavior: 'smooth'
       })
 
       // Reset the "just sent" flag after scroll
-      if (userJustSentMessage.current) {
-        setTimeout(() => {
-          userJustSentMessage.current = false
-        }, 500)
-      }
+      setTimeout(() => {
+        userJustSentMessage.current = false
+      }, 500)
     }
-  }, [messages, streamingContent, isAtBottom])
+  }, [messages])
 
   // Load conversation history on mount
   useEffect(() => {
@@ -164,7 +179,12 @@ export function ChatInterface({ conversationId, onCitationClick, onMessagesChang
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ message: content }),
+          body: JSON.stringify({
+            message: content,
+            preferences: {
+              depth: preferences.depth
+            }
+          }),
         }
       )
 
@@ -180,6 +200,7 @@ export function ChatInterface({ conversationId, onCitationClick, onMessagesChang
       }
 
       let fullContent = ''
+      let responseSaved = false
 
       while (true) {
         const { done, value } = await reader.read()
@@ -195,13 +216,16 @@ export function ChatInterface({ conversationId, onCitationClick, onMessagesChang
 
             if (data === '[DONE]') {
               // Stream complete - add assistant message
-              const assistantMessage: Message = {
-                id: `assistant-${Date.now()}`,
-                role: 'assistant',
-                content: fullContent,
-                timestamp: new Date(),
+              if (fullContent.length > 0) {
+                const assistantMessage: Message = {
+                  id: `assistant-${Date.now()}`,
+                  role: 'assistant',
+                  content: fullContent,
+                  timestamp: new Date(),
+                }
+                setMessages((prev) => [...prev, assistantMessage])
+                responseSaved = true
               }
-              setMessages((prev) => [...prev, assistantMessage])
               setStreamingContent('')
               break
             }
@@ -217,6 +241,18 @@ export function ChatInterface({ conversationId, onCitationClick, onMessagesChang
             }
           }
         }
+      }
+
+      // If we got content but no [DONE] signal, still save the response
+      if (!responseSaved && fullContent.length > 0) {
+        const assistantMessage: Message = {
+          id: `assistant-${Date.now()}`,
+          role: 'assistant',
+          content: fullContent,
+          timestamp: new Date(),
+        }
+        setMessages((prev) => [...prev, assistantMessage])
+        setStreamingContent('')
       }
     } catch (error) {
       console.error('Failed to send message:', error)
@@ -234,7 +270,7 @@ export function ChatInterface({ conversationId, onCitationClick, onMessagesChang
     }
   }
 
-  // Handle expand request - sends a follow-up message asking for elaboration
+  // Handle expand request - sends a hidden follow-up for organic content expansion
   const handleExpand = useCallback(async (messageId: string) => {
     // Find the message to expand
     const messageToExpand = messages.find(m => m.id === messageId)
@@ -242,18 +278,131 @@ export function ChatInterface({ conversationId, onCitationClick, onMessagesChang
 
     // Mark as expanding
     setExpandingMessageId(messageId)
+    userJustSentMessage.current = true
+    setShowJumpIndicator(false)
+    setUnreadCount(0)
 
-    // Send an expansion request
+    // Create expansion prompt - hidden from UI
     const expandPrompt = `Please expand on your previous response with more detail and examples. Your previous response was: "${messageToExpand.content.substring(0, 200)}${messageToExpand.content.length > 200 ? '...' : ''}"`
 
+    // Add hidden user message (not displayed but sent to API)
+    const hiddenUserMessage: Message = {
+      id: `expand-${Date.now()}`,
+      role: 'user',
+      content: expandPrompt,
+      timestamp: new Date(),
+      isHiddenExpansion: true, // This prevents it from being displayed
+    }
+    setMessages((prev) => [...prev, hiddenUserMessage])
+
+    // Start streaming
+    setIsStreaming(true)
+    setStreamingContent('')
+
     try {
-      await handleSendMessage(expandPrompt)
-      // Mark as expanded after successful response
-      setExpandedMessageIds(prev => new Set([...prev, messageId]))
+      const response = await fetch(
+        `${API_URL}/api/conversations/${conversationId}/messages/stream`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: expandPrompt,
+            preferences: {
+              depth: preferences.depth
+            }
+          }),
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('Failed to expand message')
+      }
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        throw new Error('No response stream')
+      }
+
+      let fullContent = ''
+      let responseSaved = false
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value, { stream: true })
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.substring(6).trim()
+
+            if (data === '[DONE]') {
+              // Stream complete - add expansion response
+              if (fullContent.length > 0) {
+                const expansionResponse: Message = {
+                  id: `expansion-${Date.now()}`,
+                  role: 'assistant',
+                  content: fullContent,
+                  timestamp: new Date(),
+                }
+                setMessages((prev) => [...prev, expansionResponse])
+                responseSaved = true
+              }
+              setStreamingContent('')
+              break
+            }
+
+            try {
+              const parsed = JSON.parse(data)
+              if (parsed.chunk) {
+                fullContent += parsed.chunk
+                setStreamingContent(fullContent)
+              }
+            } catch {
+              // Ignore parse errors
+            }
+          }
+        }
+      }
+
+      // If we got content but no [DONE] signal, still save the response
+      if (!responseSaved && fullContent.length > 0) {
+        const expansionResponse: Message = {
+          id: `expansion-${Date.now()}`,
+          role: 'assistant',
+          content: fullContent,
+          timestamp: new Date(),
+        }
+        setMessages((prev) => [...prev, expansionResponse])
+        responseSaved = true
+        setStreamingContent('')
+      }
+
+      // Mark original message as expanded only if we got a response
+      if (responseSaved) {
+        setExpandedMessageIds(prev => new Set([...prev, messageId]))
+      }
+    } catch (error) {
+      console.error('Failed to expand message:', error)
+      // Show error message to user
+      const errorMessage: Message = {
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        content: 'Sorry, I encountered an error expanding that response. Please try again.',
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, errorMessage])
     } finally {
+      setIsStreaming(false)
+      setStreamingContent('')
       setExpandingMessageId(null)
     }
-  }, [messages])
+  }, [messages, conversationId])
 
   // Jump to bottom handler
   const handleJumpToBottom = useCallback(() => {
@@ -293,19 +442,22 @@ export function ChatInterface({ conversationId, onCitationClick, onMessagesChang
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0"
       >
-        {messages.map((message) => (
-          <ChatMessage
-            key={message.id}
-            role={message.role}
-            content={message.content}
-            timestamp={message.timestamp}
-            messageId={message.id}
-            isExpanded={expandedMessageIds.has(message.id)}
-            isExpandLoading={expandingMessageId === message.id}
-            onCitationClick={onCitationClick}
-            onExpand={handleExpand}
-          />
-        ))}
+        {/* Filter out hidden expansion prompts for organic content expansion UX */}
+        {messages
+          .filter((message) => !message.isHiddenExpansion)
+          .map((message) => (
+            <ChatMessage
+              key={message.id}
+              role={message.role}
+              content={message.content}
+              timestamp={message.timestamp}
+              messageId={message.id}
+              isExpanded={expandedMessageIds.has(message.id)}
+              isExpandLoading={expandingMessageId === message.id}
+              onCitationClick={onCitationClick}
+              onExpand={handleExpand}
+            />
+          ))}
 
         {/* Streaming message */}
         {isStreaming && streamingContent && (

@@ -27,6 +27,7 @@ export function DocumentViewer({
 }: DocumentViewerProps) {
   const [document, setDocument] = useState<{
     title: string
+    filename: string
     outline: DocumentOutlineSection[]
     mimeType: string
   } | null>(null)
@@ -62,6 +63,7 @@ export function DocumentViewer({
         const data = await api.getShareLinkDocument(shareSlug, documentId)
         setDocument({
           title: data.document.title,
+          filename: data.document.filename,
           outline: data.document.outline,
           mimeType: data.document.mimeType,
         })
@@ -206,7 +208,10 @@ export function DocumentViewer({
     <div className="flex h-full flex-col bg-card-bg">
       {/* Header */}
       <div className="border-b border-border p-4 shrink-0">
-        <h2 className="text-xl font-bold pr-8 text-foreground">{document.title}</h2>
+        <h2 className="text-xl font-bold pr-8 text-foreground">{document.filename}</h2>
+        {document.title && document.title !== document.filename && (
+          <p className="text-sm text-muted mt-1">{document.title}</p>
+        )}
         <div className="mt-2 flex gap-2">
           <button
             onClick={handleDownload}

@@ -1,11 +1,13 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { cn } from '../lib/utils'
 import { getSectionInfo } from '../lib/documentLookup'
-import { convertCitationsToMarkdownLinks, citationUrlTransform, parseCitationUrl } from '../lib/documentReferences'
+import { convertCitationsToNumbered, citationUrlTransform, parseCitationUrl } from '../lib/documentReferences'
 import { createMarkdownComponents } from '../lib/markdownConfig'
 import { ChatExpandButton } from './chat/ChatExpandButton'
+import { CitationPill } from './chat/CitationPill'
+import { CitationBlock, type Citation } from './chat/CitationBlock'
 
 interface ChatMessageProps {
   role: 'user' | 'assistant'
@@ -17,49 +19,6 @@ interface ChatMessageProps {
   isExpandLoading?: boolean
   onCitationClick?: (filename: string, sectionId: string) => void
   onExpand?: (messageId: string) => void
-}
-
-/**
- * Citation button component for document references
- */
-function CitationButton({
-  filename,
-  sectionId,
-  onCitationClick,
-  isUserMessage,
-}: {
-  filename: string
-  sectionId: string
-  onCitationClick?: (filename: string, sectionId: string) => void
-  isUserMessage: boolean
-}) {
-  const sectionInfo = getSectionInfo(filename, sectionId)
-  const displayText = sectionInfo
-    ? `${sectionInfo.documentTitle}: ${sectionInfo.sectionTitle}`
-    : filename
-
-  return (
-    <button
-      onClick={() => onCitationClick?.(filename, sectionId)}
-      className={cn(
-        'inline-flex items-center gap-1 font-medium mx-1 transition-colors',
-        isUserMessage
-          ? 'text-background/90 hover:text-background underline hover:no-underline'
-          : 'text-accent hover:text-accent/80 underline hover:no-underline'
-      )}
-      title={`Open ${filename}, section: ${sectionInfo?.sectionTitle || sectionId}`}
-    >
-      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-        />
-      </svg>
-      <span className="break-words">{displayText}</span>
-    </button>
-  )
 }
 
 export function ChatMessage({
@@ -76,11 +35,30 @@ export function ChatMessage({
   const isUser = role === 'user'
   const isAssistant = role === 'assistant'
 
+  // Track currently highlighted citation
+  const [activeCitation, setActiveCitation] = useState<number | undefined>()
+
   // Show expand button for completed assistant messages that haven't been expanded
   const showExpandButton = isAssistant && !isStreaming && !isExpanded && messageId && onExpand
 
-  // Convert citations to markdown links for processing
-  const processedContent = useMemo(() => convertCitationsToMarkdownLinks(content), [content])
+  // Convert citations to numbered format and collect citation data
+  const { processedContent, citations } = useMemo(() => {
+    const { content: processed, citations: collected } = convertCitationsToNumbered(content)
+
+    // Enrich citations with document/section titles
+    const enrichedCitations: Citation[] = collected.map((c) => {
+      const sectionInfo = getSectionInfo(c.filename, c.sectionId)
+      return {
+        number: c.number,
+        filename: c.filename,
+        sectionId: c.sectionId,
+        documentTitle: sectionInfo?.documentTitle,
+        sectionTitle: sectionInfo?.sectionTitle,
+      }
+    })
+
+    return { processedContent: processed, citations: enrichedCitations }
+  }, [content])
 
   // Custom components for ReactMarkdown using shared config
   const markdownComponents = useMemo(
@@ -90,13 +68,19 @@ export function ChatMessage({
         renderLink: ({ href, children }) => {
           // Check if this is a citation link
           const citation = parseCitationUrl(href || '')
-          if (citation) {
+          if (citation && citation.number !== undefined) {
+            // Numbered citation pill
             return (
-              <CitationButton
-                filename={citation.filename}
-                sectionId={citation.sectionId}
-                onCitationClick={onCitationClick}
+              <CitationPill
+                number={citation.number}
+                onClick={() => {
+                  setActiveCitation(citation.number)
+                  onCitationClick?.(citation.filename, citation.sectionId)
+                  // Clear highlight after a delay
+                  setTimeout(() => setActiveCitation(undefined), 2000)
+                }}
                 isUserMessage={isUser}
+                isActive={activeCitation === citation.number}
               />
             )
           }
@@ -117,7 +101,7 @@ export function ChatMessage({
           )
         },
       }),
-    [onCitationClick, isUser]
+    [onCitationClick, isUser, activeCitation]
   )
 
   const handleExpand = () => {
@@ -126,31 +110,68 @@ export function ChatMessage({
     }
   }
 
+  const handleCitationBlockClick = (filename: string, sectionId: string) => {
+    // Find the citation number for highlighting
+    const citation = citations.find(c => c.filename === filename && c.sectionId === sectionId)
+    if (citation) {
+      setActiveCitation(citation.number)
+      setTimeout(() => setActiveCitation(undefined), 2000)
+    }
+    onCitationClick?.(filename, sectionId)
+  }
+
   return (
     <div className={cn('flex w-full', isUser ? 'justify-end' : 'justify-start')}>
       <div
         className={cn(
-          'max-w-[80%] rounded-lg px-4 py-2',
+          'max-w-[80%] rounded-lg px-4 py-3',
           isUser
             ? 'bg-accent text-background'
             : 'bg-card-bg border border-border text-foreground'
         )}
+        style={{
+          // Apply max line width for optimal reading
+          maxWidth: 'min(80%, var(--max-line-chat, 66ch))',
+        }}
       >
-        <div className="break-words">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents} urlTransform={citationUrlTransform}>
+        {/* Message content with elite typography */}
+        <div
+          className="break-words"
+          style={{
+            lineHeight: 'var(--leading-chat, 1.65)',
+            letterSpacing: 'var(--letter-spacing-body, 0.01em)',
+          }}
+        >
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={markdownComponents}
+            urlTransform={citationUrlTransform}
+          >
             {processedContent}
           </ReactMarkdown>
         </div>
+
+        {/* Citation block for assistant messages with citations */}
+        {isAssistant && citations.length > 0 && (
+          <CitationBlock
+            citations={citations}
+            onCitationClick={handleCitationBlockClick}
+            activeCitation={activeCitation}
+          />
+        )}
+
+        {/* Timestamp */}
         {timestamp && (
           <div
             className={cn(
-              'mt-1 text-xs',
+              'mt-2 text-xs',
               isUser ? 'text-background/70' : 'text-muted'
             )}
           >
             {timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </div>
         )}
+
         {/* Expand button for assistant messages */}
         {showExpandButton && (
           <ChatExpandButton

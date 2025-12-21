@@ -201,39 +201,64 @@ class ApiClient {
   }
 
   // Document endpoints
-  async uploadDocument(projectId: string, file: File) {
-    // Always sync token from localStorage before upload to handle HMR/module reload edge cases
-    const storedToken = localStorage.getItem('auth_token')
-    if (storedToken && !this.token) {
-      this.token = storedToken
-    }
+  async uploadDocument(projectId: string, file: File, options?: { maxRetries?: number }) {
+    const maxRetries = options?.maxRetries ?? 3
+    let lastError: Error | null = null
 
-    const formData = new FormData()
-    formData.append('document', file)
-
-    const headers: Record<string, string> = {}
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`
-    }
-
-    const response = await fetch(`${this.baseUrl}/api/projects/${projectId}/documents`, {
-      method: 'POST',
-      headers,
-      body: formData,
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      let error
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        error = JSON.parse(errorText)
-      } catch {
-        throw new Error(`Upload failed: ${errorText}`)
+        // Always sync token from localStorage before upload to handle HMR/module reload edge cases
+        const storedToken = localStorage.getItem('auth_token')
+        if (storedToken && !this.token) {
+          this.token = storedToken
+        }
+
+        const formData = new FormData()
+        formData.append('document', file)
+
+        const headers: Record<string, string> = {}
+        if (this.token) {
+          headers['Authorization'] = `Bearer ${this.token}`
+        }
+
+        const response = await fetch(`${this.baseUrl}/api/projects/${projectId}/documents`, {
+          method: 'POST',
+          headers,
+          body: formData,
+        })
+
+        if (!response.ok) {
+          const errorText = await response.text()
+          let error
+          try {
+            error = JSON.parse(errorText)
+          } catch {
+            throw new Error(`Upload failed: ${errorText}`)
+          }
+          throw new Error(error.error?.message || 'Upload failed')
+        }
+
+        return response.json()
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err))
+
+        // Don't retry auth errors or validation errors - they won't succeed
+        const errorMsg = lastError.message.toLowerCase()
+        if (errorMsg.includes('unauthorized') || errorMsg.includes('invalid file') || errorMsg.includes('too large')) {
+          throw lastError
+        }
+
+        // If we have retries left, wait with exponential backoff
+        if (attempt < maxRetries) {
+          const delay = Math.min(1000 * Math.pow(2, attempt), 8000) // 1s, 2s, 4s, max 8s
+          console.warn(`Upload attempt ${attempt + 1} failed, retrying in ${delay}ms...`, lastError.message)
+          await new Promise(resolve => setTimeout(resolve, delay))
+        }
       }
-      throw new Error(error.error?.message || 'Upload failed')
     }
 
-    return response.json()
+    // All retries exhausted
+    throw lastError || new Error('Upload failed after retries')
   }
 
   async getDocuments(projectId: string) {
@@ -369,6 +394,9 @@ class ApiClient {
     allowedEmails?: string[]
     expiresAt?: string
     recipientRole?: 'viewer' | 'collaborator'
+    name?: string
+    customSlug?: string
+    profileName?: string
   }) {
     return this.request<{ shareLink: unknown }>(`/api/projects/${projectId}/share-links`, {
       method: 'POST',
@@ -378,6 +406,18 @@ class ApiClient {
 
   async getShareLinks(projectId: string) {
     return this.request<{ shareLinks: unknown[] }>(`/api/projects/${projectId}/share-links`)
+  }
+
+  async updateShareLink(shareLinkId: string, data: {
+    isActive?: boolean
+    expiresAt?: string | null
+    maxViews?: number | null
+    name?: string
+  }) {
+    return this.request<{ shareLink: unknown }>(`/api/share-links/${shareLinkId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
   }
 
   async getShareLinkBySlug(slug: string) {
@@ -405,7 +445,8 @@ class ApiClient {
     return this.request<{
       documents: Array<{
         id: string
-        filename: string
+        filename: string // Display name (originalName || filename)
+        internalFilename?: string // Internal storage filename for citation matching
         title: string
         mimeType: string
         outline: Array<{ id: string; title: string; level: number; position: number }>
@@ -418,7 +459,8 @@ class ApiClient {
     return this.request<{
       document: {
         id: string
-        filename: string
+        filename: string // Display name (originalName || filename)
+        internalFilename?: string // Internal storage filename for citation matching
         title: string
         mimeType: string
         outline: Array<{ id: string; title: string; level: number; position: number }>

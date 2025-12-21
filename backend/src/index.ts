@@ -23,6 +23,7 @@ import collaboratorProfileRoutes from './routes/collaboratorProfile.routes'
 import { documentVersionRoutes } from './routes/documentVersion.routes'
 import { startProcessingQueue } from './services/processingQueue'
 import { terminatePool } from './services/worker/workerPool'
+import { runReprocessingIfNeeded } from './services/documentReprocessor'
 
 // Create Express app
 const app = express()
@@ -90,6 +91,9 @@ app.listen(PORT, () => {
   // Re-enable processing queue with worker pool isolation
   startProcessingQueue(15000)
   console.warn('📋 Document processing queue ENABLED (worker pool mode)')
+
+  // Reprocess existing DOCX documents with formatting preservation
+  runReprocessingIfNeeded()
 })
 
 // Graceful shutdown - clean up worker pool

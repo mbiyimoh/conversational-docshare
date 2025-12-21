@@ -21,6 +21,36 @@ interface Document {
   currentVersion?: number
 }
 
+/**
+ * Parse auto-retry info from processingError field.
+ * Backend stores retry count as "[auto-retry N] Previous error: ..."
+ */
+function parseAutoRetryInfo(processingError?: string): { retryCount: number; originalError: string } | null {
+  if (!processingError) return null
+  const match = processingError.match(/^\[auto-retry (\d+)\] Previous error: (.*)$/)
+  if (match) {
+    return {
+      retryCount: parseInt(match[1], 10),
+      originalError: match[2],
+    }
+  }
+  return null
+}
+
+/**
+ * Check if a failed document is eligible for auto-retry (uploaded within last hour).
+ * The backend auto-retries failed docs up to 2 times within 1 hour of upload.
+ */
+function isEligibleForAutoRetry(doc: Document): boolean {
+  if (doc.status !== 'failed') return false
+  const uploadedAt = new Date(doc.uploadedAt).getTime()
+  const oneHourAgo = Date.now() - 60 * 60 * 1000
+  const autoRetryInfo = parseAutoRetryInfo(doc.processingError)
+  const retryCount = autoRetryInfo?.retryCount ?? 0
+  // Backend allows up to 2 auto-retries, within 1 hour of upload
+  return uploadedAt > oneHourAgo && retryCount < 2
+}
+
 interface DocumentUploadProps {
   projectId: string
   onUploadComplete?: () => void
@@ -64,11 +94,18 @@ function MarkdownIcon({ className }: { className?: string }) {
   )
 }
 
+interface UploadProgress {
+  filename: string
+  status: 'pending' | 'uploading' | 'success' | 'failed'
+  error?: string
+}
+
 export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadProps) {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
+  const [uploadQueue, setUploadQueue] = useState<UploadProgress[]>([])
   const [editingDocument, setEditingDocument] = useState<{
     id: string
     content: Record<string, unknown> | null
@@ -95,10 +132,12 @@ export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadPr
     loadDocuments()
   }, [loadDocuments])
 
-  // Auto-refresh while documents are processing
+  // Auto-refresh while documents are processing OR have pending auto-retries
   useEffect(() => {
     const hasProcessing = documents.some(d => d.status === 'pending' || d.status === 'processing')
-    if (!hasProcessing) return
+    const hasPendingAutoRetry = documents.some(d => isEligibleForAutoRetry(d))
+
+    if (!hasProcessing && !hasPendingAutoRetry) return
 
     const interval = setInterval(loadDocuments, 5000) // Refresh every 5 seconds
     return () => clearInterval(interval)
@@ -108,21 +147,50 @@ export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadPr
     setError('')
     setUploading(true)
 
-    try {
-      for (const file of acceptedFiles) {
+    // Initialize upload queue with all files as pending
+    const initialQueue: UploadProgress[] = acceptedFiles.map(file => ({
+      filename: file.name,
+      status: 'pending',
+    }))
+    setUploadQueue(initialQueue)
+
+    // Process files sequentially to avoid overwhelming the server
+    for (let i = 0; i < acceptedFiles.length; i++) {
+      const file = acceptedFiles[i]
+
+      // Update status to uploading
+      setUploadQueue(prev => prev.map((item, idx) =>
+        idx === i ? { ...item, status: 'uploading' } : item
+      ))
+
+      try {
+        // Auto-retry is handled inside uploadDocument with exponential backoff
         const result = await api.uploadDocument(projectId, file)
         // Add the newly uploaded document to the list
         setDocuments(prev => [result.document as Document, ...prev])
-      }
 
-      if (onUploadComplete) {
-        onUploadComplete()
+        // Update status to success
+        setUploadQueue(prev => prev.map((item, idx) =>
+          idx === i ? { ...item, status: 'success' } : item
+        ))
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Upload failed'
+        // Update status to failed
+        setUploadQueue(prev => prev.map((item, idx) =>
+          idx === i ? { ...item, status: 'failed', error: errorMsg } : item
+        ))
+        // Don't stop the queue - continue with other files
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed')
-    } finally {
-      setUploading(false)
     }
+
+    // Clear the queue after a short delay to show final status
+    setTimeout(() => setUploadQueue([]), 3000)
+
+    if (onUploadComplete) {
+      onUploadComplete()
+    }
+
+    setUploading(false)
   }, [projectId, onUploadComplete])
 
   const handleDelete = async (documentId: string) => {
@@ -138,6 +206,29 @@ export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadPr
 
   const handleRetry = async (documentId: string) => {
     try {
+      // First, refresh the document list to get latest status
+      // This prevents acting on stale state (e.g., doc already succeeded via auto-retry)
+      const freshData = await api.getDocuments(projectId)
+      const freshDoc = (freshData.documents as Document[]).find(d => d.id === documentId)
+
+      if (!freshDoc) {
+        setError('Document not found')
+        return
+      }
+
+      if (freshDoc.status === 'completed') {
+        // Doc already succeeded - just refresh UI
+        setDocuments(freshData.documents as Document[])
+        return
+      }
+
+      if (freshDoc.status !== 'failed') {
+        // Doc is processing or pending - just refresh UI
+        setDocuments(freshData.documents as Document[])
+        return
+      }
+
+      // Doc is still failed, proceed with retry
       await api.retryDocument(documentId)
       // Update the document status to pending locally
       setDocuments(prev => prev.map(d =>
@@ -145,6 +236,8 @@ export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadPr
       ))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Retry failed')
+      // Refresh to show latest state even on error
+      loadDocuments()
     }
   }
 
@@ -184,7 +277,9 @@ export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadPr
     disabled: uploading,
   })
 
-  const getStatusBadge = (status: Document['status']) => {
+  const getStatusBadge = (doc: Document) => {
+    const { status } = doc
+
     switch (status) {
       case 'pending':
         return (
@@ -209,15 +304,29 @@ export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadPr
             Ready
           </Badge>
         )
-      case 'failed':
+      case 'failed': {
+        // Check if auto-retry is pending
+        const willAutoRetry = isEligibleForAutoRetry(doc)
+        const autoRetryInfo = parseAutoRetryInfo(doc.processingError)
+
+        if (willAutoRetry) {
+          return (
+            <Badge variant="warning">
+              <RotateCcw className="w-3 h-3 mr-1 animate-spin" style={{ animationDuration: '3s' }} />
+              Retrying{autoRetryInfo ? ` (${autoRetryInfo.retryCount + 1}/2)` : '...'}
+            </Badge>
+          )
+        }
+
         return (
           <Badge variant="destructive">
             <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
-            Failed
+            Failed{autoRetryInfo ? ` (after ${autoRetryInfo.retryCount} retries)` : ''}
           </Badge>
         )
+      }
     }
   }
 
@@ -272,12 +381,42 @@ export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadPr
         </div>
       )}
 
-      {/* Uploading indicator */}
-      {uploading && (
+      {/* Upload Queue Progress */}
+      {uploadQueue.length > 0 && (
         <Card className="bg-accent/10 border-accent/30">
-          <div className="flex items-center gap-3">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-            <span className="text-foreground">Uploading...</span>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm text-muted">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+              <span>Uploading {uploadQueue.filter(f => f.status === 'success').length}/{uploadQueue.length} files...</span>
+            </div>
+            <div className="space-y-1">
+              {uploadQueue.map((item, idx) => (
+                <div key={idx} className="flex items-center gap-2 text-sm">
+                  {item.status === 'pending' && (
+                    <span className="h-2 w-2 rounded-full bg-muted" />
+                  )}
+                  {item.status === 'uploading' && (
+                    <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
+                  )}
+                  {item.status === 'success' && (
+                    <svg className="w-3 h-3 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                  {item.status === 'failed' && (
+                    <svg className="w-3 h-3 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  )}
+                  <span className={item.status === 'failed' ? 'text-destructive' : 'text-foreground'}>
+                    {item.filename}
+                  </span>
+                  {item.error && (
+                    <span className="text-destructive text-xs">({item.error})</span>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </Card>
       )}
@@ -336,13 +475,15 @@ export function DocumentUpload({ projectId, onUploadComplete }: DocumentUploadPr
                       )}
                     </p>
                     {doc.status === 'failed' && doc.processingError && (
-                      <p className="text-sm text-destructive mt-1">{doc.processingError}</p>
+                      <p className="text-sm text-destructive mt-1">
+                        {parseAutoRetryInfo(doc.processingError)?.originalError || doc.processingError}
+                      </p>
                     )}
                   </div>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
-                  {getStatusBadge(doc.status)}
-                  {doc.status === 'failed' && (
+                  {getStatusBadge(doc)}
+                  {doc.status === 'failed' && !isEligibleForAutoRetry(doc) && (
                     <Button
                       variant="ghost"
                       size="sm"

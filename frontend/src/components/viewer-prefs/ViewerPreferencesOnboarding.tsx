@@ -8,7 +8,7 @@ import { DepthSelector } from './DepthSelector'
 import { FontSelector } from './FontSelector'
 import { ThemeSelector } from './ThemeSelector'
 import { useViewerPreferencesContext } from './ViewerPreferencesProvider'
-import { DepthLevel, FontFamily, ThemeName } from './viewerPrefsConfig'
+import { DepthLevel, FontFamily, FontSize, ThemeName } from './viewerPrefsConfig'
 
 interface ViewerPreferencesOnboardingProps {
   onComplete: () => void
@@ -30,6 +30,7 @@ export function ViewerPreferencesOnboarding({ onComplete }: ViewerPreferencesOnb
     preferences,
     updateDepth,
     updateFont,
+    updateFontSize,
     updateTheme,
     markOnboardingComplete
   } = useViewerPreferencesContext()
@@ -114,6 +115,10 @@ export function ViewerPreferencesOnboarding({ onComplete }: ViewerPreferencesOnb
     updateFont(font)
   }, [updateFont])
 
+  const handleFontSizeChange = useCallback((fontSize: FontSize) => {
+    updateFontSize(fontSize)
+  }, [updateFontSize])
+
   const handleThemeChange = useCallback((theme: ThemeName) => {
     updateTheme(theme)
   }, [updateTheme])
@@ -169,13 +174,21 @@ export function ViewerPreferencesOnboarding({ onComplete }: ViewerPreferencesOnb
         </motion.h2>
 
         {/* Preview response - always visible */}
-        <div className="w-full mb-8">
+        <div className="w-full mb-6">
           <PreviewResponse
             depth={preferences.depth}
             fontFamily={preferences.fontFamily}
+            fontSize={preferences.fontSize}
             theme={preferences.theme}
           />
         </div>
+
+        {/* Note for depth step */}
+        {currentStepName === 'depth' && (
+          <p className="text-xs text-muted text-center mb-6 max-w-md">
+            This sets the default detail level. You can always ask for more or less detail in any conversation.
+          </p>
+        )}
 
         {/* Step-specific selector */}
         <AnimatePresence mode="wait">
@@ -196,7 +209,9 @@ export function ViewerPreferencesOnboarding({ onComplete }: ViewerPreferencesOnb
             {currentStepName === 'font' && (
               <FontSelector
                 value={preferences.fontFamily}
+                fontSize={preferences.fontSize}
                 onChange={handleFontChange}
+                onFontSizeChange={handleFontSizeChange}
               />
             )}
             {currentStepName === 'theme' && (

@@ -15,6 +15,7 @@ export interface ChatCompletionOptions {
   temperature?: number
   maxTokens?: number
   stream?: boolean
+  depth?: 'concise' | 'balanced' | 'detailed'
 }
 
 /**
@@ -94,13 +95,16 @@ export async function buildDocumentContext(projectId: string, userMessage: strin
 
   for (const chunk of similarChunks) {
     // Show document and section info prominently
+    // Use originalName for display, but internal filename for citation matching
+    const displayName = chunk.originalName || chunk.filename
     const sectionHeader = chunk.sectionTitle
       ? `${chunk.documentTitle} - ${chunk.sectionTitle}`
       : chunk.documentTitle
     contextParts.push(`### ${sectionHeader}`)
-    contextParts.push(`**Filename:** ${chunk.filename}`)
+    contextParts.push(`**Document:** ${displayName}`)
     if (chunk.sectionId) {
       contextParts.push(`**Section ID:** ${chunk.sectionId}`)
+      // Use internal filename in citation format for consistent resolution
       contextParts.push(`**Cite as:** \`[DOC:${chunk.filename}:${chunk.sectionId}]\``)
     }
     contextParts.push('')
@@ -133,9 +137,10 @@ export async function generateChatCompletion(
     const model = options.model || agentConfig?.preferredModel || 'gpt-4-turbo'
     const temperature = options.temperature ?? agentConfig?.temperature ?? 0.7
     const maxTokens = options.maxTokens || 2000
+    const depth = options.depth || 'balanced'
 
-    // Build system prompt
-    const systemPrompt = await buildSystemPrompt(projectId)
+    // Build system prompt with depth preference
+    const systemPrompt = await buildSystemPrompt(projectId, { depth })
 
     // Build document context from RAG
     const documentContext = await buildDocumentContext(projectId, userMessage)

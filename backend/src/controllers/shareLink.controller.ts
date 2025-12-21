@@ -12,6 +12,26 @@ function generateSlug(): string {
 }
 
 /**
+ * Validate custom slug format.
+ * Must start/end with alphanumeric, hyphens only between words, 3-50 chars.
+ */
+function isValidCustomSlug(slug: string): boolean {
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length >= 3 && slug.length <= 50
+}
+
+/**
+ * Generate default share link name from project and profile.
+ * Format: "{Project Name} - {Profile Name} - {Mon DD}" or "{Project Name} - {Mon DD}"
+ */
+function generateDefaultName(projectName: string, profileName?: string): string {
+  const date = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  if (profileName) {
+    return `${projectName} - ${profileName} - ${date}`
+  }
+  return `${projectName} - ${date}`
+}
+
+/**
  * Validation result for share link status checks
  */
 interface ShareLinkValidationResult {
@@ -71,7 +91,7 @@ export async function createShareLink(req: Request, res: Response) {
   }
 
   const { projectId } = req.params
-  const { accessType, password, allowedEmails, allowedDomains, maxViews, expiresAt } = req.body
+  const { accessType, password, allowedEmails, allowedDomains, maxViews, expiresAt, customSlug, name, profileName } = req.body
   const recipientRole = req.body.recipientRole || 'viewer'
 
   // Verify project ownership
@@ -107,21 +127,52 @@ export async function createShareLink(req: Request, res: Response) {
     passwordHash = await hashPassword(password)
   }
 
-  // Generate unique slug
-  let slug = generateSlug()
-  let attempts = 0
-  while (attempts < 10) {
-    const existing = await prisma.shareLink.findUnique({ where: { slug } })
-    if (!existing) break
+  // Generate or validate slug
+  let slug: string
+  if (customSlug) {
+    if (!isValidCustomSlug(customSlug)) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_SLUG',
+          message: 'Slug must be 3-50 lowercase alphanumeric characters or hyphens, starting and ending with alphanumeric',
+          retryable: false,
+        },
+      })
+      return
+    }
+    const existing = await prisma.shareLink.findUnique({ where: { slug: customSlug } })
+    if (existing) {
+      res.status(400).json({
+        error: {
+          code: 'SLUG_TAKEN',
+          message: 'This custom URL is already taken',
+          retryable: false,
+        },
+      })
+      return
+    }
+    slug = customSlug
+  } else {
+    // Generate random slug with collision check
     slug = generateSlug()
-    attempts++
+    let attempts = 0
+    while (attempts < 10) {
+      const existing = await prisma.shareLink.findUnique({ where: { slug } })
+      if (!existing) break
+      slug = generateSlug()
+      attempts++
+    }
   }
+
+  // Generate name if not provided
+  const linkName = name || generateDefaultName(project.name, profileName)
 
   // Create share link
   const shareLink = await prisma.shareLink.create({
     data: {
       projectId,
       slug,
+      name: linkName,
       accessType,
       passwordHash,
       allowedEmails: allowedEmails || [],
@@ -137,6 +188,7 @@ export async function createShareLink(req: Request, res: Response) {
     shareLink: {
       id: shareLink.id,
       slug: shareLink.slug,
+      name: shareLink.name,
       accessType: shareLink.accessType,
       recipientRole: shareLink.recipientRole,
       maxViews: shareLink.maxViews,
@@ -188,6 +240,7 @@ export async function getProjectShareLinks(req: Request, res: Response) {
     shareLinks: shareLinks.map((link: typeof shareLinks[0]) => ({
       id: link.id,
       slug: link.slug,
+      name: link.name,
       accessType: link.accessType,
       maxViews: link.maxViews,
       currentViews: link.currentViews,
@@ -390,7 +443,21 @@ export async function updateShareLink(req: Request, res: Response) {
   }
 
   const { shareLinkId } = req.params
-  const { isActive, expiresAt, maxViews } = req.body
+  const { isActive, expiresAt, maxViews, name } = req.body
+
+  // Validate name if provided
+  if (name !== undefined) {
+    if (typeof name !== 'string' || name.length === 0 || name.length > 100) {
+      res.status(400).json({
+        error: {
+          code: 'INVALID_NAME',
+          message: 'Name must be 1-100 characters',
+          retryable: false,
+        },
+      })
+      return
+    }
+  }
 
   // Get share link and verify ownership
   const shareLink = await prisma.shareLink.findUnique({
@@ -418,6 +485,7 @@ export async function updateShareLink(req: Request, res: Response) {
       ...(isActive !== undefined && { isActive }),
       ...(expiresAt !== undefined && { expiresAt: expiresAt ? new Date(expiresAt) : null }),
       ...(maxViews !== undefined && { maxViews }),
+      ...(name !== undefined && { name }),
     },
   })
 
@@ -425,6 +493,7 @@ export async function updateShareLink(req: Request, res: Response) {
     shareLink: {
       id: updated.id,
       slug: updated.slug,
+      name: updated.name,
       accessType: updated.accessType,
       isActive: updated.isActive,
       expiresAt: updated.expiresAt,
@@ -495,7 +564,8 @@ export async function getShareLinkDocument(req: Request, res: Response) {
   res.json({
     document: {
       id: document.id,
-      filename: document.originalName || document.filename, // Prefer original name for display
+      filename: document.originalName || document.filename, // Display name for UI
+      internalFilename: document.filename, // Internal filename for citation matching
       title: document.title,
       mimeType: document.mimeType,
       outline: document.outline,
@@ -562,7 +632,8 @@ export async function getShareLinkDocuments(req: Request, res: Response) {
   res.json({
     documents: documents.map((doc: typeof documents[0]) => ({
       id: doc.id,
-      filename: doc.originalName || doc.filename, // Prefer original name for display
+      filename: doc.originalName || doc.filename, // Display name for UI
+      internalFilename: doc.filename, // Internal filename for citation matching
       title: doc.title,
       mimeType: doc.mimeType,
       outline: doc.outline,

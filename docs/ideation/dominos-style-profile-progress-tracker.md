@@ -3,6 +3,7 @@
 **Slug:** dominos-style-profile-progress-tracker
 **Author:** Claude Code
 **Date:** 2025-12-15
+**Updated:** 2025-12-15 (post-architecture refactor)
 **Related:** `feat-braindump-agent-profile-synthesis-frontend.md`, `feat-sequential-profile-generation.md`
 
 ---
@@ -24,6 +25,13 @@
 - Mobile-specific optimizations (responsive design assumed)
 - Persisting progress state across page refreshes
 
+**User Decisions (Confirmed):**
+1. Show time estimate: "This usually takes 30-60 seconds"
+2. Include cancel button: Yes
+3. Show streaming preview: Yes
+4. Error recovery: Auto-retry twice before showing error
+5. V1 interview flow: Update to match new progress UI
+
 ---
 
 ## 2) Pre-reading Log
@@ -36,35 +44,99 @@
 | `frontend/src/lib/api.ts` | Has `generateAgentProfileStream()` using `fetchEventSource` for V1, `synthesizeAgentProfile()` as plain POST for V2 |
 | `CLAUDE.md` | SSE patterns for TestingDojo chat, stale closure gotchas, 60-second LLM timeout standard |
 
+**New Architecture Files (Post-Refactor):**
+
+| File | Takeaway |
+|------|----------|
+| `frontend/src/components/AgentPage.tsx` | Smart wrapper orchestrating profile creation flow. Calls `api.getAgentConfig()` to check `status === 'complete'`. Opens BrainDump/Interview modals. Handles `onSaved` callback with success toast. |
+| `frontend/src/components/AgentInterviewModal.tsx` | Modal-based 5-question interview. Has built-in progress bar. Saves config then calls `onComplete()`. |
+| `frontend/src/components/AgentProfile.tsx` | **Already has streaming progress UI for V1!** Lines 279-333 show section-by-section progress with checkmarks/spinners. Also has refinement flow that needs progress. |
+| `frontend/src/components/SourceMaterialModal.tsx` | View raw braindump or interview responses. Uses `rawBrainDump` or `interviewData` from AgentConfig. |
+| `CLAUDE.md` (Agent Tab Architecture) | Documents flow: AgentPage → Modals → AgentProfile. Tab uses URL params. |
+
 ---
 
 ## 3) Codebase Map
 
-**Primary components/modules:**
-- `frontend/src/components/AgentProfileBrainDumpModal.tsx` - Current braindump UI (needs enhancement)
-- `backend/src/services/profileSynthesizer.ts` - Contains `synthesizeFromBrainDump()`
-- `backend/src/controllers/agent.controller.ts` - Has `generateAgentProfileStream` pattern to follow
+### Current Architecture Flow
 
-**Shared dependencies:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        AgentPage.tsx                             │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ checkProfileExists() → api.getAgentConfig()              │   │
+│  │   ├─ status !== 'complete' → ProfileCreationChoice       │   │
+│  │   └─ status === 'complete' → AgentProfile                │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└───────────────┬───────────────────────────────────┬─────────────┘
+                │                                   │
+    ┌───────────▼───────────┐           ┌──────────▼──────────┐
+    │ AgentProfileBrainDump │           │ AgentInterviewModal │
+    │       Modal.tsx       │           │                     │
+    │                       │           │  • 5 questions      │
+    │  • Text/voice input   │           │  • Built-in progress│
+    │  • 'processing' step  │◄──NEEDS──►│  • Saves interview  │
+    │    ❌ Basic spinner   │  PROGRESS │    then onComplete()│
+    │  • Preview + Save     │  TRACKER  │                     │
+    └───────────────────────┘           └──────────┬──────────┘
+                                                   │
+                                        ┌──────────▼──────────┐
+                                        │   AgentProfile.tsx  │
+                                        │                     │
+                                        │  ✅ Already has     │
+                                        │     streaming UI    │
+                                        │     for V1!         │
+                                        │                     │
+                                        │  • Refinement flow  │◄──NEEDS
+                                        │    ❌ No progress   │   PROGRESS
+                                        └─────────────────────┘
+```
+
+### Integration Points for Progress Tracker
+
+**Location 1: BrainDump Modal (Primary)**
+- File: `AgentProfileBrainDumpModal.tsx`
+- Current: `step === 'processing'` shows basic spinner (lines 247-259)
+- Change: Replace with `ProfileSynthesisProgress` component
+
+**Location 2: Interview → Profile Generation**
+- Flow: `AgentInterviewModal.onComplete()` → `AgentPage.handleProfileCreated()` → `AgentProfile.generateProfile()`
+- Current: Profile generation happens in `AgentProfile` with existing streaming UI
+- Change: Enhance existing `generateProfile()` UI to use shared `ProfileSynthesisProgress`
+
+**Location 3: Refinement Flow**
+- File: `AgentProfile.tsx`
+- Function: `handleRefineProfile()` (lines 208-242)
+- Current: Sets `refining=true`, calls `api.synthesizeAgentProfile()`, no progress
+- Change: Show progress tracker during refinement
+
+### Shared Dependencies
+
 - `framer-motion` - Already used for onboarding animations
-- `lucide-react` - Icon library
+- `lucide-react` - Icon library (Sparkles, Loader, CheckCircle, Circle)
 - `@microsoft/fetch-event-source` - SSE client library
 - 33 Strategies design tokens (gold `#d4a54a`, glass cards, DM Sans)
 
-**Data flow:**
-1. User enters braindump text in modal
-2. Frontend calls `/api/projects/:projectId/profile/synthesize`
-3. Backend runs single LLM call (~30-60s)
-4. Response returned with 12-field profile
-5. User reviews and saves
+### Existing V1 Progress UI (Reusable Pattern)
 
-**Current gap:** No intermediate progress events between step 2 and 4.
+From `AgentProfile.tsx` lines 279-333:
+```tsx
+// State
+const [generationStep, setGenerationStep] = useState<string>('')
+const [currentSection, setCurrentSection] = useState<string | null>(null)
+const [completedSections, setCompletedSections] = useState<string[]>([])
 
-**Potential blast radius:**
-- `AgentProfileBrainDumpModal.tsx` - Major changes
-- `profileSynthesizer.ts` - Refactor for streaming (if Option A)
-- `agent.controller.ts` - New streaming endpoint
-- `api.ts` - New SSE method for V2
+// Display
+const sectionDisplayInfo = [
+  { id: 'identityRole', name: 'Identity & Role' },
+  { id: 'communicationStyle', name: 'Communication Style' },
+  ...
+]
+
+// Render: checkmark (complete) | spinner (current) | empty circle (pending)
+```
+
+This pattern can be extracted into a reusable `ProfileSynthesisProgress` component.
 
 ---
 
@@ -216,6 +288,7 @@ export async function synthesizeBrainDumpStream(req: Request, res: Response) {
 2. Backend changes are minimal and low-risk
 3. Existing SSE infrastructure can be reused
 4. Future enhancement to Option A is straightforward
+5. Existing V1 progress UI in `AgentProfile.tsx` provides a proven pattern to extend
 
 **Suggested Stage Names:**
 
@@ -229,46 +302,112 @@ export async function synthesizeBrainDumpStream(req: Request, res: Response) {
 
 ---
 
-## 8) Clarifications Needed
+## 8) Component Architecture (Updated)
 
-1. **Time estimate display:** Should we show "This usually takes 30-60 seconds" or prefer no time indication at all?
-
-2. **Cancel button:** Should users be able to cancel mid-generation? (Recommended: Yes)
-
-3. **Streaming preview:** During "Generating" stage, should we show partial profile content as it's extracted, or just the animated stages?
-
-4. **Error recovery:** If generation fails, should we auto-retry once or immediately show error?
-
-5. **Interview flow parity:** Should the V1 interview-based generation also get this new UI treatment, or keep its current streaming sections approach?
-
----
-
-## 9) Component Architecture
+### File Structure
 
 ```
 frontend/src/components/
 ├── ProfileSynthesisProgress/
-│   ├── ProfileSynthesisProgress.tsx   # Main container
-│   ├── StageIndicator.tsx             # Individual stage row
-│   ├── StreamingPreview.tsx           # Optional text preview
-│   └── useSynthesisProgress.ts        # SSE hook
-└── AgentProfileBrainDumpModal.tsx     # Updated to use new component
+│   ├── index.ts                         # Barrel export
+│   ├── ProfileSynthesisProgress.tsx     # Main container (shared by all flows)
+│   ├── StageIndicator.tsx               # Individual stage row with animation
+│   ├── StreamingPreview.tsx             # Partial content preview
+│   ├── ContextTips.tsx                  # Rotating tips during generation
+│   └── useSynthesisProgress.ts          # SSE connection hook
+│
+├── AgentPage.tsx                        # Unchanged - orchestrator
+├── AgentProfileBrainDumpModal.tsx       # Uses ProfileSynthesisProgress
+├── AgentInterviewModal.tsx              # Unchanged (has own progress bar)
+├── AgentProfile.tsx                     # Uses ProfileSynthesisProgress for refinement
+└── SourceMaterialModal.tsx              # Unchanged
 ```
 
-**Key Props:**
+### Component Interfaces
+
 ```typescript
+// Main progress component - used by BrainDump, Interview gen, and Refinement
 interface ProfileSynthesisProgressProps {
   projectId: string
-  brainDumpText: string
+  mode: 'braindump' | 'interview' | 'refinement'
+  inputText?: string           // For braindump/refinement
+  additionalContext?: string   // For refinement
   onComplete: (profile: AgentProfileV2) => void
   onError: (error: Error) => void
   onCancel?: () => void
+  showTimeEstimate?: boolean   // Default: true
+  allowRetry?: boolean         // Default: true (auto-retry twice)
 }
+
+// Individual stage indicator
+interface StageIndicatorProps {
+  stage: StageConfig
+  status: 'pending' | 'active' | 'complete'
+  description?: string
+}
+
+// Stage configuration
+interface StageConfig {
+  id: string
+  label: string
+  description: string
+  icon: 'sparkles' | 'loader' | 'check' | 'circle'
+}
+
+// SSE hook return type
+interface UseSynthesisProgressReturn {
+  currentStage: Stage
+  streamedPreview: string
+  error: Error | null
+  isComplete: boolean
+  cancel: () => void
+}
+```
+
+### Integration Examples
+
+**BrainDump Modal (replace lines 247-259):**
+```tsx
+{step === 'processing' && (
+  <ProfileSynthesisProgress
+    projectId={projectId}
+    mode="braindump"
+    inputText={rawInput}
+    onComplete={(profile) => {
+      setSynthesisResult(profile)
+      setStep('preview')
+    }}
+    onError={(err) => {
+      setError(err.message)
+      setStep('input')
+    }}
+    onCancel={() => setStep('input')}
+  />
+)}
+```
+
+**Refinement Flow (replace lines 208-242):**
+```tsx
+{refining && (
+  <ProfileSynthesisProgress
+    projectId={projectId}
+    mode="refinement"
+    additionalContext={refinementContext}
+    onComplete={async (profile) => {
+      await api.saveAgentProfileV2(projectId, { profile, ... })
+      await loadProfile()
+      setRefining(false)
+      showNotification('Profile updated')
+    }}
+    onError={(err) => setError(err.message)}
+    onCancel={() => setRefining(false)}
+  />
+)}
 ```
 
 ---
 
-## 10) Visual Design (33 Strategies)
+## 9) Visual Design (33 Strategies)
 
 **Stage Indicators:**
 - **Active:** Gold accent (`#d4a54a`), scale 1.02, pulsing/spinning icon
@@ -286,6 +425,7 @@ border-radius: 0.5rem;
 **Typography:**
 - Stage labels: DM Sans, font-medium
 - Descriptions: DM Sans, text-sm, text-muted
+- Time estimate: DM Sans, text-sm, text-dim
 - Section marker: JetBrains Mono, uppercase, tracking-wider
 
 **Animation Timing:**
@@ -294,28 +434,68 @@ border-radius: 0.5rem;
 - Tip rotation: 8-10s interval
 - Success celebration: spring animation (stiffness 260, damping 20)
 
+**Cancel Button:**
+- Text-only, muted color
+- "Cancel" label
+- ESC keyboard shortcut
+
 ---
 
-## 11) Implementation Checklist
+## 10) Implementation Checklist
 
 ### Backend (Option C)
-- [ ] Create `synthesizeBrainDumpStream` in `agent.controller.ts`
-- [ ] Add route `/api/projects/:projectId/profile/synthesize-stream`
-- [ ] Send `start`, `generating`, `complete` events via SSE
 
-### Frontend
-- [ ] Create `ProfileSynthesisProgress` component
-- [ ] Create `StageIndicator` sub-component
-- [ ] Create `useSynthesisProgress` hook with SSE logic
-- [ ] Update `AgentProfileBrainDumpModal` to use new progress UI
-- [ ] Add rotating context tips during "Generating" stage
-- [ ] Add cancel button with keyboard support (ESC)
-- [ ] Add success animation on completion
+- [ ] Create `synthesizeBrainDumpStream` in `agent.controller.ts`
+- [ ] Add route `POST /api/projects/:projectId/profile/synthesize-stream`
+- [ ] Send SSE events: `start`, `generating`, `complete`, `error`
+- [ ] Add retry logic (up to 2 retries before error)
+- [ ] Ensure 60-second timeout with proper cleanup
+
+### Frontend - Shared Components
+
+- [ ] Create `ProfileSynthesisProgress/` directory
+- [ ] Create `ProfileSynthesisProgress.tsx` main component
+- [ ] Create `StageIndicator.tsx` with animations
+- [ ] Create `StreamingPreview.tsx` for partial content display
+- [ ] Create `ContextTips.tsx` with 8-10s rotation
+- [ ] Create `useSynthesisProgress.ts` SSE hook with retry logic
+
+### Frontend - Integration
+
+- [ ] Update `AgentProfileBrainDumpModal.tsx` to use new progress component
+- [ ] Update `AgentProfile.tsx` refinement flow to use progress component
+- [ ] Update `AgentProfile.tsx` V1 generation to use shared component
+- [ ] Add cancel button with ESC keyboard support
 - [ ] Add ARIA live regions for accessibility
+- [ ] Add "This usually takes 30-60 seconds" time estimate
+
+### Frontend API
+
+- [ ] Add `synthesizeBrainDumpStream()` method to `api.ts`
+- [ ] Handle SSE connection lifecycle
+- [ ] Implement auto-retry (2 attempts before error)
 
 ### Testing
+
 - [ ] Test with short input (~50 chars) - should complete quickly without feeling rushed
 - [ ] Test with long input (~2000 chars) - stages should feel natural
 - [ ] Test network disconnect recovery
 - [ ] Test cancel mid-generation
 - [ ] Test reduced motion preference
+- [ ] Test auto-retry behavior
+- [ ] Test all three flows: braindump, interview generation, refinement
+
+---
+
+## 11) Migration Notes
+
+### Backward Compatibility
+
+The existing `synthesizeAgentProfile()` API endpoint will remain unchanged. The new `synthesize-stream` endpoint is additive.
+
+### Rollout Strategy
+
+1. **Phase 1:** Deploy `ProfileSynthesisProgress` component
+2. **Phase 2:** Integrate into `AgentProfileBrainDumpModal` (primary use case)
+3. **Phase 3:** Integrate into `AgentProfile` refinement flow
+4. **Phase 4:** Consolidate V1 interview generation to use shared component

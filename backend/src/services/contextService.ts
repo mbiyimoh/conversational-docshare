@@ -1,10 +1,68 @@
 import { prisma } from '../utils/prisma'
 import { NotFoundError } from '../utils/errors'
 
+export type ViewerDepth = 'concise' | 'balanced' | 'detailed'
+
+/**
+ * Get depth-specific instructions for the system prompt
+ */
+export function getDepthInstructions(depth: ViewerDepth): string {
+  const instructions: Record<ViewerDepth, string> = {
+    concise: `**CRITICAL: The viewer has explicitly requested CONCISE responses. This is their top priority.**
+
+STRICT LENGTH REQUIREMENTS:
+- Target: 50-150 words maximum per response
+- Structure: 2-4 sentences, or 3-5 bullet points max
+- NO introductory phrases like "Great question!" or "I'd be happy to help"
+- NO summary paragraphs at the end
+- NO examples unless the user specifically asks for one
+
+FORMAT:
+- Lead with the direct answer in the first sentence
+- Use bullet points for lists (max 3-5 items)
+- Omit background context unless essential to understanding
+
+If the user wants more detail, they will ask. Brevity is respect for their time.`,
+
+    balanced: `The viewer prefers BALANCED responses with moderate detail.
+
+LENGTH GUIDELINES:
+- Target: 150-300 words per response
+- Structure: 2-3 short paragraphs OR intro + bullet list
+
+FORMAT:
+- Start with a direct answer
+- Add 1-2 supporting details or context points
+- Include one example only if it significantly clarifies
+- Keep paragraphs to 3-4 sentences max`,
+
+    detailed: `The viewer prefers DETAILED, comprehensive responses.
+
+You may provide thorough explanations including:
+- Full background context and reasoning
+- Multiple examples and analogies
+- Step-by-step breakdowns where helpful
+- Anticipate follow-up questions
+- No strict length limit, but stay focused and organized
+
+Structure longer responses with headers or numbered sections for readability.`
+  }
+
+  return instructions[depth] || instructions.balanced
+}
+
+export interface BuildSystemPromptOptions {
+  depth?: ViewerDepth
+}
+
 /**
  * Build system prompt from context layers and document outlines
  */
-export async function buildSystemPrompt(projectId: string): Promise<string> {
+export async function buildSystemPrompt(
+  projectId: string,
+  options: BuildSystemPromptOptions = {}
+): Promise<string> {
+  const depth = options.depth || 'balanced'
   // Get project with agent config and context layers
   const project = await prisma.project.findUnique({
     where: { id: projectId },
@@ -100,6 +158,41 @@ export async function buildSystemPrompt(projectId: string): Promise<string> {
   sections.push('2. Use the EXACT section-id shown in backticks above')
   sections.push('3. Place citations inline where relevant, not just at the end')
   sections.push('4. The frontend will auto-open and highlight the cited section for the reader')
+  sections.push('')
+  sections.push('---')
+  sections.push('')
+
+  // Add depth preference instructions
+  sections.push('## RESPONSE DEPTH PREFERENCE')
+  sections.push('')
+  sections.push(getDepthInstructions(depth))
+  sections.push('')
+  sections.push('---')
+  sections.push('')
+
+  // Add formatting instructions for readability
+  sections.push('## RESPONSE FORMATTING (IMPORTANT)')
+  sections.push('')
+  sections.push('Format your responses for optimal readability:')
+  sections.push('')
+  sections.push('**Structure:**')
+  sections.push('- Break content into clear paragraphs (2-4 sentences each)')
+  sections.push('- Use headers (## or ###) to organize longer responses')
+  sections.push('- Add blank lines between paragraphs and sections')
+  sections.push('')
+  sections.push('**Lists:**')
+  sections.push('- Use numbered lists for sequential steps or ranked items')
+  sections.push('- Use bullet points for non-sequential items')
+  sections.push('- Keep list items concise (1-2 sentences)')
+  sections.push('')
+  sections.push('**Emphasis:**')
+  sections.push('- Use **bold** for key terms and important concepts')
+  sections.push('- Use *italics* sparingly for emphasis')
+  sections.push('')
+  sections.push('**Avoid:**')
+  sections.push('- Dense walls of text without breaks')
+  sections.push('- Run-on paragraphs with multiple topics')
+  sections.push('- Excessive punctuation or all-caps')
   sections.push('')
 
   return sections.join('\n')

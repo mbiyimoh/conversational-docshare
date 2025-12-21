@@ -1,8 +1,4 @@
 {
-  "rewrites": [
-    { "source": "/share/**", "destination": "/share.html" },
-    { "source": "**", "destination": "/index.html" }
-  ],
   "headers": [
     {
       "source": "**/*.@(jpg|jpeg|gif|png|svg|ico)",

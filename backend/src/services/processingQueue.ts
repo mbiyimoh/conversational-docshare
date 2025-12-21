@@ -5,21 +5,31 @@ import { getDocumentWorkerPool, processInChildProcess, isDevelopment } from './w
 import type { ProcessedDocument } from './documentProcessor'
 import type { ProcessedDocumentWithChunks } from './worker/processDocumentChild'
 
-const MAX_RETRIES = 1
+const MAX_RETRIES = 3
 const WORKER_TIMEOUT = 120000 // 2 minutes per document
+const AUTO_RETRY_FAILED_INTERVAL = 60000 // Check for failed docs to auto-retry every 60s
+const MAX_AUTO_RETRIES = 2 // Auto-retry failed docs up to 2 times before giving up
 
 /**
- * Check if an error is a workerpool timeout error.
+ * Check if an error is retryable (transient errors that may succeed on retry).
+ * Permanent errors (file not found, invalid format) should NOT be retried.
  */
-function isTimeoutError(error: unknown): boolean {
+function isRetryableError(error: unknown): boolean {
   if (error instanceof Error) {
-    return (
-      error.message.includes('timeout') ||
-      error.name === 'TimeoutError' ||
-      error.constructor?.name === 'TimeoutError'
-    )
+    const msg = error.message.toLowerCase()
+    // Permanent errors - don't retry these
+    if (
+      msg.includes('not found') ||
+      msg.includes('invalid file') ||
+      msg.includes('unsupported') ||
+      msg.includes('corrupt') ||
+      msg.includes('permission denied')
+    ) {
+      return false
+    }
   }
-  return false
+  // Default: retry all other errors (timeouts, network issues, unknown errors)
+  return true
 }
 
 /**
@@ -124,14 +134,20 @@ export async function processDocumentById(documentId: string): Promise<void> {
       lastError = error as Error
       retries++
 
-      // Only retry timeout errors - other errors are likely permanent
-      const shouldRetry = isTimeoutError(error) && retries <= MAX_RETRIES
+      // Check if error is retryable (transient vs permanent)
+      const shouldRetry = isRetryableError(error) && retries <= MAX_RETRIES
 
       if (shouldRetry) {
-        console.warn(`⚠️ Timeout, retry ${retries}/${MAX_RETRIES} for document ${documentId}`)
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-      } else if (retries <= MAX_RETRIES && !isTimeoutError(error)) {
-        // Non-timeout error, don't retry
+        // Use exponential backoff with jitter: base * 2^retry * (0.5 + random 0-0.5)
+        // This prevents "thundering herd" when multiple docs retry simultaneously
+        const baseDelay = 1000 * Math.pow(2, retries - 1)
+        const jitter = 0.5 + Math.random() * 0.5 // 0.5 to 1.0 multiplier
+        const delay = Math.min(Math.floor(baseDelay * jitter), 4000)
+        console.warn(`⚠️ Retryable error, retry ${retries}/${MAX_RETRIES} for document ${documentId} in ${delay}ms`)
+        await new Promise((resolve) => setTimeout(resolve, delay))
+      } else if (!isRetryableError(error)) {
+        // Permanent error, don't retry
+        console.warn(`❌ Permanent error for document ${documentId}, not retrying: ${lastError.message}`)
         break
       }
     }
@@ -167,13 +183,65 @@ export async function processNextPendingDocument(): Promise<boolean> {
 }
 
 /**
+ * Auto-retry failed documents that haven't exceeded max auto-retry attempts.
+ * This runs on a separate interval to give failed docs a second chance.
+ */
+async function autoRetryFailedDocuments(): Promise<number> {
+  // Find failed documents that haven't been retried too many times
+  // We track retries by counting how many times processingError has been updated
+  const failedDocs = await prisma.document.findMany({
+    where: {
+      status: 'failed',
+      // Only retry docs that failed recently (within last hour)
+      uploadedAt: {
+        gte: new Date(Date.now() - 60 * 60 * 1000),
+      },
+    },
+    orderBy: { uploadedAt: 'asc' },
+    take: MAX_AUTO_RETRIES, // Limit batch size
+  })
+
+  let retriedCount = 0
+
+  for (const doc of failedDocs) {
+    // Check if error message suggests it's been auto-retried before
+    const retryMatch = doc.processingError?.match(/\[auto-retry (\d+)\]/)
+    const previousRetries = retryMatch ? parseInt(retryMatch[1], 10) : 0
+
+    if (previousRetries >= MAX_AUTO_RETRIES) {
+      continue // Skip - already hit max auto-retries
+    }
+
+    // Reset to pending with retry count in error field for tracking
+    await prisma.document.update({
+      where: { id: doc.id },
+      data: {
+        status: 'pending',
+        processingError: `[auto-retry ${previousRetries + 1}] Previous error: ${doc.processingError}`,
+      },
+    })
+
+    // Delete existing chunks (in case of partial failure)
+    await prisma.documentChunk.deleteMany({
+      where: { documentId: doc.id },
+    })
+
+    console.warn(`🔄 Auto-retrying failed document ${doc.id} (attempt ${previousRetries + 1}/${MAX_AUTO_RETRIES})`)
+    retriedCount++
+  }
+
+  return retriedCount
+}
+
+/**
  * Start processing queue worker - processes one document per interval
  */
-export function startProcessingQueue(intervalMs: number = 15000): NodeJS.Timeout {
+export function startProcessingQueue(intervalMs: number = 5000): NodeJS.Timeout {
   console.warn('📋 Starting document processing queue (worker pool mode)...')
 
   let isProcessing = false
 
+  // Main processing queue - runs every 5 seconds (reduced from 15s)
   const interval = setInterval(async () => {
     if (isProcessing) {
       return
@@ -192,6 +260,18 @@ export function startProcessingQueue(intervalMs: number = 15000): NodeJS.Timeout
       isProcessing = false
     }
   }, intervalMs)
+
+  // Auto-retry queue - runs every 60 seconds to retry failed docs
+  setInterval(async () => {
+    try {
+      const retriedCount = await autoRetryFailedDocuments()
+      if (retriedCount > 0) {
+        console.warn(`🔄 Auto-retry queue: ${retriedCount} failed documents queued for retry`)
+      }
+    } catch (error) {
+      console.error('Error in auto-retry queue:', (error as Error).message)
+    }
+  }, AUTO_RETRY_FAILED_INTERVAL)
 
   return interval
 }

@@ -108,7 +108,14 @@ export async function getProjectDocuments(req: Request, res: Response) {
     },
   })
 
-  res.json({ documents })
+  // Transform to include both display and internal filenames for consistency
+  res.json({
+    documents: documents.map((doc) => ({
+      ...doc,
+      filename: doc.originalName || doc.filename, // Display name for UI
+      internalFilename: doc.filename, // Internal filename for citation matching
+    })),
+  })
 }
 
 /**
@@ -144,8 +151,9 @@ export async function getDocument(req: Request, res: Response) {
   res.json({
     document: {
       id: document.id,
-      filename: document.filename,
-      originalName: document.originalName,
+      filename: document.originalName || document.filename, // Display name for UI
+      internalFilename: document.filename, // Internal filename for citation matching
+      originalName: document.originalName, // Keep for backward compatibility
       mimeType: document.mimeType,
       fileSize: document.fileSize,
       status: document.status,
