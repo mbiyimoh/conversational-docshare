@@ -9,6 +9,12 @@ import {
   getShareLinkDocument,
   getShareLinkDocuments,
   getShareLinkDocumentChunks,
+  generateOpeningMessage,
+  refineOpeningMessage,
+  updateOpeningMessage,
+  restoreOpeningMessageVersion,
+  generateOpeningMessagePreview,
+  refineOpeningMessagePreview,
 } from '../controllers/shareLink.controller'
 import { authenticate } from '../middleware/auth'
 import { asyncHandler } from '../middleware/errorHandler'
@@ -77,5 +83,79 @@ router.patch('/share-links/:shareLinkId', authenticate, asyncHandler(updateShare
  * @access  Private
  */
 router.delete('/share-links/:shareLinkId', authenticate, asyncHandler(deleteShareLink))
+
+// ============================================================================
+// OPENING MESSAGE ROUTES
+// ============================================================================
+
+// --- Preview Endpoints (before share link creation) ---
+
+/**
+ * @route   POST /api/projects/:projectId/opening-message/preview
+ * @desc    Generate an opening message preview without creating a share link
+ * @access  Private
+ */
+router.post(
+  '/projects/:projectId/opening-message/preview',
+  authenticate,
+  asyncHandler(generateOpeningMessagePreview)
+)
+
+/**
+ * @route   POST /api/projects/:projectId/opening-message/refine-preview
+ * @desc    Refine an opening message preview without saving to database
+ * @access  Private
+ */
+router.post(
+  '/projects/:projectId/opening-message/refine-preview',
+  authenticate,
+  asyncHandler(refineOpeningMessagePreview)
+)
+
+// --- Share Link Endpoints (after share link creation) ---
+
+/**
+ * @route   POST /api/share-links/:shareLinkId/opening-message/generate
+ * @desc    Generate an opening message for a share link
+ * @access  Private
+ */
+router.post(
+  '/share-links/:shareLinkId/opening-message/generate',
+  authenticate,
+  asyncHandler(generateOpeningMessage)
+)
+
+/**
+ * @route   POST /api/share-links/:shareLinkId/opening-message/refine
+ * @desc    Refine an existing opening message with AI
+ * @access  Private
+ */
+router.post(
+  '/share-links/:shareLinkId/opening-message/refine',
+  authenticate,
+  asyncHandler(refineOpeningMessage)
+)
+
+/**
+ * @route   PATCH /api/share-links/:shareLinkId/opening-message
+ * @desc    Update opening message manually
+ * @access  Private
+ */
+router.patch(
+  '/share-links/:shareLinkId/opening-message',
+  authenticate,
+  asyncHandler(updateOpeningMessage)
+)
+
+/**
+ * @route   POST /api/share-links/:shareLinkId/opening-message/restore
+ * @desc    Restore a previous version of the opening message
+ * @access  Private
+ */
+router.post(
+  '/share-links/:shareLinkId/opening-message/restore',
+  authenticate,
+  asyncHandler(restoreOpeningMessageVersion)
+)
 
 export default router

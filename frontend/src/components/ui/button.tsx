@@ -46,10 +46,12 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={isLoading || disabled}
         {...props}
       >
-        {isLoading ? (
-          <span className={cn('mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent', spinnerColor)} />
-        ) : null}
-        {children}
+        <span className="inline-flex items-center justify-center">
+          {isLoading ? (
+            <span className={cn('mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent', spinnerColor)} />
+          ) : null}
+          {children}
+        </span>
       </button>
     )
   }

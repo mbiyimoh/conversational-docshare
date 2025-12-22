@@ -440,6 +440,93 @@ class ApiClient {
     })
   }
 
+  // ============================================================================
+  // Opening Message endpoints (Share Link customization)
+  // ============================================================================
+
+  // --- Preview endpoints (before share link creation) ---
+
+  async generateOpeningMessagePreview(projectId: string) {
+    return this.request<{
+      message: string
+      isDefault?: boolean
+    }>(`/api/projects/${projectId}/opening-message/preview`, {
+      method: 'POST',
+    })
+  }
+
+  async refineOpeningMessagePreview(projectId: string, currentMessage: string, prompt: string) {
+    return this.request<{
+      message: string
+    }>(`/api/projects/${projectId}/opening-message/refine-preview`, {
+      method: 'POST',
+      body: JSON.stringify({ currentMessage, prompt }),
+    })
+  }
+
+  // --- Share link endpoints (after share link creation) ---
+
+  async generateOpeningMessage(shareLinkId: string) {
+    return this.request<{
+      message: string
+      versions: Array<{
+        version: number
+        content: string
+        source: 'generated' | 'manual' | 'refined'
+        createdAt: string
+      }>
+      isDefault?: boolean
+    }>(`/api/share-links/${shareLinkId}/opening-message/generate`, {
+      method: 'POST',
+    })
+  }
+
+  async refineOpeningMessage(shareLinkId: string, prompt: string) {
+    return this.request<{
+      message: string
+      versions: Array<{
+        version: number
+        content: string
+        source: 'generated' | 'manual' | 'refined'
+        createdAt: string
+      }>
+    }>(`/api/share-links/${shareLinkId}/opening-message/refine`, {
+      method: 'POST',
+      body: JSON.stringify({ prompt }),
+    })
+  }
+
+  async updateOpeningMessage(shareLinkId: string, message: string | null) {
+    return this.request<{
+      message: string | null
+      versions: Array<{
+        version: number
+        content: string
+        source: 'generated' | 'manual' | 'refined'
+        createdAt: string
+      }>
+    }>(`/api/share-links/${shareLinkId}/opening-message`, {
+      method: 'PATCH',
+      body: JSON.stringify({ message }),
+    })
+  }
+
+  async restoreOpeningMessageVersion(shareLinkId: string, version: number) {
+    return this.request<{
+      message: string
+      versions: Array<{
+        version: number
+        content: string
+        source: 'generated' | 'manual' | 'refined'
+        createdAt: string
+      }>
+      restoredVersion: number
+    }>(`/api/share-links/${shareLinkId}/opening-message/restore`, {
+      method: 'POST',
+      body: JSON.stringify({ version }),
+    })
+  }
+
   // Share link document endpoints (public, for viewers)
   async getShareLinkDocuments(slug: string) {
     return this.request<{
