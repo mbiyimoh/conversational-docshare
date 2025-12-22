@@ -83,7 +83,7 @@ export async function generateWelcomeMessage(projectId: string): Promise<string>
   const documentsWithOutlines = project.documents.map((doc) => ({
     filename: doc.filename,
     title: doc.title,
-    outline: doc.outline ? (doc.outline as DocumentOutlineSection[]) : null,
+    outline: doc.outline ? (doc.outline as unknown as DocumentOutlineSection[]) : null,
   }))
 
   // Build prompt for LLM
