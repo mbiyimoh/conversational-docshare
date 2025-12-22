@@ -135,7 +135,7 @@ export function SavedProfilesSection() {
   if (loading) {
     return (
       <section className="mb-8" data-testid="saved-profiles-section">
-        <SectionLabel number={2} title="SAVED PROFILES" />
+        <SectionLabel number={2} title="SAVED RECIPIENT PROFILES" />
         <Card className="p-8 text-center">
           <div className="flex items-center justify-center gap-2 text-muted">
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
@@ -149,7 +149,7 @@ export function SavedProfilesSection() {
   if (error) {
     return (
       <section className="mb-8" data-testid="saved-profiles-section">
-        <SectionLabel number={2} title="SAVED PROFILES" />
+        <SectionLabel number={2} title="SAVED RECIPIENT PROFILES" />
         <Card className="p-8 text-center">
           <span className="text-destructive">{error}</span>
           <button onClick={loadProfiles} className="ml-2 text-accent underline hover:no-underline">
@@ -163,7 +163,7 @@ export function SavedProfilesSection() {
   return (
     <section className="mb-8" data-testid="saved-profiles-section">
       <div className="flex items-center justify-between mb-4">
-        <SectionLabel number={2} title="SAVED PROFILES" className="mb-0" />
+        <SectionLabel number={2} title="SAVED RECIPIENT PROFILES" className="mb-0" />
         <Button
           size="sm"
           onClick={() => {

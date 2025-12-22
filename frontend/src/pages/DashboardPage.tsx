@@ -135,19 +135,19 @@ export function DashboardPage() {
 
       {/* Dashboard content */}
       <div className="container mx-auto px-4 py-8 space-y-12">
-        {/* My Projects Section - first */}
+        {/* Document Capsules Section */}
         <section>
-          <SectionLabel number={1} title="MY PROJECTS" />
+          <SectionLabel number={1} title="MY DOCUMENT CAPSULES" />
 
           {!dashboardData || dashboardData.projects.length === 0 ? (
             <Card className="p-12 text-center">
               <EmptyFolderIcon />
-              <h2 className="mt-6 font-display text-xl text-foreground">No projects yet</h2>
+              <h2 className="mt-6 font-display text-xl text-foreground">No capsules yet</h2>
               <p className="mt-2 text-muted">
-                Create your first project to start sharing documents with AI-powered conversations
+                Create your first document capsule to start sharing documents with AI-powered conversations
               </p>
               <Button onClick={() => setShowCreateModal(true)} className="mt-6">
-                Create Project
+                Create Capsule
               </Button>
             </Card>
           ) : (
