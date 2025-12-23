@@ -278,10 +278,10 @@ class ApiClient {
   }
 
   // Chat endpoints
-  async createConversation(projectId: string, viewerEmail?: string, viewerName?: string) {
+  async createConversation(projectId: string, viewerEmail?: string, viewerName?: string, shareLinkId?: string) {
     return this.request<{ conversation: { id: string } }>(`/api/projects/${projectId}/conversations`, {
       method: 'POST',
-      body: JSON.stringify({ viewerEmail, viewerName }),
+      body: JSON.stringify({ viewerEmail, viewerName, shareLinkId }),
     })
   }
 

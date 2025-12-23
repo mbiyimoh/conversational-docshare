@@ -214,6 +214,38 @@ const enrichedCitations: Citation[] = collected.map((c) => {
 ### Access Types
 `public_password` | `email_required` (captures leads) | `whitelist`
 
+### Opening Message Customization
+
+**What it does:** Per-link custom intro messages shown to viewers when they first access a share link, with AI generation + manual editing.
+
+**Key files:**
+- `backend/src/services/welcomeService.ts` - AI generation with document context
+- `backend/src/controllers/shareLink.controller.ts:generateOpeningMessagePreview` - Preview endpoint
+- `frontend/src/components/share-link/OpeningMessageSection.tsx` - Editor with preview
+- `backend/src/services/chatService.ts:createConversation` - Runtime lookup
+
+**Data Flow (CRITICAL):**
+1. **Link Creation**: Optional opening message stored in `ShareLink.openingMessage`
+2. **Viewer Access**: Frontend passes `shareLinkId` to `createConversation()`
+3. **Runtime Lookup**: Backend checks `shareLinkId` → fetches `ShareLink.openingMessage`
+4. **Fallback**: If no stored message, generates dynamic message via `welcomeService`
+
+**Gotchas:**
+- **shareLinkId MUST be passed** through the entire chain: `SharePage.tsx` → `api.createConversation()` → `chat.controller.ts` → `chatService.createConversation()`. Missing this breaks custom message lookup.
+- Character limit enforced at 950 chars (backend auto-condenses if LLM exceeds limit)
+- Preview endpoints use GPT-4o with document outlines + agent profiles for context
+- Uses `openingMessageVersions` array (max 10) for client-side version history
+
+**Integration points:**
+- Connects to `welcomeService.generateWelcomeMessage()` for dynamic generation
+- `ShareLinkManager.tsx` shows "Custom Intro" badge on links with custom messages
+- View-only modal uses `Modal` component for consistency (not inline markup)
+
+**Extending this:**
+- To add refinement prompts, use `refineOpeningMessagePreview` endpoint
+- Versioning handled client-side via `OpeningMessageSection` state
+- Backend stores only final message in `ShareLink.openingMessage`, not versions
+
 ---
 
 ## ProfileSectionContent

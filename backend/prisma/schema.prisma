@@ -324,6 +324,11 @@ model ShareLink {
   // Status
   isActive Boolean @default(true)
 
+  // Opening Message (pre-composed greeting for recipients)
+  openingMessage         String?  @db.Text  // Current active message
+  openingMessageVersions Json?              // Array of { version, content, source, createdAt }
+  openingMessageSource   String?            // "generated" | "manual" | "refined"
+
   // Timestamps
   createdAt DateTime @default(now())
 

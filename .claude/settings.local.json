@@ -64,7 +64,10 @@
       "WebFetch(domain:ryanccn.dev)",
       "WebFetch(domain:railway.com)",
       "WebFetch(domain:www.nordtheme.com)",
-      "SlashCommand(/deploy:push-and-check-railway)"
+      "SlashCommand(/deploy:push-and-check-railway)",
+      "WebFetch(domain:support.claude.com)",
+      "WebFetch(domain:knowledge.hubspot.com)",
+      "SlashCommand(/dev:fresh-start)"
     ],
     "deny": [],
     "ask": []

@@ -202,7 +202,8 @@ export function SharePage() {
       const convData = await api.createConversation(
         targetLink.projectId,
         email || undefined,
-        viewerName || undefined
+        viewerName || undefined,
+        targetLink.id
       )
       setConversationId(convData.conversation.id)
       setConversationStartedAt(new Date())

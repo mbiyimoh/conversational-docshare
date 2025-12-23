@@ -288,6 +288,7 @@ export async function getProjectShareLinks(req: Request, res: Response) {
       accessLogCount: link._count.accessLogs,
       conversationCount: link._count.conversations,
       createdAt: link.createdAt,
+      openingMessage: link.openingMessage,
     })),
   })
 }

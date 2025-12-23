@@ -369,6 +369,7 @@ export async function generateChatCompletionWithSummary(
 
 /**
  * Create a new conversation with optional welcome message
+ * Checks for stored opening message on share link first, then falls back to dynamic generation
  */
 export async function createConversation(
   projectId: string,
@@ -392,7 +393,27 @@ export async function createConversation(
   // Generate and save welcome message
   if (generateWelcome) {
     try {
-      const welcomeMessage = await generateWelcomeMessage(projectId)
+      let welcomeMessage: string | null = null
+      let messageSource: 'stored' | 'dynamic' = 'dynamic'
+
+      // Check for stored opening message on share link
+      if (shareLinkId) {
+        const shareLink = await prisma.shareLink.findUnique({
+          where: { id: shareLinkId },
+          select: { openingMessage: true },
+        })
+
+        if (shareLink?.openingMessage) {
+          welcomeMessage = shareLink.openingMessage
+          messageSource = 'stored'
+        }
+      }
+
+      // Fall back to dynamic generation if no stored message
+      if (!welcomeMessage) {
+        welcomeMessage = await generateWelcomeMessage(projectId)
+      }
+
       await prisma.$transaction([
         prisma.message.create({
           data: {
@@ -401,6 +422,7 @@ export async function createConversation(
             content: welcomeMessage,
             metadata: {
               isWelcomeMessage: true,
+              source: messageSource,
             },
           },
         }),

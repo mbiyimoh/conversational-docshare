@@ -6,10 +6,11 @@ import type { Message } from '@prisma/client'
 
 /**
  * Start a new conversation
+ * @param shareLinkId - Optional share link ID to look up stored opening message
  */
 export async function startConversation(req: Request, res: Response) {
   const { projectId } = req.params
-  const { viewerEmail, viewerName } = req.body
+  const { viewerEmail, viewerName, shareLinkId } = req.body
 
   // Verify project exists
   const project = await prisma.project.findUnique({
@@ -20,8 +21,8 @@ export async function startConversation(req: Request, res: Response) {
     throw new NotFoundError('Project')
   }
 
-  // Create conversation
-  const conversation = await createConversation(projectId, undefined, viewerEmail, viewerName)
+  // Create conversation with optional shareLinkId for stored opening message lookup
+  const conversation = await createConversation(projectId, shareLinkId, viewerEmail, viewerName)
 
   res.status(201).json({
     conversation: {

@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { api } from '../lib/api'
 import type { AudienceProfile, CollaboratorProfile } from './SavedProfilesSection'
-import { Card, Button, Badge, Input } from './ui'
-import { Link, Copy, Trash2, Users, UserCheck, ChevronDown, ChevronUp } from 'lucide-react'
+import { Card, Button, Badge, Input, Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from './ui'
+import { Link, Copy, Trash2, Users, UserCheck, ChevronDown, ChevronUp, MessageCircle, Eye } from 'lucide-react'
 import { ShareLinkSection } from './share-link/ShareLinkSection'
 import { OpeningMessageSection } from './share-link/OpeningMessageSection'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface ShareLink {
   id: string
@@ -68,6 +70,9 @@ export function ShareLinkManager({ projectId, projectName = 'Project' }: ShareLi
   // Opening message state (for new links - edited before creation)
   // Uses preview endpoints - no database records until link is created
   const [openingMessage, setOpeningMessage] = useState('')
+
+  // Preview modal state for existing links
+  const [previewLink, setPreviewLink] = useState<ShareLink | null>(null)
   const [openingMessageVersions, setOpeningMessageVersions] = useState<
     Array<{
       version: number
@@ -535,12 +540,22 @@ export function ShareLinkManager({ projectId, projectName = 'Project' }: ShareLi
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     {/* Name as primary identifier */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-medium text-foreground truncate">{link.name || link.slug}</p>
                       {!link.isActive && <Badge variant="destructive">Inactive</Badge>}
                       <Badge variant="secondary" className="capitalize">
                         {link.accessType}
                       </Badge>
+                      {link.openingMessage && (
+                        <button
+                          onClick={() => setPreviewLink(link)}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-accent/20 text-accent hover:bg-accent/30 transition-colors"
+                          title="View custom intro message"
+                        >
+                          <MessageCircle className="w-3 h-3" />
+                          Custom Intro
+                        </button>
+                      )}
                     </div>
                     {/* URL below name */}
                     <code className="text-sm text-muted font-mono mt-1 block">
@@ -573,6 +588,50 @@ export function ShareLinkManager({ projectId, projectName = 'Project' }: ShareLi
           </div>
         )}
       </Card>
+
+      {/* Opening Message Preview Modal */}
+      <Modal
+        isOpen={!!previewLink && !!previewLink.openingMessage}
+        onClose={() => setPreviewLink(null)}
+        size="lg"
+      >
+        <ModalHeader>
+          <div className="flex items-center gap-2">
+            <Eye className="w-5 h-5 text-accent" />
+            <ModalTitle>Opening Message Preview</ModalTitle>
+          </div>
+          <p className="text-sm text-muted mt-1">
+            Link: <span className="text-foreground font-medium">{previewLink?.name || previewLink?.slug}</span>
+          </p>
+        </ModalHeader>
+
+        <ModalContent>
+          {/* Message Preview - Chat bubble style */}
+          <div className="bg-background rounded-lg p-4 border border-border/50">
+            <div className="flex justify-start">
+              <div className="max-w-[90%] rounded-lg px-4 py-3 bg-accent">
+                <div
+                  className="prose prose-base max-w-none break-words text-background [&_strong]:text-background [&_a]:text-background [&_a]:underline"
+                  style={{ fontFamily: 'Merriweather, Georgia, serif' }}
+                >
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {previewLink?.openingMessage || ''}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-muted text-center">
+            This is how recipients will see the opening message when they access this link.
+          </p>
+        </ModalContent>
+
+        <ModalFooter>
+          <Button variant="secondary" onClick={() => setPreviewLink(null)}>
+            Close
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   )
 }
