@@ -169,29 +169,35 @@ SharePage.tsx
 
 1. **Trigger icon placement:** Should the document capsule trigger icon be in the chat header area (top-right) or a floating action button (bottom-right)?
    - *Recommendation:* Top-right header icon to match existing header pattern and avoid covering chat input.
+   >> your recommendation is good, go with that
 
 2. **Overlay vs Page transition:** Should the overlay animate on top of chat (preserving chat state) or should it be a navigation that unmounts chat?
    - *Recommendation:* Overlay on top (preserve chat state, faster perceived performance).
+   >> your recommendation is good, go with that
 
 3. **Document Capsule in mobile:** When user taps the document icon, should it show:
    - A) Document Capsule list (user picks document) → then full document, OR
    - B) Directly open last-viewed document OR
    - C) Show capsule with "View Full Document" CTA per document?
    - *Recommendation:* Show Document Capsule first (option A), consistent with desktop capsule pattern.
+   >> your recommendation is good, go with that
 
 4. **Citation click behavior:** When tapping a citation:
    - A) Open overlay directly to that document+section, OR
    - B) Open capsule with that document expanded?
    - *Recommendation:* Open directly to document+section (option A), as citations are specific references.
+   >> your recommendation is good, go with that
 
 5. **Header on mobile overlay:** Should the overlay header show:
    - A) Just "Back to Chat" / X, OR
    - B) "Back to Chat" + document title, OR
    - C) Same header as desktop document view?
    - *Recommendation:* "Back to Chat" on left + document title + X on right (option B).
+   >> your recommendation is good, go with that
 
 6. **Scroll lock:** Should background (chat) scroll be locked when overlay is open?
    - *Recommendation:* Yes, prevent background scroll for cleaner mobile UX.
+   >> yes for sure
 
 ---
 

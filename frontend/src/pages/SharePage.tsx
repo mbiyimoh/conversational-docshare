@@ -1,13 +1,14 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useCallback } from 'react'
 import { Resplit } from 'react-resplit'
-import { ArrowLeft, MessageSquare } from 'lucide-react'
+import { ArrowLeft, MessageSquare, FileText } from 'lucide-react'
 import { ChatInterface } from '../components/ChatInterface'
 import { DocumentCapsule } from '../components/DocumentCapsule'
 import { DocumentContentViewer } from '../components/DocumentContentViewer'
 import { EndSessionModal } from '../components/EndSessionModal'
 import { DocumentCommentsDrawer } from '../components/DocumentCommentsDrawer'
 import { CollaboratorCommentPanel } from '../components/CollaboratorCommentPanel'
+import { MobileDocumentOverlay } from '../components/MobileDocumentOverlay'
 import {
   ViewerPreferencesProvider,
   ViewerPreferencesOnboarding,
@@ -20,6 +21,7 @@ import {
   lookupDocumentByFilename,
   clearDocumentCache,
 } from '../lib/documentLookup'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 // Storage key for panel ratio persistence
 const PANEL_RATIO_STORAGE_KEY = 'viewer-chat-panel-fr'
@@ -453,6 +455,7 @@ export function SharePage() {
           handleChatPanelResize={handleChatPanelResize}
           handleCitationClick={handleCitationClick}
           panelMode={panelMode}
+          setPanelMode={setPanelMode}
           handleBackToCapsule={handleBackToCapsule}
           documents={documents}
           handleDocumentClick={handleDocumentClick}
@@ -498,6 +501,7 @@ interface SharePageContentProps {
   handleChatPanelResize: (size: `${number}fr`) => void
   handleCitationClick: (filenameOrId: string, sectionId: string) => void
   panelMode: 'capsule' | 'document'
+  setPanelMode: React.Dispatch<React.SetStateAction<'capsule' | 'document'>>
   handleBackToCapsule: () => void
   documents: DocumentInfo[]
   handleDocumentClick: (documentId: string) => void
@@ -531,6 +535,7 @@ function SharePageContent({
   handleChatPanelResize,
   handleCitationClick,
   panelMode,
+  setPanelMode,
   handleBackToCapsule,
   documents,
   handleDocumentClick,
@@ -554,6 +559,56 @@ function SharePageContent({
   const { preferences } = useViewerPreferencesContext()
   const [showOnboarding, setShowOnboarding] = useState(!preferences.onboardingComplete)
 
+  // Mobile detection and state
+  const isMobile = useIsMobile()
+  const [mobileOverlayOpen, setMobileOverlayOpen] = useState(false)
+
+  // Track selected document title for overlay header
+  const selectedDocumentTitle = selectedDocumentId
+    ? documents.find(d => d.id === selectedDocumentId)?.filename
+    : undefined
+
+  // Auto-close overlay when resizing from mobile to desktop
+  useEffect(() => {
+    if (!isMobile && mobileOverlayOpen) {
+      setMobileOverlayOpen(false)
+    }
+  }, [isMobile, mobileOverlayOpen])
+
+  // Handle opening overlay when document/citation is selected on mobile
+  useEffect(() => {
+    if (isMobile && panelMode === 'document' && selectedDocumentId) {
+      setMobileOverlayOpen(true)
+    }
+  }, [isMobile, panelMode, selectedDocumentId])
+
+  // Mobile document icon click handler
+  const handleMobileDocumentIconClick = () => {
+    setPanelMode('capsule')
+    setMobileOverlayOpen(true)
+  }
+
+  // Mobile overlay close handler
+  const handleMobileOverlayClose = () => {
+    setMobileOverlayOpen(false)
+  }
+
+  // Mobile back to capsule handler
+  const handleMobileBackToCapsule = () => {
+    handleBackToCapsule()
+  }
+
+  // Wrap document click handlers to open overlay on mobile
+  const handleDocumentClickMobile = (documentId: string) => {
+    handleDocumentClick(documentId)
+    if (isMobile) setMobileOverlayOpen(true)
+  }
+
+  const handleSectionClickMobile = (documentId: string, sectionId: string) => {
+    handleSectionClick(documentId, sectionId)
+    if (isMobile) setMobileOverlayOpen(true)
+  }
+
   // Show onboarding if not complete
   if (showOnboarding && !preferences.onboardingComplete) {
     return (
@@ -563,6 +618,86 @@ function SharePageContent({
     )
   }
 
+  // MOBILE LAYOUT
+  if (isMobile) {
+    return (
+      <div className="h-screen bg-background flex flex-col overflow-hidden">
+        {/* Mobile Header */}
+        <header className="border-b border-border p-4 bg-background-elevated shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <h1 className="font-display text-lg text-foreground truncate">
+                <AccentText>{project.name}</AccentText>
+              </h1>
+            </div>
+            <div className="flex items-center gap-2 ml-2">
+              {/* Document capsule trigger */}
+              <button
+                onClick={handleMobileDocumentIconClick}
+                className="p-2 rounded-lg bg-card-bg border border-border hover:border-accent/50 transition-colors"
+                aria-label="View documents"
+              >
+                <FileText className="w-5 h-5 text-accent" />
+              </button>
+              {/* End conversation button */}
+              {conversationId && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowEndModal(true)}
+                  data-testid="end-conversation-button"
+                >
+                  End
+                </Button>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* Full-width Chat */}
+        <div className="flex-1 overflow-hidden min-h-0">
+          <ChatInterface
+            conversationId={conversationId}
+            onCitationClick={handleCitationClick}
+            onMessagesChange={setMessages}
+          />
+        </div>
+
+        {/* Mobile Document Overlay */}
+        <MobileDocumentOverlay
+          isOpen={mobileOverlayOpen}
+          onClose={handleMobileOverlayClose}
+          mode={panelMode}
+          documents={documents}
+          projectName={project.name}
+          onDocumentClick={handleDocumentClickMobile}
+          onSectionClick={handleSectionClickMobile}
+          selectedDocumentId={selectedDocumentId}
+          selectedDocumentTitle={selectedDocumentTitle}
+          shareSlug={slug}
+          highlightSectionId={highlightSectionId}
+          highlightKey={highlightKey}
+          isCollaborator={isCollaborator}
+          onAddComment={handleAddComment}
+          onBackToCapsule={handleMobileBackToCapsule}
+        />
+
+        {/* End Session Modal */}
+        {showEndModal && conversationId && conversationStartedAt && (
+          <EndSessionModal
+            conversationId={conversationId}
+            messageCount={messages.length}
+            startedAt={conversationStartedAt}
+            projectName={project.name}
+            onClose={() => setShowEndModal(false)}
+            onEnded={() => setShowEndModal(false)}
+          />
+        )}
+      </div>
+    )
+  }
+
+  // DESKTOP LAYOUT
   return (
     <div className="h-screen bg-background overflow-hidden">
       <Resplit.Root direction="horizontal" className="h-full">

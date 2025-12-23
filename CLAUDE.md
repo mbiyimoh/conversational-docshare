@@ -77,6 +77,57 @@ const scrollToSection = useCallback((sectionId: string) => {
 
 ---
 
+## Mobile Responsive Patterns
+
+### Mobile Document Viewer Overlay
+
+**Pattern:** Full-screen slide-in overlay for document viewing on mobile (<768px).
+
+**Key Files:**
+- `useIsMobile.ts` - Reactive viewport detection hook using `matchMedia` API
+- `MobileDocumentOverlay.tsx` - Framer Motion overlay component
+- `SharePage.tsx:622-697` - Mobile layout branching logic
+
+**How it works:**
+- Desktop: Side-by-side Resplit layout (chat | documents)
+- Mobile: Single-panel chat with FileText icon → full-screen overlay
+- Overlay modes: `capsule` (document list) → `document` (viewer)
+- Citation clicks auto-open overlay in document mode
+
+**Integration Pattern:**
+```typescript
+const isMobile = useIsMobile(768) // 768px breakpoint (Tailwind md)
+
+// Auto-close overlay when resizing to desktop
+useEffect(() => {
+  if (!isMobile && mobileOverlayOpen) {
+    setMobileOverlayOpen(false)
+  }
+}, [isMobile, mobileOverlayOpen])
+
+// Auto-open when document selected on mobile
+useEffect(() => {
+  if (isMobile && panelMode === 'document' && selectedDocumentId) {
+    setMobileOverlayOpen(true)
+  }
+}, [isMobile, panelMode, selectedDocumentId])
+```
+
+**Gotchas:**
+- **Scroll lock**: Set `document.body.style.overflow = 'hidden'` when overlay open, restore on close
+- **Escape key**: Add event listener only when overlay is open to avoid memory leaks
+- **Resize handling**: Auto-close overlay when viewport expands to desktop to prevent hidden state
+- **Animation**: Use Framer Motion spring physics (`damping: 28, stiffness: 300`) for native feel
+- **Backdrop click**: Separate backdrop `div` with `onClick={onClose}` to dismiss
+- **Header buttons**: "Back" navigates capsule↔document, "X" closes entirely
+
+**Extending this:**
+- Breakpoint configurable via `useIsMobile(breakpoint)` parameter
+- Overlay component reusable for any dual-mode content (list → detail)
+- Framer Motion `initial`/`animate`/`exit` pattern portable to other overlays
+
+---
+
 ## Project Purpose
 
 Chat-first document sharing: creators upload docs, configure AI via interview, share links for conversational access.
