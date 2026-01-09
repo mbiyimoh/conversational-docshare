@@ -15,6 +15,7 @@ import {
 } from '../components/viewer-prefs'
 import { api } from '../lib/api'
 import { Card, Button, Input, AccentText, GlowPulse } from '../components/ui'
+import { FeedbackButton, FeedbackIconButton } from '../components/feedback'
 import {
   initDocumentLookup,
   lookupDocumentByFilename,
@@ -606,6 +607,8 @@ function SharePageContent({
               </h1>
             </div>
             <div className="flex items-center gap-2 ml-2">
+              {/* Feedback icon button */}
+              <FeedbackIconButton className="bg-card-bg border border-border hover:border-accent/50" />
               {/* Document capsule trigger */}
               <button
                 onClick={handleMobileDocumentIconClick}
@@ -803,6 +806,9 @@ function SharePageContent({
             onClose={() => setCommentsDrawerOpen(false)}
           />
         )}
+
+        {/* Feedback button - fixed bottom-right for viewers */}
+        <FeedbackButton context="viewer" />
       </div>
   )
 }
