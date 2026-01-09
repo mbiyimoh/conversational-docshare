@@ -9,6 +9,7 @@ import { DocumentCapsule } from '../components/DocumentCapsule'
 import { DocumentContentViewer } from '../components/DocumentContentViewer'
 import { EndSessionModal } from '../components/EndSessionModal'
 import { Card, Button, Badge, AccentText } from '../components/ui'
+import { FeedbackButton } from '../components/feedback'
 import {
   initDocumentLookup,
   lookupDocumentByFilename,
@@ -519,6 +520,9 @@ export function SavedThreadPage() {
           )}
         </Card>
       )}
+
+      {/* Feedback button - fixed bottom-left for creators */}
+      <FeedbackButton context="creator" />
     </div>
   )
 }
