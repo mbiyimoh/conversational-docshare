@@ -13,19 +13,19 @@ export function FontSelector({ value, fontSize, onChange, onFontSizeChange }: Fo
   const serif = FONT_OPTIONS.filter(f => f.category === 'serif')
 
   return (
-    <div className="flex flex-col gap-6 w-full">
+    <div className="flex flex-col gap-4 md:gap-6 w-full">
       {/* Font Style Section */}
       <div>
-        <p className="text-xs font-mono text-muted uppercase tracking-wider mb-3">Font Style</p>
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        <p className="text-xs font-mono text-muted uppercase tracking-wider mb-2 md:mb-3">Font Style</p>
+        <div className="grid grid-cols-3 gap-2 md:gap-3 mb-2 md:mb-4">
           {sansSerif.map((font) => (
             <button
               key={font.value}
               onClick={() => onChange(font.value)}
               style={{ fontFamily: font.fontStack }}
               className={cn(
-                'flex items-center justify-center p-3 rounded-xl border transition-all',
-                'text-base min-h-[50px]',
+                'flex items-center justify-center p-2 md:p-3 rounded-xl border transition-all',
+                'text-sm md:text-base min-h-[44px] md:min-h-[50px]',
                 'focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background',
                 value === font.value
                   ? 'border-accent bg-accent/10 text-foreground'
@@ -36,15 +36,15 @@ export function FontSelector({ value, fontSize, onChange, onFontSizeChange }: Fo
             </button>
           ))}
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2 md:gap-3">
           {serif.map((font) => (
             <button
               key={font.value}
               onClick={() => onChange(font.value)}
               style={{ fontFamily: font.fontStack }}
               className={cn(
-                'flex items-center justify-center p-3 rounded-xl border transition-all',
-                'text-base min-h-[50px]',
+                'flex items-center justify-center p-2 md:p-3 rounded-xl border transition-all',
+                'text-sm md:text-base min-h-[44px] md:min-h-[50px]',
                 'focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background',
                 value === font.value
                   ? 'border-accent bg-accent/10 text-foreground'
@@ -57,10 +57,32 @@ export function FontSelector({ value, fontSize, onChange, onFontSizeChange }: Fo
         </div>
       </div>
 
-      {/* Font Size Section */}
+      {/* Font Size Section - Mobile: inline segmented control */}
       <div>
-        <p className="text-xs font-mono text-muted uppercase tracking-wider mb-3">Text Size</p>
-        <div className="grid grid-cols-3 gap-3">
+        <p className="text-xs font-mono text-muted uppercase tracking-wider mb-2 md:mb-3">Text Size</p>
+
+        {/* Mobile: compact inline segmented control */}
+        <div className="md:hidden flex items-center rounded-xl border border-border bg-background-elevated/50 p-1">
+          {FONT_SIZE_OPTIONS.map((size) => (
+            <button
+              key={size.value}
+              onClick={() => onFontSizeChange(size.value)}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg transition-all',
+                'focus:outline-none focus:ring-2 focus:ring-accent focus:ring-inset',
+                fontSize === size.value
+                  ? 'bg-accent/15 text-foreground'
+                  : 'text-muted hover:text-foreground'
+              )}
+            >
+              <span style={{ fontSize: size.previewSize }} className="font-medium">A</span>
+              <span className="text-xs">{size.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Desktop: card grid */}
+        <div className="hidden md:grid grid-cols-3 gap-3">
           {FONT_SIZE_OPTIONS.map((size) => (
             <button
               key={size.value}

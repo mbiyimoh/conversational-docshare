@@ -67,7 +67,11 @@
       "SlashCommand(/deploy:push-and-check-railway)",
       "WebFetch(domain:support.claude.com)",
       "WebFetch(domain:knowledge.hubspot.com)",
-      "SlashCommand(/dev:fresh-start)"
+      "SlashCommand(/dev:fresh-start)",
+      "WebFetch(domain:liveblocks.io)",
+      "WebFetch(domain:www.appcues.com)",
+      "WebFetch(domain:www.toptal.com)",
+      "WebFetch(domain:qualaroo.com)"
     ],
     "deny": [],
     "ask": []

@@ -7,6 +7,7 @@ import { ShareLinkManager } from '../components/ShareLinkManager'
 import { TestingDojo } from '../components/TestingDojo'
 import { api } from '../lib/api'
 import { Button, Card, AccentText } from '../components/ui'
+import { FeedbackButton } from '../components/feedback'
 
 interface Project {
   id: string
@@ -170,6 +171,9 @@ export function ProjectPage() {
           {activeTab === 'analytics' && <AnalyticsDashboard projectId={projectId!} />}
         </div>
       </div>
+
+      {/* Feedback button - fixed bottom-left for creators */}
+      <FeedbackButton context="creator" />
     </div>
   )
 }

@@ -26,12 +26,13 @@ interface MobileDocumentOverlayProps {
   highlightSectionId: string | null
   highlightKey: number
   isCollaborator: boolean
-  onAddComment?: (selection: {
+  onCommentSubmit?: (data: {
     chunkId: string
     startOffset: number
     endOffset: number
     text: string
-  }) => void
+    content: string
+  }) => Promise<void>
   onBackToCapsule: () => void
 }
 
@@ -49,7 +50,7 @@ export function MobileDocumentOverlay({
   highlightSectionId,
   highlightKey,
   isCollaborator,
-  onAddComment,
+  onCommentSubmit,
   onBackToCapsule,
 }: MobileDocumentOverlayProps) {
   // Escape key handler
@@ -155,7 +156,7 @@ export function MobileDocumentOverlay({
                   highlightSectionId={highlightSectionId}
                   highlightKey={highlightKey}
                   isCollaborator={isCollaborator}
-                  onAddComment={isCollaborator ? onAddComment : undefined}
+                  onCommentSubmit={isCollaborator ? onCommentSubmit : undefined}
                 />
               ) : null}
             </div>

@@ -17,6 +17,12 @@ datasource db {
 // USER & AUTHENTICATION
 // ============================================================================
 
+// User role for access control (feedback system admin)
+enum UserRole {
+  USER         // Default - can submit feedback, vote
+  SYSTEM_ADMIN // Can change feedback status, see admin controls
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
@@ -24,6 +30,9 @@ model User {
   name          String?
   emailVerified DateTime?
   image         String?
+
+  // Role-based access control
+  role UserRole @default(USER)
 
   // Relationships
   projects           Project[]
@@ -33,6 +42,10 @@ model User {
   documentVersions   DocumentVersion[]
   audienceProfiles     AudienceProfile[]     @relation("UserAudienceProfiles")
   collaboratorProfiles CollaboratorProfile[] @relation("UserCollaboratorProfiles")
+
+  // Feedback system
+  feedbackSubmissions Feedback[]     @relation("UserFeedback")
+  feedbackVotes       FeedbackVote[] @relation("UserFeedbackVotes")
 
   // Subscription (Phase 3)
   subscriptionTier String  @default("free") // free, pro
@@ -766,4 +779,77 @@ model CollaboratorProfile {
   @@index([ownerId])
   @@index([email])
   @@map("collaborator_profiles")
+}
+
+// ============================================================================
+// USER FEEDBACK SYSTEM
+// ============================================================================
+
+// Categorizes the nature of feedback
+enum FeedbackType {
+  BUG
+  ENHANCEMENT
+  IDEA
+  QUESTION
+}
+
+// Tracks lifecycle state (admin-managed)
+enum FeedbackStatus {
+  OPEN
+  IN_REVIEW
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CLOSED
+}
+
+// User feedback submissions
+model Feedback {
+  id     String @id @default(cuid())
+  userId String
+
+  title       String @db.VarChar(200)
+  description String @db.Text
+
+  // Areas stored as JSON array since Prisma doesn't support enum arrays well
+  // Validated at API layer to contain only valid area values
+  // Valid values: DOCUMENT_UPLOAD, AI_CHAT, SHARE_LINKS, ANALYTICS, AGENT_CONFIG, GENERAL
+  areas Json @default("[]")
+
+  type   FeedbackType
+  status FeedbackStatus @default(OPEN)
+
+  // Denormalized for efficient sorting by popularity
+  upvoteCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User           @relation("UserFeedback", fields: [userId], references: [id], onDelete: Cascade)
+  votes FeedbackVote[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+  @@index([upvoteCount])
+  @@map("feedback")
+}
+
+// Tracks user votes on feedback (one vote per user per feedback)
+model FeedbackVote {
+  id         String @id @default(cuid())
+  feedbackId String
+  userId     String
+
+  createdAt DateTime @default(now())
+
+  feedback Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  user     User     @relation("UserFeedbackVotes", fields: [userId], references: [id], onDelete: Cascade)
+
+  // One vote per user per feedback
+  @@unique([feedbackId, userId])
+  @@index([feedbackId])
+  @@index([userId])
+  @@map("feedback_votes")
 }

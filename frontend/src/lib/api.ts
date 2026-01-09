@@ -5,6 +5,14 @@ import type {
   RollbackResponse,
   VersionHistoryResponse,
 } from '../types/recommendation'
+import type {
+  FeedbackItem,
+  CreateFeedbackInput,
+  ListFeedbackParams,
+  ListFeedbackResponse,
+  VoteResponse,
+  FeedbackStatus,
+} from '../types/feedback'
 
 // Re-export types for external use
 export type { VersionHistoryResponse } from '../types/recommendation'
@@ -1417,6 +1425,46 @@ class ApiClient {
     }>(`/api/recommendations/${recommendationId}/apply`, {
       method: 'POST',
       body: JSON.stringify({ proposedText, changeNote }),
+    })
+  }
+
+  // ============================================================================
+  // User Feedback endpoints
+  // ============================================================================
+
+  async listFeedback(params?: ListFeedbackParams) {
+    const query = params
+      ? new URLSearchParams(
+          Object.entries(params)
+            .filter(([, v]) => v !== undefined)
+            .map(([k, v]) => [k, String(v)])
+        ).toString()
+      : ''
+    return this.request<ListFeedbackResponse>(`/api/feedback${query ? `?${query}` : ''}`)
+  }
+
+  async createFeedback(data: CreateFeedbackInput) {
+    return this.request<{ feedback: FeedbackItem }>('/api/feedback', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async getFeedback(feedbackId: string) {
+    return this.request<{ feedback: FeedbackItem }>(`/api/feedback/${feedbackId}`)
+  }
+
+  async toggleFeedbackVote(feedbackId: string, action: 'upvote' | 'remove') {
+    return this.request<VoteResponse>(`/api/feedback/${feedbackId}/vote`, {
+      method: 'POST',
+      body: JSON.stringify({ action }),
+    })
+  }
+
+  async updateFeedbackStatus(feedbackId: string, status: FeedbackStatus) {
+    return this.request<{ feedback: FeedbackItem }>(`/api/feedback/${feedbackId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
     })
   }
 }

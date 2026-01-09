@@ -467,6 +467,50 @@ AgentPage wrapper handles profile existence check and navigation.
 
 ---
 
+## User Feedback System
+
+Public feedback portal for authenticated users to submit and upvote feedback.
+
+**Files:**
+- Frontend: `frontend/src/components/feedback/*.tsx`
+- Backend: `backend/src/controllers/feedback.controller.ts`
+- Types: `frontend/src/types/feedback.ts`
+- Page: `frontend/src/pages/FeedbackPage.tsx`
+
+**Key patterns:**
+- Areas stored as JSON array (multi-select: DOCUMENT_UPLOAD, AI_CHAT, SHARE_LINKS, ANALYTICS, AGENT_CONFIG, GENERAL)
+- Upvotes use optimistic UI with rollback on error
+- Status dropdown only visible to SYSTEM_ADMIN users
+- Self-vote auto-created on feedback submission (starts at count 1)
+- Cursor-based pagination with "Load More" button
+
+**Models:**
+```prisma
+UserRole { USER, SYSTEM_ADMIN }
+FeedbackType { BUG, ENHANCEMENT, IDEA, QUESTION }
+FeedbackStatus { OPEN, IN_REVIEW, PLANNED, IN_PROGRESS, COMPLETED, CLOSED }
+Feedback { userId, title, description, areas (JSON), type, status, upvoteCount }
+FeedbackVote { feedbackId, userId } @@unique([feedbackId, userId])
+```
+
+**API Endpoints:**
+- `GET /api/feedback` - List with filters (sort, area, type, status) and cursor pagination
+- `POST /api/feedback` - Create feedback (auto self-vote)
+- `POST /api/feedback/:id/vote` - Toggle upvote { action: 'upvote' | 'remove' }
+- `PATCH /api/feedback/:id/status` - Update status (SYSTEM_ADMIN only)
+
+**Making yourself admin:**
+```bash
+cd backend && DOTENV_CONFIG_PATH=../.env npx tsx --require dotenv/config scripts/set-admin-role.ts
+```
+Or edit `scripts/set-admin-role.ts` to change the email.
+
+**Button placement:**
+- Creator views (Dashboard, Project): Fixed bottom-left
+- FeedbackButton component with `context="creator"` or `context="viewer"` prop
+
+---
+
 ## Critical Rules
 
 - **Context Layers:** Never manual edit → re-run interview

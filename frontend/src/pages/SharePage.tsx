@@ -7,7 +7,6 @@ import { DocumentCapsule } from '../components/DocumentCapsule'
 import { DocumentContentViewer } from '../components/DocumentContentViewer'
 import { EndSessionModal } from '../components/EndSessionModal'
 import { DocumentCommentsDrawer } from '../components/DocumentCommentsDrawer'
-import { CollaboratorCommentPanel } from '../components/CollaboratorCommentPanel'
 import { MobileDocumentOverlay } from '../components/MobileDocumentOverlay'
 import {
   ViewerPreferencesProvider,
@@ -105,13 +104,6 @@ export function SharePage() {
   // Collaborator comments state
   const [comments, setComments] = useState<DocumentComment[]>([])
   const [commentsDrawerOpen, setCommentsDrawerOpen] = useState(false)
-  const [pendingComment, setPendingComment] = useState<{
-    chunkId: string
-    startOffset: number
-    endOffset: number
-    text: string
-    position: { x: number; y: number }
-  } | null>(null)
 
   // Helper to check if current user is a collaborator
   const isCollaborator = shareLink?.recipientRole === 'collaborator'
@@ -309,33 +301,30 @@ export function SharePage() {
     setCommentsDrawerOpen(false)
   }, [])
 
-  // Handle adding a new comment from text selection
-  const handleAddComment = useCallback((selection: { chunkId: string; startOffset: number; endOffset: number; text: string }) => {
-    setPendingComment({
-      ...selection,
-      position: { x: 300, y: 200 }, // Default position, will be positioned by the panel
-    })
-  }, [])
-
-  // Submit the comment to the API
-  const handleSubmitComment = useCallback(async (content: string) => {
-    if (!pendingComment || !selectedDocumentId) return
+  // Handle inline comment submission (new flow - selection + content in one call)
+  const handleCommentSubmit = useCallback(async (data: {
+    chunkId: string
+    startOffset: number
+    endOffset: number
+    text: string
+    content: string
+  }) => {
+    if (!selectedDocumentId) return
 
     await api.createDocumentComment(selectedDocumentId, {
       conversationId: conversationId || undefined,
-      chunkId: pendingComment.chunkId,
-      startOffset: pendingComment.startOffset,
-      endOffset: pendingComment.endOffset,
-      highlightedText: pendingComment.text,
-      content,
+      chunkId: data.chunkId,
+      startOffset: data.startOffset,
+      endOffset: data.endOffset,
+      highlightedText: data.text,
+      content: data.content,
       viewerEmail: email || undefined,
       viewerName: viewerName || undefined,
     })
 
     // Refresh comments
     await loadComments(selectedDocumentId)
-    setPendingComment(null)
-  }, [pendingComment, selectedDocumentId, conversationId, email, viewerName, loadComments])
+  }, [selectedDocumentId, conversationId, email, viewerName, loadComments])
 
   // Loading state
   if (loading) {
@@ -465,16 +454,11 @@ export function SharePage() {
           highlightSectionId={highlightSectionId}
           highlightKey={highlightKey}
           isCollaborator={isCollaborator}
-          handleAddComment={handleAddComment}
+          onCommentSubmit={handleCommentSubmit}
           comments={comments}
           commentsDrawerOpen={commentsDrawerOpen}
           setCommentsDrawerOpen={setCommentsDrawerOpen}
           handleCommentClick={handleCommentClick}
-          pendingComment={pendingComment}
-          email={email}
-          viewerName={viewerName}
-          handleSubmitComment={handleSubmitComment}
-          setPendingComment={setPendingComment}
         />
       </ViewerPreferencesProvider>
     )
@@ -511,16 +495,11 @@ interface SharePageContentProps {
   highlightSectionId: string | null
   highlightKey: number
   isCollaborator: boolean
-  handleAddComment: (selection: { chunkId: string; startOffset: number; endOffset: number; text: string }) => void
+  onCommentSubmit: (data: { chunkId: string; startOffset: number; endOffset: number; text: string; content: string }) => Promise<void>
   comments: DocumentComment[]
   commentsDrawerOpen: boolean
   setCommentsDrawerOpen: React.Dispatch<React.SetStateAction<boolean>>
   handleCommentClick: (comment: DocumentComment) => void
-  pendingComment: { chunkId: string; startOffset: number; endOffset: number; text: string; position: { x: number; y: number } } | null
-  email: string
-  viewerName: string
-  handleSubmitComment: (content: string) => Promise<void>
-  setPendingComment: React.Dispatch<React.SetStateAction<{ chunkId: string; startOffset: number; endOffset: number; text: string; position: { x: number; y: number } } | null>>
 }
 
 function SharePageContent({
@@ -545,16 +524,11 @@ function SharePageContent({
   highlightSectionId,
   highlightKey,
   isCollaborator,
-  handleAddComment,
+  onCommentSubmit,
   comments,
   commentsDrawerOpen,
   setCommentsDrawerOpen,
-  handleCommentClick,
-  pendingComment,
-  email,
-  viewerName,
-  handleSubmitComment,
-  setPendingComment
+  handleCommentClick
 }: SharePageContentProps) {
   const { preferences } = useViewerPreferencesContext()
   const [showOnboarding, setShowOnboarding] = useState(!preferences.onboardingComplete)
@@ -614,6 +588,7 @@ function SharePageContent({
     return (
       <ViewerPreferencesOnboarding
         onComplete={() => setShowOnboarding(false)}
+        isCollaborator={isCollaborator}
       />
     )
   }
@@ -678,7 +653,7 @@ function SharePageContent({
           highlightSectionId={highlightSectionId}
           highlightKey={highlightKey}
           isCollaborator={isCollaborator}
-          onAddComment={handleAddComment}
+          onCommentSubmit={isCollaborator ? onCommentSubmit : undefined}
           onBackToCapsule={handleMobileBackToCapsule}
         />
 
@@ -799,7 +774,7 @@ function SharePageContent({
                   highlightSectionId={highlightSectionId}
                   highlightKey={highlightKey}
                   isCollaborator={isCollaborator}
-                  onAddComment={isCollaborator ? handleAddComment : undefined}
+                  onCommentSubmit={isCollaborator ? onCommentSubmit : undefined}
                 />
               ) : null}
             </div>
@@ -826,25 +801,6 @@ function SharePageContent({
             isOpen={commentsDrawerOpen}
             onCommentClick={handleCommentClick}
             onClose={() => setCommentsDrawerOpen(false)}
-          />
-        )}
-
-        {/* Collaborator Comment Panel - shown when adding a new comment */}
-        {pendingComment && selectedDocumentId && conversationId && (
-          <CollaboratorCommentPanel
-            documentId={selectedDocumentId}
-            conversationId={conversationId}
-            selectedText={pendingComment.text}
-            selectionRange={{
-              chunkId: pendingComment.chunkId,
-              start: pendingComment.startOffset,
-              end: pendingComment.endOffset,
-            }}
-            position={pendingComment.position}
-            viewerEmail={email || undefined}
-            viewerName={viewerName || undefined}
-            onSubmit={handleSubmitComment}
-            onCancel={() => setPendingComment(null)}
           />
         )}
       </div>

@@ -5,6 +5,7 @@ import { api } from '../lib/api'
 import { formatDate } from '../lib/utils'
 import { SavedThreadsSection, type SavedThread } from '../components/SavedThreadsSection'
 import { SavedProfilesSection } from '../components/SavedProfilesSection'
+import { FeedbackButton } from '../components/feedback'
 import { StoriesOnboarding, useOnboardingState } from '../components/onboarding'
 import {
   Card,
@@ -204,6 +205,9 @@ export function DashboardPage() {
           loadDashboard()
         }}
       />
+
+      {/* Feedback button - fixed bottom-left for creators */}
+      <FeedbackButton context="creator" />
     </div>
   )
 }

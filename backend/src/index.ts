@@ -21,6 +21,7 @@ import audienceSynthesisRoutes from './routes/audienceSynthesis.routes'
 import audienceProfileRoutes from './routes/audienceProfile.routes'
 import collaboratorProfileRoutes from './routes/collaboratorProfile.routes'
 import { documentVersionRoutes } from './routes/documentVersion.routes'
+import feedbackRoutes from './routes/feedback.routes'
 import { startProcessingQueue } from './services/processingQueue'
 import { terminatePool } from './services/worker/workerPool'
 import { runReprocessingIfNeeded } from './services/documentReprocessor'
@@ -75,6 +76,7 @@ app.use('/api', audienceSynthesisRoutes)
 app.use('/api', audienceProfileRoutes)
 app.use('/api', collaboratorProfileRoutes)
 app.use('/api', documentVersionRoutes)
+app.use('/api/feedback', feedbackRoutes)
 
 // 404 handler
 app.use(notFoundHandler)

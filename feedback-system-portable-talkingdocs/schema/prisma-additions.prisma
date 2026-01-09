@@ -1,0 +1,126 @@
+// ============================================================================
+// User Feedback System - Prisma Schema Additions
+// ============================================================================
+//
+// INSTRUCTIONS:
+// 1. Copy this content to your existing prisma/schema.prisma file
+// 2. Update the FeedbackArea enum values for your app's specific areas
+// 3. Add the relation fields to your User model (see bottom of file)
+// 4. Run: npx prisma migrate dev --name add_feedback_system
+// ============================================================================
+
+// Represents which part of the application the feedback relates to
+// CUSTOMIZE THESE VALUES for your specific application
+enum FeedbackArea {
+  DASHBOARD       // Example: Main dashboard
+  REPORTS         // Example: Reports section
+  SETTINGS        // Example: Settings/preferences
+  BILLING         // Example: Billing/subscription
+  API             // Example: API/integrations
+  OTHER           // Catch-all for uncategorized
+}
+
+// Categorizes the nature of the feedback
+enum FeedbackType {
+  BUG             // Something is broken
+  ENHANCEMENT     // Improvement to existing feature
+  IDEA            // New feature suggestion
+  QUESTION        // General question or confusion
+}
+
+// Tracks the lifecycle state of feedback (admin-managed)
+enum FeedbackStatus {
+  OPEN            // New, unreviewed
+  IN_REVIEW       // Being evaluated
+  PLANNED         // Accepted, will be implemented
+  IN_PROGRESS     // Currently being worked on
+  COMPLETED       // Done/shipped
+  CLOSED          // Won't do / duplicate / invalid
+}
+
+// Main feedback submission model
+model Feedback {
+  id          String         @id @default(cuid())
+  userId      String
+
+  // Content
+  title       String         @db.VarChar(200)
+  description String         @db.Text
+
+  // Categorization
+  area        FeedbackArea
+  type        FeedbackType
+  status      FeedbackStatus @default(OPEN)
+
+  // Metrics - denormalized for sorting performance
+  upvoteCount Int            @default(0)
+
+  // Timestamps
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  // Relations
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  votes       FeedbackVote[]
+  attachments FeedbackAttachment[]
+
+  // Indexes for common queries
+  @@index([userId])
+  @@index([status])
+  @@index([area])
+  @@index([type])
+  @@index([createdAt])
+  @@index([upvoteCount])
+}
+
+// Tracks individual user votes on feedback items
+// One vote per user per feedback (enforced by unique constraint)
+model FeedbackVote {
+  id         String   @id @default(cuid())
+  feedbackId String
+  userId     String
+  createdAt  DateTime @default(now())
+
+  // Relations
+  feedback   Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Constraints
+  @@unique([feedbackId, userId])  // Prevents duplicate votes
+  @@index([feedbackId])
+  @@index([userId])
+}
+
+// Stores file attachment metadata for feedback items
+// Actual files are stored in R2/S3/blob storage
+model FeedbackAttachment {
+  id         String   @id @default(cuid())
+  feedbackId String
+
+  // File metadata
+  url        String   @db.Text          // Full URL to stored file
+  filename   String   @db.VarChar(255)  // Original filename
+  mimeType   String   @db.VarChar(100)  // e.g., image/png
+  sizeBytes  Int                        // File size for display
+
+  createdAt  DateTime @default(now())
+
+  // Relations
+  feedback   Feedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  @@index([feedbackId])
+}
+
+
+// ============================================================================
+// ADD TO YOUR EXISTING USER MODEL
+// ============================================================================
+//
+// model User {
+//   // ... your existing fields ...
+//
+//   // Add these two lines:
+//   feedbackSubmissions Feedback[]
+//   feedbackVotes       FeedbackVote[]
+// }
+// ============================================================================

@@ -5,6 +5,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { ProjectPage } from './pages/ProjectPage'
 import { SharePage } from './pages/SharePage'
 import { SavedThreadPage } from './pages/SavedThreadPage'
+import { FeedbackPage } from './pages/FeedbackPage'
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/projects/:projectId" element={<ProjectPage />} />
         <Route path="/threads/:id" element={<SavedThreadPage />} />
+        <Route path="/feedback" element={<FeedbackPage />} />
         <Route path="/share/:slug" element={<SharePage />} />
         <Route path="/s/:slug" element={<SharePage />} />
         <Route path="/" element={<LoginPage />} />

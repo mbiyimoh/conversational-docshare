@@ -8,6 +8,7 @@ import { createMarkdownComponents } from '../lib/markdownConfig'
 import { ChatExpandButton } from './chat/ChatExpandButton'
 import { CitationPill } from './chat/CitationPill'
 import { CitationBlock, type Citation } from './chat/CitationBlock'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 interface ChatMessageProps {
   role: 'user' | 'assistant'
@@ -34,6 +35,7 @@ export function ChatMessage({
 }: ChatMessageProps) {
   const isUser = role === 'user'
   const isAssistant = role === 'assistant'
+  const isMobile = useIsMobile(768)
 
   // Track currently highlighted citation
   const [activeCitation, setActiveCitation] = useState<number | undefined>()
@@ -123,18 +125,27 @@ export function ChatMessage({
     onCitationClick?.(filename, sectionId)
   }
 
+  // Mobile assistant messages: full-width, no bubble (like Claude mobile app)
+  // User messages: keep bubble treatment for visual distinction
+  const mobileAssistant = isMobile && isAssistant
+
   return (
     <div className={cn('flex w-full', isUser ? 'justify-end' : 'justify-start')}>
       <div
         className={cn(
-          'max-w-[80%] rounded-lg px-4 py-3',
-          isUser
-            ? 'bg-accent text-background'
-            : 'bg-card-bg border border-border text-foreground'
+          'rounded-lg',
+          // Mobile assistant: full width, no bubble styling
+          mobileAssistant
+            ? 'w-full px-1 py-2 text-foreground'
+            : 'max-w-[80%] px-4 py-3',
+          // User messages: always bubble style
+          isUser && 'bg-accent text-background',
+          // Desktop assistant: bubble style
+          isAssistant && !mobileAssistant && 'bg-card-bg border border-border text-foreground'
         )}
         style={{
-          // Apply max line width for optimal reading
-          maxWidth: 'min(80%, var(--max-line-chat, 66ch))',
+          // Apply max line width for optimal reading (only when not mobile assistant)
+          maxWidth: mobileAssistant ? '100%' : 'min(80%, var(--max-line-chat, 66ch))',
         }}
       >
         {/* Message content with elite typography */}

@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { motion, AnimatePresence } from 'framer-motion'
 import { api } from '../lib/api'
 import { FileText, Download, Loader2, MessageSquarePlus } from 'lucide-react'
 import { PaperContainer } from './ui/PaperContainer'
@@ -34,7 +35,178 @@ interface DocumentContentViewerProps {
   highlightSectionId?: string | null
   highlightKey?: number
   isCollaborator?: boolean
-  onAddComment?: (selection: { chunkId: string; startOffset: number; endOffset: number; text: string }) => void
+  onCommentSubmit?: (data: {
+    chunkId: string
+    startOffset: number
+    endOffset: number
+    text: string
+    content: string
+  }) => Promise<void>
+}
+
+// Inline Comment Popup Component
+interface InlineCommentPopupProps {
+  selection: TextSelection
+  onSubmit: (content: string) => Promise<void>
+  onCancel: () => void
+  containerRect: DOMRect | null
+}
+
+function InlineCommentPopup({ selection, onSubmit, onCancel, containerRect }: InlineCommentPopupProps) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [content, setContent] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState('')
+  const popupRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Keyboard accessibility: Escape to dismiss
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onCancel()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onCancel])
+
+  // Auto-focus textarea when expanded
+  useEffect(() => {
+    if (isExpanded && textareaRef.current) {
+      textareaRef.current.focus()
+    }
+  }, [isExpanded])
+
+  // Calculate position with viewport boundary detection
+  const position = useMemo(() => {
+    let x = selection.position.x
+    const y = selection.position.y
+
+    // Ensure popup stays within container bounds
+    if (containerRect) {
+      const popupWidth = isExpanded ? 320 : 140
+      const minX = popupWidth / 2 + 8
+      const maxX = containerRect.width - popupWidth / 2 - 8
+      x = Math.max(minX, Math.min(maxX, x))
+    }
+
+    return { x, y }
+  }, [selection.position, containerRect, isExpanded])
+
+  const handleSubmit = async () => {
+    if (!content.trim()) {
+      setError('Comment cannot be empty')
+      return
+    }
+    setIsSubmitting(true)
+    setError('')
+    try {
+      await onSubmit(content.trim())
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to submit')
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <motion.div
+      ref={popupRef}
+      role="dialog"
+      aria-label={isExpanded ? "Add comment form" : "Comment on selected text"}
+      aria-modal="false"
+      initial={{ opacity: 0, scale: 0.95, y: 5 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95, y: 5 }}
+      transition={{ type: 'spring', damping: 25, stiffness: 400 }}
+      className="comment-popover absolute z-50"
+      style={{
+        left: position.x,
+        top: position.y,
+        transform: 'translate(-50%, -100%)',
+      }}
+    >
+      {/* Caret pointing to selection */}
+      <div className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-0 h-0
+        border-l-[8px] border-l-transparent
+        border-r-[8px] border-r-transparent
+        border-t-[8px] border-t-card-bg" />
+
+      <div className="bg-card-bg backdrop-blur-sm border border-border rounded-lg shadow-xl overflow-hidden">
+        <AnimatePresence mode="wait">
+          {!isExpanded ? (
+            // Collapsed: Just the button
+            <motion.button
+              key="collapsed"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsExpanded(true)}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-accent hover:bg-background-elevated transition-colors"
+            >
+              <MessageSquarePlus className="w-4 h-4" />
+              Comment
+            </motion.button>
+          ) : (
+            // Expanded: Inline form
+            <motion.div
+              key="expanded"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="w-80 p-4"
+            >
+              {/* Selected text preview */}
+              <div className="mb-3 pb-2 border-b border-border">
+                <div className="text-[10px] font-mono text-accent uppercase tracking-wider mb-1">
+                  Commenting on:
+                </div>
+                <div className="text-sm text-muted italic line-clamp-2">
+                  &quot;{selection.text}&quot;
+                </div>
+              </div>
+
+              {/* Textarea */}
+              <textarea
+                ref={textareaRef}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Write your comment..."
+                aria-label="Comment text"
+                className="w-full h-20 px-3 py-2 text-sm bg-background border border-border rounded-lg
+                  text-foreground placeholder:text-muted resize-none
+                  focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent"
+              />
+
+              {error && (
+                <p className="text-xs text-red-400 mt-1">{error}</p>
+              )}
+
+              {/* Actions */}
+              <div className="flex justify-end gap-2 mt-3">
+                <button
+                  onClick={onCancel}
+                  disabled={isSubmitting}
+                  className="px-3 py-1.5 text-sm text-muted hover:text-foreground transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={isSubmitting || !content.trim()}
+                  className="px-4 py-1.5 text-sm font-medium bg-accent text-background rounded-md
+                    hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isSubmitting ? 'Posting...' : 'Post'}
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  )
 }
 
 export function DocumentContentViewer({
@@ -43,7 +215,7 @@ export function DocumentContentViewer({
   highlightSectionId,
   highlightKey = 0,
   isCollaborator = false,
-  onAddComment,
+  onCommentSubmit,
 }: DocumentContentViewerProps) {
   const [docData, setDocData] = useState<{ title: string; filename: string } | null>(null)
   const [chunks, setChunks] = useState<DocumentChunk[]>([])
@@ -74,7 +246,7 @@ export function DocumentContentViewer({
 
   // Handle text selection for collaborators
   const handleTextSelection = useCallback(() => {
-    if (!isCollaborator || !onAddComment) return
+    if (!isCollaborator || !onCommentSubmit) return
 
     const selection = window.getSelection()
     if (!selection || selection.isCollapsed || !selection.toString().trim()) {
@@ -154,7 +326,7 @@ export function DocumentContentViewer({
         y: rect.top - (containerRect?.top || 0) - 10,
       },
     })
-  }, [isCollaborator, onAddComment, chunks])
+  }, [isCollaborator, onCommentSubmit, chunks])
 
   // Clear selection when clicking elsewhere
   useEffect(() => {
@@ -376,32 +548,25 @@ export function DocumentContentViewer({
             ))}
 
             {/* Text Selection Popover for Collaborators */}
-            {textSelection && isCollaborator && onAddComment && (
-              <div
-                className="comment-popover absolute z-50 bg-background-elevated rounded-lg shadow-lg border border-border p-1 backdrop-blur-sm"
-                style={{
-                  left: textSelection.position.x,
-                  top: textSelection.position.y,
-                  transform: 'translate(-50%, -100%)',
-                }}
-              >
-                <button
-                  onClick={() => {
-                    onAddComment({
+            <AnimatePresence>
+              {textSelection && isCollaborator && onCommentSubmit && (
+                <InlineCommentPopup
+                  selection={textSelection}
+                  containerRect={scrollContainerRef.current?.getBoundingClientRect() || null}
+                  onSubmit={async (content) => {
+                    await onCommentSubmit({
                       chunkId: textSelection.chunkId,
                       startOffset: textSelection.startOffset,
                       endOffset: textSelection.endOffset,
                       text: textSelection.text,
+                      content,
                     })
                     setTextSelection(null)
                   }}
-                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-accent hover:bg-card-bg rounded transition-colors"
-                >
-                  <MessageSquarePlus className="w-4 h-4" />
-                  Add Comment
-                </button>
-              </div>
-            )}
+                  onCancel={() => setTextSelection(null)}
+                />
+              )}
+            </AnimatePresence>
 
             {chunks.length === 0 && (
               <div className="text-center text-dim py-8">
@@ -488,32 +653,25 @@ export function DocumentContentViewer({
             ))}
 
             {/* Text Selection Popover for Collaborators */}
-            {textSelection && isCollaborator && onAddComment && (
-              <div
-                className="comment-popover absolute z-50 bg-background-elevated rounded-lg shadow-lg border border-border p-1 backdrop-blur-sm"
-                style={{
-                  left: textSelection.position.x,
-                  top: textSelection.position.y,
-                  transform: 'translate(-50%, -100%)',
-                }}
-              >
-                <button
-                  onClick={() => {
-                    onAddComment({
+            <AnimatePresence>
+              {textSelection && isCollaborator && onCommentSubmit && (
+                <InlineCommentPopup
+                  selection={textSelection}
+                  containerRect={scrollContainerRef.current?.getBoundingClientRect() || null}
+                  onSubmit={async (content) => {
+                    await onCommentSubmit({
                       chunkId: textSelection.chunkId,
                       startOffset: textSelection.startOffset,
                       endOffset: textSelection.endOffset,
                       text: textSelection.text,
+                      content,
                     })
                     setTextSelection(null)
                   }}
-                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-accent hover:bg-card-bg rounded transition-colors"
-                >
-                  <MessageSquarePlus className="w-4 h-4" />
-                  Add Comment
-                </button>
-              </div>
-            )}
+                  onCancel={() => setTextSelection(null)}
+                />
+              )}
+            </AnimatePresence>
 
             {chunks.length === 0 && (
               <div className="text-center text-dim py-8">
