@@ -40,7 +40,7 @@ export function FeedbackPage() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await api.getUser()
+        const response = await api.getMe()
         // Check if user has role field (SYSTEM_ADMIN or USER)
         const role = (response.user as { role?: UserRole }).role || 'USER'
         setUserRole(role)
@@ -152,7 +152,7 @@ export function FeedbackPage() {
 
       {/* Main content */}
       <main className="max-w-4xl mx-auto px-6 py-8">
-        <SectionLabel>All Feedback</SectionLabel>
+        <SectionLabel number={1} title="All Feedback" />
 
         <div className="mt-4">
           <FeedbackList
