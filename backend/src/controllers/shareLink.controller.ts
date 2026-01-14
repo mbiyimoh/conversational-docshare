@@ -1,4 +1,6 @@
 import { Request, Response } from 'express'
+import path from 'path'
+import fs from 'fs/promises'
 import { prisma } from '../utils/prisma'
 import { hashPassword, verifyPassword } from '../utils/password'
 import { NotFoundError, AuthorizationError, ValidationError } from '../utils/errors'
@@ -744,6 +746,78 @@ export async function getShareLinkDocumentChunks(req: Request, res: Response) {
   })
 
   res.json({ chunks })
+}
+
+/**
+ * Download a document file via share link (public endpoint)
+ * Allows viewers with valid share link access to download documents
+ */
+export async function downloadShareLinkDocument(req: Request, res: Response) {
+  const { slug, documentId } = req.params
+
+  // Find share link and verify it's valid
+  const shareLink = await prisma.shareLink.findUnique({
+    where: { slug },
+    include: {
+      project: {
+        select: {
+          id: true,
+        },
+      },
+    },
+  })
+
+  if (!shareLink) {
+    throw new NotFoundError('Share link')
+  }
+
+  // Validate share link status
+  const validation = validateShareLinkStatus(shareLink)
+  if (!validation.isValid) {
+    res.status(validation.httpStatus || 403).json({
+      error: {
+        code: validation.errorCode,
+        message: validation.errorMessage,
+        retryable: false,
+      },
+    })
+    return
+  }
+
+  // Verify document belongs to the project
+  const document = await prisma.document.findFirst({
+    where: {
+      id: documentId,
+      projectId: shareLink.project.id,
+    },
+    select: {
+      id: true,
+      filename: true,
+      originalName: true,
+      filePath: true,
+      mimeType: true,
+      fileSize: true,
+    },
+  })
+
+  if (!document) {
+    throw new NotFoundError('Document')
+  }
+
+  // Check if file exists
+  try {
+    await fs.access(document.filePath)
+  } catch {
+    throw new NotFoundError('Document file')
+  }
+
+  // Set headers for download
+  res.setHeader('Content-Type', document.mimeType)
+  res.setHeader('Content-Disposition', `attachment; filename="${document.originalName}"`)
+  res.setHeader('Content-Length', document.fileSize.toString())
+
+  // Stream file
+  res.sendFile(path.resolve(document.filePath))
 }
 
 /**

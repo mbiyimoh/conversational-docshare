@@ -31,7 +31,9 @@ interface TextSelection {
 
 interface DocumentContentViewerProps {
   documentId: string
-  shareSlug: string
+  documentTitle?: string
+  shareSlug?: string // Optional for share link access
+  projectId?: string // Optional for direct project access (explorer mode)
   highlightSectionId?: string | null
   highlightKey?: number
   isCollaborator?: boolean
@@ -42,6 +44,7 @@ interface DocumentContentViewerProps {
     text: string
     content: string
   }) => Promise<void>
+  onBack?: () => void // Optional back handler
 }
 
 // Inline Comment Popup Component
@@ -211,11 +214,14 @@ function InlineCommentPopup({ selection, onSubmit, onCancel, containerRect }: In
 
 export function DocumentContentViewer({
   documentId,
+  documentTitle,
   shareSlug,
+  projectId,
   highlightSectionId,
   highlightKey = 0,
   isCollaborator = false,
   onCommentSubmit,
+  onBack,
 }: DocumentContentViewerProps) {
   const [docData, setDocData] = useState<{ title: string; filename: string } | null>(null)
   const [chunks, setChunks] = useState<DocumentChunk[]>([])
@@ -234,8 +240,15 @@ export function DocumentContentViewer({
 
   // Load document metadata and chunks
   useEffect(() => {
-    loadDocument()
-  }, [documentId, shareSlug])
+    if (shareSlug || projectId) {
+      loadDocument()
+    }
+  }, [documentId, shareSlug, projectId])
+
+  // documentTitle prop used as fallback when API doesn't return title
+  // onBack is passed to header but optional
+  void documentTitle
+  void onBack
 
   // Handle highlight when section changes
   useEffect(() => {
@@ -341,20 +354,35 @@ export function DocumentContentViewer({
   }, [])
 
   const loadDocument = async () => {
+    if (!shareSlug && !projectId) {
+      setError('Document viewing requires share link or project access')
+      return
+    }
+
     setLoading(true)
     setError(null)
 
     try {
-      // Fetch document metadata
-      const response = await api.getShareLinkDocument(shareSlug, documentId)
-      setDocData({
-        title: response.document.title,
-        filename: response.document.filename,
-      })
-
-      // Fetch document chunks for content rendering
-      const chunksData = await api.getShareLinkDocumentChunks(shareSlug, documentId)
-      setChunks(chunksData.chunks)
+      // Branch based on access method: share link (public) vs project (authenticated)
+      if (shareSlug) {
+        // Share link access (public, validated by slug)
+        const response = await api.getShareLinkDocument(shareSlug, documentId)
+        setDocData({
+          title: response.document.title,
+          filename: response.document.filename,
+        })
+        const chunksData = await api.getShareLinkDocumentChunks(shareSlug, documentId)
+        setChunks(chunksData.chunks)
+      } else if (projectId) {
+        // Project access (authenticated, for explorer mode)
+        const response = await api.getProjectDocument(projectId, documentId)
+        setDocData({
+          title: response.document.title,
+          filename: response.document.filename,
+        })
+        const chunksData = await api.getProjectDocumentChunks(projectId, documentId)
+        setChunks(chunksData.chunks)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load document')
     } finally {
@@ -446,8 +474,10 @@ export function DocumentContentViewer({
           </div>
           <button
             onClick={() => {
-              // Open download in new tab via API
-              const url = `${import.meta.env.VITE_API_URL || ''}/api/documents/${documentId}/download`
+              // Use share link endpoint for public access, authenticated endpoint otherwise
+              const url = shareSlug
+                ? `${import.meta.env.VITE_API_URL || ''}/api/share/${shareSlug}/documents/${documentId}/download`
+                : `${import.meta.env.VITE_API_URL || ''}/api/documents/${documentId}/download`
               window.open(url, '_blank')
             }}
             className="flex items-center gap-2 px-3 py-1.5 bg-accent text-background text-sm rounded hover:opacity-90 transition-opacity shrink-0"

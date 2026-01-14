@@ -9,6 +9,7 @@ import {
   getShareLinkDocument,
   getShareLinkDocuments,
   getShareLinkDocumentChunks,
+  downloadShareLinkDocument,
   generateOpeningMessage,
   refineOpeningMessage,
   updateOpeningMessage,
@@ -69,6 +70,13 @@ router.get('/share/:slug/documents/:documentId', asyncHandler(getShareLinkDocume
  * @access  Public (share link must be valid)
  */
 router.get('/share/:slug/documents/:documentId/chunks', asyncHandler(getShareLinkDocumentChunks))
+
+/**
+ * @route   GET /api/share/:slug/documents/:documentId/download
+ * @desc    Download a document file via share link
+ * @access  Public (share link must be valid)
+ */
+router.get('/share/:slug/documents/:documentId/download', asyncHandler(downloadShareLinkDocument))
 
 /**
  * @route   PATCH /api/share-links/:shareLinkId
