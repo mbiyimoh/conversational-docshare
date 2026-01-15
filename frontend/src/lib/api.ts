@@ -13,6 +13,7 @@ import type {
   VoteResponse,
   FeedbackStatus,
 } from '../types/feedback'
+import type { LearnerPreset, LearnerConfig, ProjectPurpose } from '../types/learner'
 
 // Re-export types for external use
 export type { VersionHistoryResponse } from '../types/recommendation'
@@ -188,10 +189,10 @@ class ApiClient {
     return this.request<{ project: unknown }>(`/api/projects/${projectId}`)
   }
 
-  async createProject(name: string, description?: string) {
+  async createProject(name: string, description?: string, purpose: ProjectPurpose = 'share') {
     return this.request<{ project: unknown }>('/api/projects', {
       method: 'POST',
-      body: JSON.stringify({ name, description }),
+      body: JSON.stringify({ name, description, purpose }),
     })
   }
 
@@ -314,6 +315,21 @@ class ApiClient {
 
   async getAgentConfig(projectId: string) {
     return this.request<{ agentConfig: unknown }>(`/api/projects/${projectId}/agent`)
+  }
+
+  // Personal Explorer Mode - Learner configuration
+  async saveLearnerConfig(projectId: string, preset: LearnerPreset, config?: LearnerConfig) {
+    return this.request<{
+      success: boolean
+      agentConfig: {
+        id: string
+        learnerPreset: string
+        learnerConfig: LearnerConfig | null
+      }
+    }>(`/api/projects/${projectId}/agent/learner`, {
+      method: 'POST',
+      body: JSON.stringify({ preset, config }),
+    })
   }
 
   // Profile endpoints
@@ -574,6 +590,36 @@ class ApiClient {
         chunkIndex: number
       }>
     }>(`/api/share/${slug}/documents/${documentId}/chunks`)
+  }
+
+  // ============================================================================
+  // Project Document endpoints (authenticated, for explorer mode)
+  // ============================================================================
+
+  async getProjectDocument(projectId: string, documentId: string) {
+    return this.request<{
+      document: {
+        id: string
+        filename: string
+        internalFilename?: string
+        title: string
+        mimeType: string
+        outline: Array<{ id: string; title: string; level: number; position: number }>
+        status: string
+      }
+    }>(`/api/projects/${projectId}/documents/${documentId}`)
+  }
+
+  async getProjectDocumentChunks(projectId: string, documentId: string) {
+    return this.request<{
+      chunks: Array<{
+        id: string
+        content: string
+        sectionId: string | null
+        sectionTitle: string | null
+        chunkIndex: number
+      }>
+    }>(`/api/projects/${projectId}/documents/${documentId}/chunks`)
   }
 
   // ============================================================================
